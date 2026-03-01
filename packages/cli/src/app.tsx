@@ -3,6 +3,7 @@ import { Box, Text, useInput, useApp } from 'ink';
 import { StatusBar } from './components/StatusBar.js';
 import { MessageView } from './components/MessageView.js';
 import { StreamingMessage } from './components/StreamingMessage.js';
+import { WelcomeScreen } from './components/WelcomeScreen.js';
 import { InputBox } from './components/InputBox.js';
 import { ToolCallView } from './components/ToolCallView.js';
 import { PermissionPrompt } from './components/PermissionPrompt.js';
@@ -38,7 +39,7 @@ export function App() {
         return;
       }
       if (trimmed === '/help') {
-        addSystemMessage('Available commands:\n- /exit, /quit: Exit the application\n- /clear: Clear current conversation\n- /cost: Show token usage and cost\n- /help: Show this message');
+        addSystemMessage('Available commands:\n- /exit, /quit: Exit the application\n- /clear: Clear current conversation\n- /cost: Show token usage and cost\n- /model <provider> <modelId>: Switch AI model\n- /mode <ask|auto|build>: Switch agent mode\n- /help: Show this message');
         setInputValue('');
         return;
       }
@@ -61,7 +62,8 @@ export function App() {
       if (trimmed.startsWith('/mode ')) {
         const parts = trimmed.split(' ');
         if (parts.length >= 2) {
-          switchMode(parts[1]);
+          const mode = parts[1] as 'ask' | 'auto' | 'build';
+          switchMode(mode);
           addSystemMessage(`Switched mode to ${parts[1]}`);
         } else {
           addSystemMessage(`Usage: /mode <ask|auto|build>`);
@@ -94,14 +96,7 @@ export function App() {
 
       {/* Conversation */}
       <Box flexDirection="column" paddingX={1} paddingY={1} flexGrow={1}>
-        {messages.length === 0 && !isStreaming && (
-          <Box flexDirection="column" alignItems="center" paddingY={2}>
-            <Text bold color="#58A6FF">
-              personal-cli
-            </Text>
-            <Text color="#484F58">Type a message to get started. /exit to quit.</Text>
-          </Box>
-        )}
+        {messages.length === 0 && !isStreaming && <WelcomeScreen />}
 
         {messages.map((message) => (
           <MessageView key={message.id} message={message} />

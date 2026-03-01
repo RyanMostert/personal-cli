@@ -93,15 +93,22 @@ function TokenView({ token, highlightedBlocks, dimmed }: TokenViewProps) {
         <Box
           flexDirection="column"
           borderStyle="round"
-          borderColor={dimmed ? 'gray' : '#484F58'}
+          borderColor={dimmed ? 'gray' : '#30363D'}
           marginBottom={1}
           paddingX={1}
         >
-          {token.lang ? (
-            <Text color={dimmed ? muted : '#58A6FF'} dimColor>
-              {token.lang}
+          <Box borderBottom borderStyle="single" borderColor="#30363D" paddingBottom={0} marginBottom={1} justifyContent="space-between">
+            <Text>
+              <Text color="#F85149">● </Text>
+              <Text color="#D29922">● </Text>
+              <Text color="#3FB950">●</Text>
             </Text>
-          ) : null}
+            {token.lang ? (
+              <Text color={dimmed ? muted : '#8B949E'} dimColor>
+                {token.lang}
+              </Text>
+            ) : null}
+          </Box>
           {highlighted ? (
             <Text>{highlighted}</Text>
           ) : (
@@ -123,7 +130,7 @@ function TokenView({ token, highlightedBlocks, dimmed }: TokenViewProps) {
     case 'list': {
       return (
         <Box flexDirection="column" marginBottom={1}>
-          {token.items.map((item, i) => (
+          {token.items.map((item: any, i: number) => (
             <Box key={i}>
               <Text color={dimmed ? muted : '#58A6FF'}>{token.ordered ? `${i + 1}. ` : '• '}</Text>
               <Text color={muted} wrap="wrap">

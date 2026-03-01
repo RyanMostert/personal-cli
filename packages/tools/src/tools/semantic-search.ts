@@ -10,21 +10,11 @@ interface SemanticItem {
   signature: string;
 }
 
-const PARSERS: Record<string, RegExp> = {
-  ts: /^(?:export\s+)?(?:async\s+)?(?:class|function|interface|type|const|let|var)\s+(\w+).*$/gm,
-  js: /^(?:export\s+)?(?:async\s+)?(?:class|function|const|let|var)\s+(\w+).*$/gm,
-  tsx: /^(?:export\s+)?(?:async\s+)?(?:class|function|interface|type|const|let|var)\s+(\w+).*$/gm,
-  jsx: /^(?:export\s+)?(?:async\s+)?(?:class|function|const|let|var)\s+(\w+).*$/gm,
-  py: /^(?:async\s+)?(?:def|class)\s+(\w+).*$/gm,
-  go: /^func\s+(\w+).*$/gm,
-  rs: /^(?:pub\s+)?(?:async\s+)?(?:fn|struct|enum|trait)\s+(\w+).*$/gm,
-};
-
 async function extractOutline(filePath: string, content: string): Promise<string> {
   const ext = path.extname(filePath).slice(1);
-  const parser = PARSERS[ext];
+  const supportedExts = ['ts', 'js', 'tsx', 'jsx', 'py', 'go', 'rs'];
 
-  if (!parser) {
+  if (!supportedExts.includes(ext)) {
     // Fallback: just return the first 20 lines if language is unknown
     const lines = content.split('\n');
     return `<file name="${filePath}">\nUnsupported AST language. First 10 lines:\n${lines.slice(0, 10).join('\n')}\n</file>`;

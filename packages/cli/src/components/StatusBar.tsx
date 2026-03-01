@@ -18,35 +18,32 @@ function formatTokens(n: number): string {
 
 export function StatusBar({ provider, modelId, tokensUsed, tokenBudget, isStreaming }: Props) {
   const usagePct = tokenBudget > 0 ? tokensUsed / tokenBudget : 0;
-  const tokenColor = usagePct > 0.8 ? '#F85149' : usagePct > 0.6 ? '#D29922' : '#3FB950';
+  let tokenColor = '#3FB950';
+  if (usagePct > 0.8) tokenColor = '#F85149';
+  else if (usagePct > 0.6) tokenColor = '#D29922';
 
   return (
     <Box flexDirection="column" marginBottom={1}>
       <MarioHeader title={APP_NAME} />
       <Box
-        borderStyle="single"
-        borderBottom
-        borderTop={false}
-        borderLeft
-        borderRight
-        borderColor="#484F58"
-        paddingX={1}
-        marginX={1}
+        backgroundColor="#00E5FF"
+        paddingX={2}
+        paddingY={0}
+        justifyContent="space-between"
       >
-        <Text color="#C9D1D9">{provider}/</Text>
-        <Text bold color="#C9D1D9">{modelId}</Text>
-        <Text color="#484F58"> │ </Text>
-
-        <Text color={tokenColor}>
-          {formatTokens(tokensUsed)}/{formatTokens(tokenBudget)} tokens
-        </Text>
-
-        {isStreaming && (
-          <>
-            <Text color="#484F58"> │ </Text>
-            <Text color="#58A6FF">streaming</Text>
-          </>
-        )}
+        <Box>
+          <Text color="black" bold>■ HUD LINK ESTABLISHED</Text>
+          <Text color="black"> │ </Text>
+          <Text color="black" bold>{provider}/{modelId}</Text>
+        </Box>
+        <Box>
+          <Text color={tokenColor} bold backgroundColor="black">
+            ⚡ TOKENS: {formatTokens(tokensUsed)} / {formatTokens(tokenBudget)}
+          </Text>
+          {isStreaming && (
+            <Text color="#FF00AA" bold backgroundColor="black"> [ NEURONS ACTIVE ] </Text>
+          )}
+        </Box>
       </Box>
     </Box>
   );

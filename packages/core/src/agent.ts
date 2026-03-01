@@ -1,5 +1,5 @@
 import { streamText } from 'ai';
-import { generateId, type Message, type StreamEvent, type ActiveModel } from '@personal-cli/shared';
+import { generateId, type Message, type StreamEvent, type ActiveModel, type AgentMode } from '@personal-cli/shared';
 import { APP_NAME, APP_VERSION, DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
 import { ProviderManager } from './providers/manager.js';
 
@@ -27,6 +27,7 @@ export class Agent {
   private maxSteps: number;
   private totalTokensUsed = 0;
   private totalCost = 0;
+  private mode: AgentMode = 'ask';
 
   constructor(options: AgentOptions) {
     this.providerManager = options.providerManager;
@@ -53,11 +54,15 @@ export class Agent {
   }
 
   switchModel(provider: string, modelId: string) {
-    this.providerManager = new ProviderManager({ ...this.providerManager.getActiveModel(), provider: provider as any, modelId });
+    this.providerManager.switchModel(provider as any, modelId);
   }
 
-  switchMode(mode: string) {
-    // Basic placeholder for mode switching
+  switchMode(mode: AgentMode) {
+    this.mode = mode;
+  }
+
+  getMode(): AgentMode {
+    return this.mode;
   }
 
   clearHistory() {
@@ -123,7 +128,6 @@ export class Agent {
               toolCall: {
                 toolCallId: part.toolCallId,
                 toolName: part.toolName,
-                args: ('args' in part ? part.args : (part as any).input) as Record<string, unknown>,
                 result: ('result' in part ? part.result : (part as any).output),
               },
             };

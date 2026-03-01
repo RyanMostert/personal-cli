@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { Agent, ProviderManager, loadConfig, getDefaultModel } from '@personal-cli/core';
-import type { Message, StreamEvent, ToolCallInfo } from '@personal-cli/shared';
+import type { Message, StreamEvent, ToolCallInfo, AgentMode } from '@personal-cli/shared';
 import { DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
 import { createTools } from '@personal-cli/tools';
 import type { PendingPermission } from '../components/PermissionPrompt.js';
@@ -75,7 +75,6 @@ export function useAgent() {
       ...prev,
       isStreaming: true,
       streamingText: '',
-      toolCalls: [],
       error: null,
     }));
 
@@ -97,7 +96,9 @@ export function useAgent() {
           setState((prev) => ({
             ...prev,
             toolCalls: prev.toolCalls.map((tc) =>
-              tc.toolCallId === event.toolCall!.toolCallId ? event.toolCall! : tc
+              tc.toolCallId === event.toolCall!.toolCallId
+                ? { ...tc, result: event.toolCall!.result, error: event.toolCall!.error }
+                : tc
             ),
           }));
         } else if (event.type === 'finish') {
@@ -146,7 +147,7 @@ export function useAgent() {
       agent.switchModel(provider, modelId);
       setState((prev) => ({ ...prev }));
     }, [getAgent]),
-    switchMode: useCallback((mode: string) => {
+    switchMode: useCallback((mode: AgentMode) => {
       const agent = getAgent();
       agent.switchMode(mode);
       setState((prev) => ({ ...prev }));
