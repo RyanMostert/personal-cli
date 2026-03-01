@@ -21,6 +21,19 @@ export function MessageView({ message }: Props) {
     );
   }
 
+  if (message.role === 'system') {
+    return (
+      <Box flexDirection="column" marginBottom={1}>
+        <Text bold color="#8B949E">System</Text>
+        <Box paddingLeft={2}>
+          <Text color="#8B949E" wrap="wrap" dimColor>
+            {message.content}
+          </Text>
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Box flexDirection="column" marginBottom={1}>
       <Text bold color="#3FB950">Assistant</Text>

@@ -258,10 +258,24 @@ defaults:
 
 ### Phase 1: Foundation (Week 1-2)
 
-- [ ] Initialize monorepo with pnpm + Turborepo
-- [ ] Set up `packages/shared`, `packages/core`, `packages/cli`
-- [ ] Integrate Vercel AI SDK with Anthropic
-- [ ] Streaming text rendering with Markdown support
+- [x] Initialize monorepo with pnpm + Turborepo
+- [x] Set up `packages/shared`, `packages/core`, `packages/cli`
+- [x] Integrate Vercel AI SDK with Anthropic (and other providers)
+- [x] Streaming text rendering with Markdown support
+
+### Phase 2: TUI Tool Integration (Week 3)
+
+- [x] Create `packages/cli/src/components/ToolCallView.tsx`
+- [x] Create `packages/cli/src/components/PermissionPrompt.tsx`
+- [x] Update `packages/cli/src/hooks/useAgent.ts` to handle tool events and permissions
+- [x] Update `packages/cli/src/app.tsx` to render tool UI and handle advanced slash commands
+
+### Phase 3: Advanced Tools & Context (Week 4)
+
+- [x] Implement `semanticSearch` (mgrep-style AST-aware outline search)
+- [x] Implement `diagnostics` (LSP/TSC type-aware file errors)
+- [ ] Implement Model Context Protocol (MCP) dynamic client
+- [ ] Implement progressive summarization `/compact`
 
 ### Phase 4: Docker Sandbox (Week 5-7)
 

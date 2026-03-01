@@ -4,12 +4,14 @@ import { StatusBar } from './components/StatusBar.js';
 import { MessageView } from './components/MessageView.js';
 import { StreamingMessage } from './components/StreamingMessage.js';
 import { InputBox } from './components/InputBox.js';
+import { ToolCallView } from './components/ToolCallView.js';
+import { PermissionPrompt } from './components/PermissionPrompt.js';
 import { useAgent } from './hooks/useAgent.js';
 import { DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
 
 export function App() {
   const [inputValue, setInputValue] = useState('');
-  const { messages, isStreaming, streamingText, tokensUsed, error, activeModel, sendMessage } =
+  const { messages, isStreaming, streamingText, tokensUsed, toolCalls, pendingPermission, error, activeModel, sendMessage, addSystemMessage, clearMessages, switchModel, switchMode } =
     useAgent();
   const { exit } = useApp();
 
@@ -31,6 +33,44 @@ export function App() {
         return;
       }
       if (trimmed === '/clear') {
+        clearMessages();
+        setInputValue('');
+        return;
+      }
+      if (trimmed === '/help') {
+        addSystemMessage('Available commands:\n- /exit, /quit: Exit the application\n- /clear: Clear current conversation\n- /cost: Show token usage and cost\n- /help: Show this message');
+        setInputValue('');
+        return;
+      }
+      if (trimmed === '/cost') {
+        addSystemMessage(`Session Cost:\n- Tokens used: ${tokensUsed}`);
+        setInputValue('');
+        return;
+      }
+      if (trimmed.startsWith('/model ')) {
+        const parts = trimmed.split(' ');
+        if (parts.length >= 3) {
+          switchModel(parts[1], parts[2]);
+          addSystemMessage(`Switched model to ${parts[1]}/${parts[2]}`);
+        } else {
+          addSystemMessage(`Usage: /model <provider> <modelId>`);
+        }
+        setInputValue('');
+        return;
+      }
+      if (trimmed.startsWith('/mode ')) {
+        const parts = trimmed.split(' ');
+        if (parts.length >= 2) {
+          switchMode(parts[1]);
+          addSystemMessage(`Switched mode to ${parts[1]}`);
+        } else {
+          addSystemMessage(`Usage: /mode <ask|auto|build>`);
+        }
+        setInputValue('');
+        return;
+      }
+      if (trimmed.startsWith('/')) {
+        addSystemMessage(`Unknown command: ${trimmed}. Type /help for available commands.`);
         setInputValue('');
         return;
       }
@@ -38,7 +78,7 @@ export function App() {
       setInputValue('');
       sendMessage(trimmed);
     },
-    [isStreaming, sendMessage, exit],
+    [isStreaming, sendMessage, exit, clearMessages, addSystemMessage, tokensUsed, switchModel, switchMode],
   );
 
   return (
@@ -67,7 +107,13 @@ export function App() {
           <MessageView key={message.id} message={message} />
         ))}
 
+        {toolCalls.map((tc) => (
+          <ToolCallView key={tc.toolCallId} tool={tc} />
+        ))}
+
         {isStreaming && <StreamingMessage text={streamingText} />}
+
+        {pendingPermission && <PermissionPrompt permission={pendingPermission} />}
 
         {error && (
           <Box marginBottom={1}>

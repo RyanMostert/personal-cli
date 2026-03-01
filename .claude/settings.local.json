@@ -11,7 +11,8 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:api.github.com)",
-      "WebFetch(domain:models.dev)"
+      "WebFetch(domain:models.dev)",
+      "Bash(grep:*)"
     ]
   }
 }

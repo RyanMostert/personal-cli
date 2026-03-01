@@ -12,6 +12,8 @@ When writing code, match the style and conventions of the existing codebase.`;
 
 export interface AgentOptions {
   providerManager: ProviderManager;
+  tools?: Record<string, any>;
+  maxSteps?: number;
   systemPrompt?: string;
   tokenBudget?: number;
 }
@@ -21,6 +23,8 @@ export class Agent {
   private providerManager: ProviderManager;
   private systemPrompt: string;
   private tokenBudget: number;
+  private tools: Record<string, any>;
+  private maxSteps: number;
   private totalTokensUsed = 0;
   private totalCost = 0;
 
@@ -28,6 +32,8 @@ export class Agent {
     this.providerManager = options.providerManager;
     this.systemPrompt = options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
     this.tokenBudget = options.tokenBudget ?? DEFAULT_TOKEN_BUDGET;
+    this.tools = options.tools ?? {};
+    this.maxSteps = options.maxSteps ?? 20;
   }
 
   getMessages(): Message[] {
@@ -46,8 +52,25 @@ export class Agent {
     return this.totalCost;
   }
 
+  switchModel(provider: string, modelId: string) {
+    this.providerManager = new ProviderManager({ ...this.providerManager.getActiveModel(), provider: provider as any, modelId });
+  }
+
+  switchMode(mode: string) {
+    // Basic placeholder for mode switching
+  }
+
   clearHistory() {
     this.messages = [];
+  }
+
+  addSystemMessage(content: string) {
+    this.messages.push({
+      id: generateId(),
+      role: 'system',
+      content,
+      timestamp: Date.now(),
+    });
   }
 
   async *sendMessage(userContent: string): AsyncGenerator<StreamEvent> {
@@ -69,14 +92,46 @@ export class Agent {
         model,
         system: this.systemPrompt,
         messages: apiMessages,
+        tools: this.tools,
+        maxSteps: this.maxSteps, // multi-step loop
         maxOutputTokens: Math.min(8192, this.tokenBudget - this.totalTokensUsed),
-      });
+      } as any);
 
       let fullText = '';
 
-      for await (const delta of result.textStream) {
-        fullText += delta;
-        yield { type: 'text-delta', delta };
+      for await (const part of result.fullStream) {
+        switch (part.type) {
+          case 'text-delta':
+            fullText += part.text;
+            yield { type: 'text-delta', delta: part.text };
+            break;
+
+          case 'tool-call':
+            yield {
+              type: 'tool-call-start',
+              toolCall: {
+                toolCallId: part.toolCallId,
+                toolName: part.toolName,
+                args: ('args' in part ? part.args : (part as any).input) as Record<string, unknown>,
+              },
+            };
+            break;
+
+          case 'tool-result':
+            yield {
+              type: 'tool-call-result',
+              toolCall: {
+                toolCallId: part.toolCallId,
+                toolName: part.toolName,
+                args: ('args' in part ? part.args : (part as any).input) as Record<string, unknown>,
+                result: ('result' in part ? part.result : (part as any).output),
+              },
+            };
+            break;
+
+          case 'error':
+            throw part.error;
+        }
       }
 
       const usage = await result.usage;

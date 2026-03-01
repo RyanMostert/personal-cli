@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import Spinner from 'ink-spinner';
+import { MinecraftSpinner } from './MinecraftSpinner.js';
 import { MarkdownRenderer } from './MarkdownRenderer.js';
 
 interface Props {
@@ -12,9 +12,7 @@ export function StreamingMessage({ text }: Props) {
     <Box flexDirection="column" marginBottom={1}>
       <Box>
         <Text bold color="#3FB950">Assistant </Text>
-        <Text color="#58A6FF">
-          <Spinner type="dots" />
-        </Text>
+        <MinecraftSpinner />
       </Box>
       <Box paddingLeft={2} flexDirection="column">
         {text ? (

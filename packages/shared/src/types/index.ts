@@ -84,12 +84,26 @@ export interface AgentConfig {
 
 // ─── Streaming ────────────────────────────────────────────────────────────────
 
-export type StreamEventType = 'text-delta' | 'finish' | 'error';
+export type StreamEventType =
+  | 'text-delta'
+  | 'tool-call-start'
+  | 'tool-call-result'
+  | 'finish'
+  | 'error';
+
+export interface ToolCallInfo {
+  toolCallId: string;
+  toolName: string;
+  args?: Record<string, unknown>;
+  result?: unknown;
+  error?: string;
+}
 
 export interface StreamEvent {
   type: StreamEventType;
   delta?: string;
-  error?: Error;
+  toolCall?: ToolCallInfo;
+  error?: Error | { message: string; name?: string; stack?: string };
   usage?: {
     promptTokens: number;
     completionTokens: number;
