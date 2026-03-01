@@ -111,8 +111,13 @@ export function App() {
         {pendingPermission && <PermissionPrompt permission={pendingPermission} />}
 
         {error && (
-          <Box marginBottom={1}>
+          <Box marginBottom={1} flexDirection="column">
             <Text color="#F85149">Error: {error}</Text>
+            {/rate limit|429|FreeUsageLimit/i.test(error) && (
+              <Text color="#8C959F">
+                {'Tip: Switch to another free model — try /model opencode-zen minimax-m2.5-free'}
+              </Text>
+            )}
           </Box>
         )}
       </Box>

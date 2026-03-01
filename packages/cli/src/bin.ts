@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// Suppress Vercel AI SDK compatibility warnings (e.g. specificationVersion)
+(globalThis as any).AI_SDK_LOG_WARNINGS = false;
+
 import { Command } from 'commander';
 import { render } from 'ink';
 import React from 'react';
