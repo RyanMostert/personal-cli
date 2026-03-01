@@ -60,3 +60,45 @@ export function deleteConversation(id: string): void {
   const p = join(HISTORY_DIR(), `${id}.json`);
   if (existsSync(p)) unlinkSync(p);
 }
+
+export function renameConversation(id: string, title: string): boolean {
+  const p = join(HISTORY_DIR(), `${id}.json`);
+  if (!existsSync(p)) return false;
+  try {
+    const data: SavedConversation = JSON.parse(readFileSync(p, 'utf-8'));
+    data.title = title.slice(0, 60);
+    writeFileSync(p, JSON.stringify(data, null, 2));
+    return true;
+  } catch { return false; }
+}
+
+export function exportConversation(
+  messages: Message[],
+  model: ActiveModel,
+  tokensUsed: number,
+  cost: number,
+  path?: string
+): string {
+  const date = new Date().toISOString().split('T')[0];
+  const timestamp = new Date().toLocaleTimeString();
+  const filePath = path ?? join(homedir(), `conversation-${date}-${Date.now()}.md`);
+
+  const content = [`# Conversation Export — ${date}`,
+    '',
+    `**Model:** ${model.provider} / ${model.modelId}`,
+    `**Messages:** ${messages.length}`,
+    `**Tokens:** ${tokensUsed.toLocaleString()}`,
+    `**Cost:** $${cost.toFixed(4)}`,
+    '',
+    '---',
+    '',
+    ...messages.map(m => {
+      const time = new Date(m.timestamp).toLocaleTimeString();
+      const role = m.role.charAt(0).toUpperCase() + m.role.slice(1);
+      return `**${role}** · ${time}\n\n${m.content}\n`;
+    }),
+  ].join('\n');
+
+  writeFileSync(filePath, content, 'utf-8');
+  return filePath;
+}

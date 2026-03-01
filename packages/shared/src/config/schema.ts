@@ -25,6 +25,13 @@ const ProviderNameSchema = z.enum([
   'ollama',
   'opencode-zen',
   'custom',
+  'openrouter',
+  'groq',
+  'xai',
+  'deepseek',
+  'perplexity',
+  'cerebras',
+  'together',
 ]);
 
 export const ProvidersConfigSchema = z.object({

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import TextInput from 'ink-text-input';
-// @ts-expect-error Types missing
+// @ts-expect-error Types missing for ink-gradient
 import Gradient from 'ink-gradient';
 
 interface Props {
@@ -12,6 +12,10 @@ interface Props {
 }
 
 export function InputBox({ value, onChange, onSubmit, isDisabled = false }: Props) {
+  const lines = value.split('\n');
+  const lineCount = lines.length;
+  const isMultiLine = lineCount > 1;
+
   return (
     <Box
       borderStyle="round"
@@ -20,29 +24,39 @@ export function InputBox({ value, onChange, onSubmit, isDisabled = false }: Prop
       paddingY={0}
       marginBottom={0}
       flexShrink={0}
+      flexDirection="column"
     >
-      <Box marginRight={1}>
-        {isDisabled ? (
-          <Text color="#484F58">⚡</Text>
-        ) : (
-          <Gradient name="pastel">
-            <Text bold>⚡</Text>
-          </Gradient>
+      <Box>
+        <Box marginRight={1} flexShrink={0}>
+          {isDisabled ? (
+            <Text color="#484F58">⚡</Text>
+          ) : (
+            <Gradient name="pastel">
+              <Text bold>⚡</Text>
+            </Gradient>
+          )}
+        </Box>
+        <Box flexGrow={1} flexDirection="column">
+          <TextInput
+            value={value}
+            onChange={onChange}
+            onSubmit={onSubmit}
+            placeholder={isDisabled ? 'Waiting for agent...' : 'Type a command or question... (/help)'}
+            focus={!isDisabled}
+          />
+        </Box>
+        {!isDisabled && (
+          <Box paddingLeft={2} flexShrink={0}>
+            <Text color="#484F58">
+              {isMultiLine ? `[${lineCount} lines]` : 'Enter ↵'}
+            </Text>
+          </Box>
         )}
       </Box>
-      <Box flexGrow={1}>
-        <TextInput
-          value={value}
-          onChange={onChange}
-          onSubmit={onSubmit}
-          placeholder={isDisabled ? 'Waiting for agent...' : 'Type a command or question... (/help)'}
-          focus={!isDisabled}
-        />
-      </Box>
-      {!isDisabled && (
-        <Box paddingLeft={2}>
-          <Text color="#30363D">
-            Enter ↵
+      {!isDisabled && isMultiLine && (
+        <Box marginTop={0}>
+          <Text color="#6E7681" dimColor>
+            Shift+Enter for new line · Ctrl+U to clear · Ctrl+W to delete word
           </Text>
         </Box>
       )}

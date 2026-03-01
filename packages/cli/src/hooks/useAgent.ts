@@ -22,6 +22,7 @@ interface AgentState {
   error: string | null;
   isPickingModel: boolean;
   attachedFiles: AttachedFile[];
+  mode: AgentMode;
 }
 
 export function useAgent() {
@@ -39,6 +40,7 @@ export function useAgent() {
     error: null,
     isPickingModel: false,
     attachedFiles: [],
+    mode: 'ask',
   });
 
   const permissionCallback = useCallback((toolName: string, args?: Record<string, unknown>) => {
@@ -168,7 +170,11 @@ export function useAgent() {
     switchMode: useCallback((mode: AgentMode) => {
       const agent = getAgent();
       agent.switchMode(mode);
-      setState((prev) => ({ ...prev }));
+      setState((prev) => ({ ...prev, mode }));
+    }, [getAgent]),
+    getMode: useCallback(() => {
+      const agent = getAgent();
+      return agent.getMode();
     }, [getAgent]),
     openModelPicker: useCallback(() => {
       setState((prev) => ({ ...prev, isPickingModel: true }));

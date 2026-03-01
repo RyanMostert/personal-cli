@@ -1,92 +1,300 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
-import { MODEL_REGISTRY } from '@personal-cli/shared';
-import type { ProviderName } from '@personal-cli/shared';
+import { MODEL_REGISTRY, type ProviderName, type ModelEntry, type ModelTag } from '@personal-cli/shared';
+import fuzzysort from 'fuzzysort';
+import { getRecentModels, addRecentModel } from '@personal-cli/core';
 
 interface Props {
   onSelect: (provider: ProviderName, modelId: string) => void;
   onClose: () => void;
 }
 
+const TAG_COLORS: Record<ModelTag, string> = {
+  'reasoning': '#BD93F9',
+  'coding':    '#00E5FF',
+  'vision':    '#FFB86C',
+  'fast':      '#50FA7B',
+  'large':     '#FF00AA',
+};
+
+const VISIBLE_HEIGHT = 14;
+// Providers with more models than this auto-collapse on open
+const COLLAPSE_THRESHOLD = 5;
+
+type RowHeader = { kind: 'header'; provider: string; label: string; collapsed: boolean; modelCount: number };
+type RowModel  = { kind: 'model';  model: ModelEntry };
+type Row = RowHeader | RowModel;
+
+// Compute which providers exceed the threshold (runs once)
+function defaultCollapsedSet(): Set<string> {
+  const counts = new Map<string, number>();
+  for (const m of MODEL_REGISTRY) counts.set(m.provider, (counts.get(m.provider) ?? 0) + 1);
+  return new Set([...counts.entries()].filter(([, c]) => c > COLLAPSE_THRESHOLD).map(([p]) => p));
+}
+
 export function ModelPicker({ onSelect, onClose }: Props) {
   const [filter, setFilter] = useState('');
-  const [focusIndex, setFocusIndex] = useState(0);
+  const [rowFocus, setRowFocus] = useState(0);
+  const [flicker, setFlicker] = useState(true);
+  const [collapsedProviders, setCollapsedProviders] = useState<Set<string>>(defaultCollapsedSet);
 
-  // Filter and flatten models
-  const filtered = useMemo(() => {
-    const q = filter.toLowerCase();
-    return MODEL_REGISTRY.filter(
-      m => m.id.includes(q) || m.label.toLowerCase().includes(q) || m.provider.includes(q)
-    );
+  useEffect(() => {
+    const timer = setInterval(() => setFlicker(f => !f), 500);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Parse filter for tags (e.g., "gpt #fast #free")
+  const { searchQuery, tags, freeOnly } = useMemo(() => {
+    const parts = filter.split(' ').filter(Boolean);
+    const tagSet = new Set<ModelTag>();
+    let isFreeOnly = false;
+    const queryParts: string[] = [];
+    for (const part of parts) {
+      if (part.startsWith('#')) {
+        const tag = part.slice(1);
+        if (tag === 'free') isFreeOnly = true;
+        else if (['reasoning', 'coding', 'vision', 'fast', 'large'].includes(tag))
+          tagSet.add(tag as ModelTag);
+      } else {
+        queryParts.push(part);
+      }
+    }
+    return { searchQuery: queryParts.join(' '), tags: tagSet, freeOnly: isFreeOnly };
   }, [filter]);
+
+  // Recent models (only shown when no filter)
+  const recentModels = useMemo(() => {
+    const recent = getRecentModels();
+    return recent
+      .map((r: { provider: string; modelId: string }) =>
+        MODEL_REGISTRY.find(m => m.provider === r.provider && m.id === r.modelId))
+      .filter((m): m is ModelEntry => m !== undefined);
+  }, []);
+
+  // Filter models
+  const filtered = useMemo(() => {
+    let models = MODEL_REGISTRY;
+    if (tags.size > 0)
+      models = models.filter(m => Array.from(tags).some(tag => m.tags?.includes(tag)));
+    if (freeOnly)
+      models = models.filter(m => m.free);
+    if (searchQuery) {
+      models = fuzzysort.go(searchQuery, models, {
+        keys: ['id', 'label', 'provider'],
+        all: true,
+      }).map(r => r.obj);
+    }
+    return models;
+  }, [searchQuery, tags, freeOnly]);
+
+  // When filter is active, expand all so results are fully visible
+  const effectiveCollapsed = filter ? new Set<string>() : collapsedProviders;
+
+  // Build flat rows (headers + models, headers navigable too)
+  const allRows = useMemo<Row[]>(() => {
+    const rows: Row[] = [];
+
+    // Recent section is never collapsed
+    const showRecent = !filter && recentModels.length > 0;
+    if (showRecent) {
+      rows.push({ kind: 'header', provider: '__recent__', label: '★ Recent', collapsed: false, modelCount: recentModels.length });
+      for (const m of recentModels) rows.push({ kind: 'model', model: m });
+    }
+
+    // Group remaining by provider
+    const byProvider = new Map<string, ModelEntry[]>();
+    for (const m of filtered) {
+      if (!byProvider.has(m.provider)) byProvider.set(m.provider, []);
+      byProvider.get(m.provider)!.push(m);
+    }
+    for (const [provider, models] of byProvider) {
+      const collapsed = effectiveCollapsed.has(provider);
+      rows.push({ kind: 'header', provider, label: provider, collapsed, modelCount: models.length });
+      if (!collapsed) {
+        for (const m of models) rows.push({ kind: 'model', model: m });
+      }
+    }
+
+    return rows;
+  }, [filtered, recentModels, filter, effectiveCollapsed]);
+
+  useEffect(() => { setRowFocus(0); }, [filter]);
+
+  // Clamp focus when rows shrink (e.g., after collapse)
+  useEffect(() => {
+    setRowFocus(f => Math.min(f, Math.max(0, allRows.length - 1)));
+  }, [allRows.length]);
+
+  const toggleCollapse = (provider: string) => {
+    setCollapsedProviders(s => {
+      const next = new Set(s);
+      if (next.has(provider)) next.delete(provider);
+      else next.add(provider);
+      return next;
+    });
+  };
 
   useInput((input, key) => {
     if (key.escape) { onClose(); return; }
-    if (key.return) {
-      const m = filtered[focusIndex];
-      if (m) onSelect(m.provider, m.id);
+
+    if (key.upArrow) {
+      setRowFocus(i => Math.max(0, i - 1));
       return;
     }
-    if (key.upArrow) { setFocusIndex(i => Math.max(0, i - 1)); return; }
-    if (key.downArrow) { setFocusIndex(i => Math.min(filtered.length - 1, i + 1)); return; }
+    if (key.downArrow) {
+      setRowFocus(i => Math.min(allRows.length - 1, i + 1));
+      return;
+    }
+
+    if (key.return || input === ' ') {
+      const row = allRows[rowFocus];
+      if (!row) return;
+      if (row.kind === 'header') {
+        if (row.provider !== '__recent__') toggleCollapse(row.provider);
+        return;
+      }
+      // Model row — select it
+      const m = row.model;
+      addRecentModel(m.provider, m.id);
+      onSelect(m.provider, m.id);
+      return;
+    }
+
     if (key.backspace || key.delete) { setFilter(f => f.slice(0, -1)); return; }
-    if (input && !key.ctrl && !key.meta) { setFilter(f => f + input); setFocusIndex(0); }
+    if (input && !key.ctrl && !key.meta) { setFilter(f => f + input); }
   });
 
-  // Group filtered models by provider for display
-  const byProvider = new Map<ProviderName, typeof filtered>();
-  for (const m of filtered) {
-    if (!byProvider.has(m.provider)) byProvider.set(m.provider, []);
-    byProvider.get(m.provider)!.push(m);
-  }
+  // Windowing centred on the focused row
+  const scrollTop = Math.max(
+    0,
+    Math.min(
+      rowFocus - Math.floor(VISIBLE_HEIGHT / 2),
+      Math.max(0, allRows.length - VISIBLE_HEIGHT),
+    ),
+  );
+  const visibleRows = allRows.slice(scrollTop, scrollTop + VISIBLE_HEIGHT);
+  const hiddenAbove = scrollTop;
+  const hiddenBelow = Math.max(0, allRows.length - scrollTop - visibleRows.length);
 
-  // Build flat list index for focus tracking
-  const flatList: typeof filtered = [];
-  for (const [, models] of byProvider) flatList.push(...models);
-
-  const formatCost = (m: typeof MODEL_REGISTRY[0]) => {
+  const formatCost = (m: ModelEntry) => {
     if (m.free) return 'FREE';
     if (m.inputCostPer1M == null) return '?';
     return `$${m.inputCostPer1M}/$${m.outputCostPer1M}`;
   };
-
-  const formatCtx = (n: number) => n >= 1_000_000 ? `${n/1_000_000}M` : `${n/1_000}k`;
+  const formatCtx = (n: number) =>
+    n >= 1_000_000 ? `${n / 1_000_000}M` : `${n / 1_000}k`;
 
   return (
-    <Box borderStyle="round" borderColor="#58A6FF" flexDirection="column" paddingX={1} marginY={1}>
-      <Box marginBottom={1}>
-        <Text bold color="#58A6FF">SELECT MODEL  </Text>
-        <Text color="#8C959F">Filter: </Text>
-        <Text color="#C9D1D9">{filter || ' '}</Text>
-        <Text color="#484F58">_</Text>
+    <Box
+      borderStyle="single"
+      borderColor="#00E5FF"
+      flexDirection="column"
+      paddingX={1}
+      paddingY={1}
+      marginY={1}
+    >
+      {/* Title */}
+      <Box position="absolute" marginTop={-1} marginLeft={2} backgroundColor="black" paddingX={1}>
+        <Text color="#00E5FF" bold> NEURAL_LINK:MODEL_SELECTION </Text>
       </Box>
 
-      {filtered.length === 0 && (
-        <Text color="#484F58">No models match "{filter}"</Text>
+      {/* Filter bar */}
+      <Box marginBottom={1} paddingX={1} borderStyle="round" borderColor="#484F58">
+        <Text color="#FF00AA" bold>❯ </Text>
+        <Text color="#00E5FF" bold>FILTER: </Text>
+        <Text color="white" bold>{filter}</Text>
+        <Text color="#00E5FF">{flicker ? '_' : ' '}</Text>
+      </Box>
+
+      {(tags.size > 0 || freeOnly) && (
+        <Box marginBottom={1} paddingX={1}>
+          <Text color="#484F58">FILTERS: </Text>
+          {freeOnly && <Text color="#3FB950" bold>✦free </Text>}
+          {Array.from(tags).map(tag => (
+            <Text key={tag} color={TAG_COLORS[tag]} bold>◈{tag} </Text>
+          ))}
+        </Box>
       )}
 
-      {Array.from(byProvider.entries()).map(([provider, models]) => (
-        <Box key={provider} flexDirection="column" marginBottom={1}>
-          <Text color="#484F58" bold>{provider}</Text>
-          {models.map(m => {
-            const idx = flatList.indexOf(m);
-            const focused = idx === focusIndex;
+      {/* Scroll indicator top */}
+      <Box height={1} alignItems="center" justifyContent="center">
+        {hiddenAbove > 0
+          ? <Text color="#FF00AA"> ▲ {hiddenAbove} above ▲ </Text>
+          : <Text color="#484F58"> ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ </Text>
+        }
+      </Box>
+
+      {allRows.length === 0 && (
+        <Box paddingY={2} alignItems="center">
+          <Text color="#FF5555" bold> [!] NO MODELS MATCH </Text>
+        </Box>
+      )}
+
+      {/* Rows */}
+      <Box flexDirection="column">
+        {visibleRows.map((row, i) => {
+          const focused = scrollTop + i === rowFocus;
+
+          if (row.kind === 'header') {
+            const isRecent = row.provider === '__recent__';
             return (
-              <Box key={m.id} paddingLeft={2}>
-                <Text color={focused ? '#58A6FF' : '#8C959F'}>{focused ? '▶ ' : '  '}</Text>
-                <Text color={focused ? '#C9D1D9' : '#8C959F'} bold={focused}>
-                  {m.id.padEnd(38)}
+              <Box key={`h-${row.provider}-${i}`} marginTop={i === 0 ? 0 : 1} backgroundColor={focused ? '#161b22' : undefined}>
+                <Text color={focused ? '#FF00AA' : '#484F58'} bold>
+                  {' '}
+                  {isRecent ? '╭─ ' : row.collapsed ? '▶ ' : '▼ '}
                 </Text>
-                <Text color="#484F58">{formatCtx(m.contextWindow).padEnd(8)}</Text>
-                <Text color={m.free ? '#3FB950' : '#8C959F'}>{formatCost(m)}</Text>
+                <Text color={focused ? '#00E5FF' : '#484F58'} bold>
+                  {row.label.toUpperCase()}
+                </Text>
+                {!isRecent && (
+                  <Text color={focused ? '#8C959F' : '#484F58'}>
+                    {' ─── '}
+                    {row.collapsed
+                      ? `${row.modelCount} models  [Enter/Space to expand]`
+                      : `[Enter/Space to collapse]`
+                    }
+                  </Text>
+                )}
               </Box>
             );
-          })}
-        </Box>
-      ))}
+          }
 
-      <Box marginTop={1}>
-        <Text color="#484F58">↑↓ navigate  Enter select  Esc cancel</Text>
+          // Model row
+          const m = row.model;
+          return (
+            <Box key={`m-${m.provider}-${m.id}`} paddingLeft={2} backgroundColor={focused ? '#161b22' : undefined}>
+              <Text color={focused ? '#FF00AA' : '#484F58'}>{focused ? '❯❯ ' : '   '}</Text>
+              <Text color={focused ? 'white' : '#8C959F'} bold={focused}>
+                {m.id.padEnd(40)}
+              </Text>
+              <Box marginLeft={1}>
+                <Text color="#484F58">Ctx:</Text>
+                <Text color="#00E5FF" bold={focused}>{formatCtx(m.contextWindow).padStart(5)} </Text>
+              </Box>
+              <Box marginLeft={1} width={16}>
+                <Text color={m.free ? '#3FB950' : '#484F58'}>{formatCost(m).padStart(13)}</Text>
+              </Box>
+              <Box marginLeft={1}>
+                {m.tags?.map(tag => (
+                  <Text key={tag} color={TAG_COLORS[tag]}>•{tag} </Text>
+                ))}
+              </Box>
+            </Box>
+          );
+        })}
+      </Box>
+
+      {/* Scroll indicator bottom */}
+      <Box height={1} alignItems="center" justifyContent="center" marginTop={1}>
+        {hiddenBelow > 0
+          ? <Text color="#FF00AA"> ▼ {hiddenBelow} below ▼ </Text>
+          : <Text color="#484F58"> ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ </Text>
+        }
+      </Box>
+
+      <Box marginTop={1} justifyContent="space-between" paddingX={1}>
+        <Text color="#484F58"> ESC abort · type to filter · #free #fast #reasoning </Text>
+        <Text color="#00E5FF" bold> Enter select/toggle </Text>
       </Box>
     </Box>
   );

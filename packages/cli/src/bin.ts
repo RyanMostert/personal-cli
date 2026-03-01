@@ -2,6 +2,9 @@
 // Suppress Vercel AI SDK compatibility warnings (e.g. specificationVersion)
 (globalThis as any).AI_SDK_LOG_WARNINGS = false;
 
+// Prevent raw stack traces from leaking to the terminal — errors are displayed in the Ink UI
+process.on('unhandledRejection', () => {});
+
 import { Command } from 'commander';
 import { render } from 'ink';
 import React from 'react';

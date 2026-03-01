@@ -7,7 +7,14 @@ export type ProviderName =
   | 'mistral'
   | 'ollama'
   | 'opencode-zen'
-  | 'custom';
+  | 'custom'
+  | 'openrouter'
+  | 'groq'
+  | 'xai'
+  | 'deepseek'
+  | 'perplexity'
+  | 'cerebras'
+  | 'together';
 
 export interface ModelConfig {
   id: string;

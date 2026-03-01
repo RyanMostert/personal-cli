@@ -4,12 +4,23 @@ import { APP_NAME, APP_VERSION, DEFAULT_TOKEN_BUDGET } from '@personal-cli/share
 import { ProviderManager } from './providers/manager.js';
 import { saveConversation, loadConversation } from './persistence/conversations.js';
 
-const DEFAULT_SYSTEM_PROMPT = `You are ${APP_NAME} v${APP_VERSION}, a powerful AI assistant for software engineers.
+const DEFAULT_SYSTEM_PROMPT = `You are ${APP_NAME} v${APP_VERSION}, a powerful AI assistant.
 
-You help with coding tasks, debugging, code review, architecture decisions, and general software engineering questions.
-You have access to the user's project files and can read, write, and edit them.
-You are direct, precise, and prefer concrete solutions over theoretical discussions.
-When writing code, match the style and conventions of the existing codebase.`;
+## Tool use — always prefer action over explanation
+- When the user asks for information you don't have, USE your tools immediately. Do NOT say "I can't" or ask for a URL — figure it out yourself.
+- For web requests: construct the most appropriate URL from context and call webFetch without asking. For example:
+  - "steam latest games" → fetch https://store.steampowered.com/api/featured/ or https://store.steampowered.com/explore/new/
+  - "news about X" → fetch a relevant URL you know
+  - "search X" → fetch a search engine or relevant site
+- For file tasks: read the relevant files before answering.
+- For system info: run the appropriate command.
+- Chain multiple tool calls in sequence when needed. Do not stop after one tool call if you need more data.
+- Always return the actual results to the user — summarize and present what you found, not what you tried.
+
+## Behaviour
+- Be direct and concrete. Skip disclaimers about limitations unless a tool actually fails.
+- If a tool returns an error or empty result, try an alternative URL or approach, then report what happened.
+- For coding tasks: match the style and conventions of the existing codebase.`;
 
 export interface AgentOptions {
   providerManager: ProviderManager;
@@ -99,16 +110,17 @@ export class Agent {
       .filter((m) => m.role !== 'system')
       .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
-    try {
-      const result = streamText({
-        model,
-        system: this.systemPrompt,
-        messages: apiMessages,
-        tools: this.tools,
-        maxSteps: this.maxSteps, // multi-step loop
-        maxOutputTokens: Math.min(8192, this.tokenBudget - this.totalTokensUsed),
-      } as any);
+    // Declare outside try so catch can silence dangling promises
+    const result = streamText({
+      model,
+      system: this.systemPrompt,
+      messages: apiMessages,
+      tools: this.tools,
+      maxSteps: this.maxSteps,
+      maxOutputTokens: Math.min(8192, this.tokenBudget - this.totalTokensUsed),
+    } as any);
 
+    try {
       let fullText = '';
 
       for await (const part of result.fullStream) {
@@ -179,7 +191,9 @@ export class Agent {
       // Save conversation — pass userContent as title so context blocks don't corrupt it
       try { saveConversation(this.messages, this.providerManager.getActiveModel(), userContent); } catch {}
     } catch (err) {
-      // Remove the user message on error so conversation stays consistent
+      // Silence result.usage — it rejects when fullStream throws, causing an unhandled rejection
+      // that Node.js would dump to stderr before Ink can render the error cleanly.
+      Promise.resolve(result.usage).catch(() => {});
       this.messages.pop();
       yield { type: 'error', error: err instanceof Error ? err : new Error(String(err)) };
     }
@@ -190,5 +204,43 @@ export class Agent {
     if (!saved) return false;
     this.messages = saved.messages;
     return true;
+  }
+
+  async compact(): Promise<string> {
+    if (this.messages.length < 2) {
+      return 'Not enough messages to compact.';
+    }
+
+    const summaryPrompt = 'Please summarize the conversation so far into a concise recap. Focus on key decisions, code changes, and important information. Keep it brief but comprehensive.';
+    
+    const model = await this.providerManager.getModel();
+    const apiMessages = [
+      ...this.messages.filter(m => m.role !== 'system').map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+      { role: 'user' as const, content: summaryPrompt }
+    ];
+
+    const result = streamText({
+      model,
+      system: this.systemPrompt,
+      messages: apiMessages,
+      maxOutputTokens: 1024,
+    } as any);
+
+    let summary = '';
+    for await (const part of result.fullStream) {
+      if (part.type === 'text-delta') {
+        summary += part.text;
+      }
+    }
+
+    // Replace all messages with a single summary message
+    this.messages = [{
+      id: generateId(),
+      role: 'assistant',
+      content: `**Conversation Summary:**\n\n${summary}`,
+      timestamp: Date.now(),
+    }];
+
+    return 'Conversation compacted successfully.';
   }
 }

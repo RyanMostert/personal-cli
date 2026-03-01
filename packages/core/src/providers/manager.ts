@@ -13,6 +13,39 @@ export interface ProviderManagerOptions {
 
 const OPENCODE_BASE_URL = 'https://opencode.ai/zen/v1';
 
+// opencode-zen sends {"type":"ping","cost":"0"} heartbeat events that the AI SDK
+// can't parse. This wrapper strips those lines from the SSE stream before the
+// SDK sees them.
+const filterPingsFetch: typeof globalThis.fetch = async (url, init) => {
+  const res = await globalThis.fetch(url as RequestInfo, init as RequestInit);
+  if (!res.body) return res;
+  const contentType = res.headers.get('content-type') ?? '';
+  if (!contentType.includes('text/event-stream')) return res;
+
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  const transform = new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, ctrl) {
+      const text = decoder.decode(chunk, { stream: true });
+      const filtered = text
+        .split('\n')
+        .filter(line => {
+          if (!line.startsWith('data:')) return true;
+          const payload = line.slice(5).trim();
+          try { if ((JSON.parse(payload) as any)?.type === 'ping') return false; } catch {}
+          return true;
+        })
+        .join('\n');
+      ctrl.enqueue(encoder.encode(filtered));
+    },
+  });
+  return new Response(res.body.pipeThrough(transform), {
+    status: res.status,
+    statusText: res.statusText,
+    headers: res.headers,
+  });
+};
+
 export class ProviderManager {
   private options: ProviderManagerOptions;
 
@@ -72,9 +105,11 @@ export class ProviderManager {
       case 'opencode-zen': {
         // OpenCode uses the Chat Completions API, not OpenAI's Responses API.
         // Use .chat() to route through /chat/completions instead of /responses.
+        // filterPingsFetch strips {"type":"ping"} heartbeat events the SDK can't parse.
         const client = createOpenAI({
           apiKey: this.resolveKey('opencode-zen', 'OPENCODE_API_KEY'),
           baseURL: baseUrl ?? OPENCODE_BASE_URL,
+          fetch: filterPingsFetch,
         });
         return client.chat(modelId);
       }
@@ -87,9 +122,62 @@ export class ProviderManager {
         return client.chat(modelId);
       }
 
+      case 'openrouter': {
+        const client = createOpenAI({
+          baseURL: 'https://openrouter.ai/api/v1',
+          apiKey: this.resolveKey('openrouter', 'OPENROUTER_API_KEY'),
+          headers: { 'HTTP-Referer': 'https://personal-cli', 'X-Title': 'personal-cli' },
+        });
+        return client.chat(modelId);
+      }
+
+      case 'groq': {
+        const { createGroq } = await import('@ai-sdk/groq');
+        const client = createGroq({ apiKey: this.resolveKey('groq', 'GROQ_API_KEY') });
+        return client(modelId);
+      }
+
+      case 'xai': {
+        const { createXai } = await import('@ai-sdk/xai');
+        const client = createXai({ apiKey: this.resolveKey('xai', 'XAI_API_KEY') });
+        return client(modelId);
+      }
+
+      case 'deepseek': {
+        const client = createOpenAI({
+          baseURL: 'https://api.deepseek.com/v1',
+          apiKey: this.resolveKey('deepseek', 'DEEPSEEK_API_KEY'),
+        });
+        return client.chat(modelId);
+      }
+
+      case 'perplexity': {
+        const client = createOpenAI({
+          baseURL: 'https://api.perplexity.ai',
+          apiKey: this.resolveKey('perplexity', 'PERPLEXITY_API_KEY'),
+        });
+        return client.chat(modelId);
+      }
+
+      case 'cerebras': {
+        const client = createOpenAI({
+          baseURL: 'https://api.cerebras.ai/v1',
+          apiKey: this.resolveKey('cerebras', 'CEREBRAS_API_KEY'),
+        });
+        return client.chat(modelId);
+      }
+
+      case 'together': {
+        const client = createOpenAI({
+          baseURL: 'https://api.together.xyz/v1',
+          apiKey: this.resolveKey('together', 'TOGETHER_API_KEY'),
+        });
+        return client.chat(modelId);
+      }
+
       default:
         throw new Error(
-          `Provider "${provider}" is not yet supported. Supported: anthropic, openai, google, mistral, ollama, opencode-zen, custom.`,
+          `Provider "${provider}" is not yet supported. Supported: anthropic, openai, google, mistral, ollama, opencode-zen, openrouter, groq, xai, deepseek, perplexity, cerebras, together, custom.`,
         );
     }
   }

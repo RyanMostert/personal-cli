@@ -1,35 +1,78 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Box, Text } from 'ink';
+import { listConversations } from '@personal-cli/core';
+import path from 'path';
 
-const ASCII = [
-  "   _____                                __           .__  .__  ",
-  "  /  _  \\   ____   ____   ____   ____ _/  |_         |  | |__| ",
-  " /  /_\\  \\ / ___\\_/ __ \\ /    \\_/ ___\\\\   __\\  ______|  | |  | ",
-  "/    |    \\  \\___\\  ___/|   |  \\  \\___ |  |   /_____/|  |_|  | ",
-  "\\____|__  /\\___  >\\___  >___|  /\\___  >|__|          |____/__| ",
-  "        \\/     \\/     \\/     \\/     \\/                         "
+const ASCII_TITLE = [
+  " █████╗ ███████╗███╗   ██╗██╗██╗   ██╗███████╗",
+  "██╔══██╗██╔════╝████╗  ██║██║██║   ██║██╔════╝",
+  "███████║█████╗  ██╔██╗ ██║██║██║   ██║███████╗",
+  "██╔══██║██╔══╝  ██║╚██╗██║██║██║   ██║╚════██║",
+  "██║  ██║███████╗██║ ╚████║██║╚██████╔╝███████║",
+  "╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝╚═╝ ╚═════╝ ╚══════╝"
 ];
 
+function formatTimeAgo(date: number): string {
+  const seconds = Math.floor((Date.now() - date) / 1000);
+  if (seconds < 60) return `${seconds}S_AGO`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}M_AGO`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}H_AGO`;
+  return `${Math.floor(hours / 24)}D_AGO`;
+}
+
 export function WelcomeScreen() {
+  const [flicker, setFlicker] = useState(true);
   const [colorIdx, setColorIdx] = useState(0);
-  const colors = ['#FF0055', '#FF00AA', '#AA00FF', '#5500FF', '#0055FF', '#00AAFF'];
+  const colors = ['#00E5FF', '#FF00AA', '#AA00FF', '#3FB950', '#FFB86C'];
+
+  const stats = useMemo(() => {
+    const convos = listConversations();
+    const lastConvo = convos[0];
+    const project = path.basename(process.cwd()).toUpperCase();
+    
+    return [
+      { label: 'TOTAL_SESSIONS', value: convos.length.toString().padStart(7, '0') },
+      { label: 'PROJECT_NODE',   value: project.slice(0, 15) },
+      { label: 'LAST_ACTIVITY',  value: lastConvo ? formatTimeAgo(lastConvo.date) : 'NEVER' },
+    ];
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
+      setFlicker((prev) => !prev);
       setColorIdx((prev) => (prev + 1) % colors.length);
-    }, 150);
+    }, 600);
     return () => clearInterval(timer);
   }, [colors.length]);
 
   return (
     <Box flexDirection="column" alignItems="center" paddingY={2}>
-      {ASCII.map((line, i) => (
+      {ASCII_TITLE.map((line, i) => (
         <Text key={i} bold color={colors[(colorIdx + i) % colors.length]}>
           {line}
         </Text>
       ))}
-      <Box marginTop={1} borderStyle="single" borderColor="#30363D" paddingX={4}>
-        <Text color="#8B949E">INSERT COIN TO CONTINUE... [ Type a message to begin ]</Text>
+
+      <Box marginTop={2} flexDirection="column" alignItems="center" borderStyle="double" borderColor="#484F58" paddingX={4} paddingY={1}>
+        <Text color="#00E5FF" bold> --- SYSTEM STATS --- </Text>
+        {stats.map(s => (
+          <Box key={s.label} width={35} justifyContent="space-between">
+            <Text color="#FF00AA">{s.label.padEnd(16)}</Text>
+            <Text color="white">❯❯</Text>
+            <Text color="#3FB950">{s.value.padStart(12)}</Text>
+          </Box>
+        ))}
+      </Box>
+
+      <Box marginTop={2} paddingX={4}>
+        <Text color={flicker ? '#FF00AA' : '#1A1A1A'} bold>
+          ► INSERT COIN TO CONTINUE ◄
+        </Text>
+      </Box>
+      <Box marginTop={1}>
+        <Text color="#484F58"> [ Type a command to start | /help for manual ] </Text>
       </Box>
     </Box>
   );
