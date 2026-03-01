@@ -2,6 +2,7 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
 import { type LanguageModel } from 'ai';
 import type { ActiveModel, ProviderName } from '@personal-cli/shared';
+import { getProviderKey } from '../config/auth.js';
 
 export interface ProviderManagerOptions {
   provider: ProviderName;
@@ -19,13 +20,17 @@ export class ProviderManager {
     this.options = options;
   }
 
-  getModel(): LanguageModel {
-    const { provider, modelId, apiKey, baseUrl } = this.options;
+  private resolveKey(provider: string, envVar: string): string | undefined {
+    return this.options.apiKey ?? getProviderKey(provider) ?? process.env[envVar];
+  }
+
+  async getModel(): Promise<LanguageModel> {
+    const { provider, modelId, baseUrl } = this.options;
 
     switch (provider) {
       case 'anthropic': {
         const client = createAnthropic({
-          apiKey: apiKey ?? process.env.ANTHROPIC_API_KEY,
+          apiKey: this.resolveKey('anthropic', 'ANTHROPIC_API_KEY'),
           ...(baseUrl ? { baseURL: baseUrl } : {}),
         });
         return client(modelId);
@@ -33,17 +38,42 @@ export class ProviderManager {
 
       case 'openai': {
         const client = createOpenAI({
-          apiKey: apiKey ?? process.env.OPENAI_API_KEY,
+          apiKey: this.resolveKey('openai', 'OPENAI_API_KEY'),
           ...(baseUrl ? { baseURL: baseUrl } : {}),
         });
         return client(modelId);
+      }
+
+      case 'google': {
+        const { createGoogleGenerativeAI } = await import('@ai-sdk/google');
+        const client = createGoogleGenerativeAI({
+          apiKey: this.resolveKey('google', 'GOOGLE_API_KEY'),
+        });
+        return client(modelId);
+      }
+
+      case 'mistral': {
+        const { createMistral } = await import('@ai-sdk/mistral');
+        const client = createMistral({
+          apiKey: this.resolveKey('mistral', 'MISTRAL_API_KEY'),
+        });
+        return client(modelId);
+      }
+
+      case 'ollama': {
+        // Ollama runs locally on port 11434 with an OpenAI-compatible API
+        const client = createOpenAI({
+          baseURL: baseUrl ?? 'http://localhost:11434/v1',
+          apiKey: 'ollama',  // required by SDK but ignored by Ollama
+        });
+        return client.chat(modelId);
       }
 
       case 'opencode-zen': {
         // OpenCode uses the Chat Completions API, not OpenAI's Responses API.
         // Use .chat() to route through /chat/completions instead of /responses.
         const client = createOpenAI({
-          apiKey: apiKey ?? process.env.OPENCODE_API_KEY,
+          apiKey: this.resolveKey('opencode-zen', 'OPENCODE_API_KEY'),
           baseURL: baseUrl ?? OPENCODE_BASE_URL,
         });
         return client.chat(modelId);
@@ -51,7 +81,7 @@ export class ProviderManager {
 
       case 'custom': {
         const client = createOpenAI({
-          apiKey: apiKey ?? process.env.CUSTOM_API_KEY,
+          apiKey: this.resolveKey('custom', 'CUSTOM_API_KEY'),
           baseURL: baseUrl,
         });
         return client.chat(modelId);
@@ -59,7 +89,7 @@ export class ProviderManager {
 
       default:
         throw new Error(
-          `Provider "${provider}" is not yet supported. Supported: anthropic, openai, opencode-zen, custom.`,
+          `Provider "${provider}" is not yet supported. Supported: anthropic, openai, google, mistral, ollama, opencode-zen, custom.`,
         );
     }
   }

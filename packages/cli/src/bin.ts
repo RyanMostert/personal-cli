@@ -15,20 +15,6 @@ program
   .description('A multi-provider, token-efficient CLI AI agent')
   .version(APP_VERSION)
   .action(() => {
-    // Need at least one provider key
-    const hasKey =
-      process.env.OPENCODE_API_KEY ||
-      process.env.ANTHROPIC_API_KEY ||
-      process.env.OPENAI_API_KEY;
-
-    if (!hasKey) {
-      console.error(
-        'Error: No API key found.\n' +
-        'Set one of: OPENCODE_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY',
-      );
-      process.exit(1);
-    }
-
     const { unmount } = render(React.createElement(App), {
       exitOnCtrlC: false,
     });

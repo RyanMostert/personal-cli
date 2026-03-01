@@ -9,6 +9,7 @@ interface Props {
   tokensUsed: number;
   tokenBudget: number;
   isStreaming: boolean;
+  attachedCount?: number;
 }
 
 function formatTokens(n: number): string {
@@ -16,7 +17,7 @@ function formatTokens(n: number): string {
   return String(n);
 }
 
-export function StatusBar({ provider, modelId, tokensUsed, tokenBudget, isStreaming }: Props) {
+export function StatusBar({ provider, modelId, tokensUsed, tokenBudget, isStreaming, attachedCount }: Props) {
   const usagePct = tokenBudget > 0 ? tokensUsed / tokenBudget : 0;
   let tokenColor = '#3FB950';
   if (usagePct > 0.8) tokenColor = '#F85149';
@@ -37,6 +38,9 @@ export function StatusBar({ provider, modelId, tokensUsed, tokenBudget, isStream
           <Text color="black" bold>{provider}/{modelId}</Text>
         </Box>
         <Box>
+          {(attachedCount ?? 0) > 0 && (
+            <Text color="#58A6FF" bold backgroundColor="black"> 📎 {attachedCount} </Text>
+          )}
           <Text color={tokenColor} bold backgroundColor="black">
             ⚡ TOKENS: {formatTokens(tokensUsed)} / {formatTokens(tokenBudget)}
           </Text>

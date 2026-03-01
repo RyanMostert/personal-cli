@@ -1,7 +1,8 @@
 import { streamText } from 'ai';
-import { generateId, type Message, type StreamEvent, type ActiveModel, type AgentMode } from '@personal-cli/shared';
+import { generateId, type Message, type StreamEvent, type ActiveModel, type AgentMode, getModelEntry } from '@personal-cli/shared';
 import { APP_NAME, APP_VERSION, DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
 import { ProviderManager } from './providers/manager.js';
+import { saveConversation, loadConversation } from './persistence/conversations.js';
 
 const DEFAULT_SYSTEM_PROMPT = `You are ${APP_NAME} v${APP_VERSION}, a powerful AI assistant for software engineers.
 
@@ -78,16 +79,22 @@ export class Agent {
     });
   }
 
-  async *sendMessage(userContent: string): AsyncGenerator<StreamEvent> {
+  async *sendMessage(userContent: string, attachedFiles?: Array<{ path: string; content: string }>): AsyncGenerator<StreamEvent> {
+    // Build context block if files are attached
+    const contextBlock = attachedFiles?.length
+      ? `<context>\n${attachedFiles.map(f => `<file path="${f.path}">\n${f.content}\n</file>`).join('\n')}\n</context>\n\n`
+      : '';
+    const fullContent = contextBlock + userContent;
+
     const userMessage: Message = {
       id: generateId(),
       role: 'user',
-      content: userContent,
+      content: fullContent,
       timestamp: Date.now(),
     };
     this.messages.push(userMessage);
 
-    const model = this.providerManager.getModel();
+    const model = await this.providerManager.getModel();
     const apiMessages = this.messages
       .filter((m) => m.role !== 'system')
       .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
@@ -143,6 +150,15 @@ export class Agent {
       const completionTokens = usage.outputTokens ?? 0;
       this.totalTokensUsed += promptTokens + completionTokens;
 
+      // Calculate cost based on model pricing
+      const entry = getModelEntry(this.providerManager.getActiveModel().provider, this.providerManager.getActiveModel().modelId);
+      if (entry?.inputCostPer1M != null) {
+        this.totalCost += (promptTokens / 1_000_000) * entry.inputCostPer1M;
+      }
+      if (entry?.outputCostPer1M != null) {
+        this.totalCost += (completionTokens / 1_000_000) * entry.outputCostPer1M;
+      }
+
       const assistantMessage: Message = {
         id: generateId(),
         role: 'assistant',
@@ -159,10 +175,20 @@ export class Agent {
           totalTokens: promptTokens + completionTokens,
         },
       };
+
+      // Save conversation — pass userContent as title so context blocks don't corrupt it
+      try { saveConversation(this.messages, this.providerManager.getActiveModel(), userContent); } catch {}
     } catch (err) {
       // Remove the user message on error so conversation stays consistent
       this.messages.pop();
       yield { type: 'error', error: err instanceof Error ? err : new Error(String(err)) };
     }
+  }
+
+  loadHistory(id: string): boolean {
+    const saved = loadConversation(id);
+    if (!saved) return false;
+    this.messages = saved.messages;
+    return true;
   }
 }

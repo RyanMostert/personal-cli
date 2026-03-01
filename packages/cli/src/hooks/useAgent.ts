@@ -4,28 +4,41 @@ import type { Message, StreamEvent, ToolCallInfo, AgentMode } from '@personal-cl
 import { DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
 import { createTools } from '@personal-cli/tools';
 import type { PendingPermission } from '../components/PermissionPrompt.js';
+import { promises as fs } from 'fs';
+
+interface AttachedFile {
+  path: string;
+  content: string;
+}
 
 interface AgentState {
   messages: Message[];
   isStreaming: boolean;
   streamingText: string;
   tokensUsed: number;
+  cost: number;
   toolCalls: ToolCallInfo[];
   pendingPermission: PendingPermission | null;
   error: string | null;
+  isPickingModel: boolean;
+  attachedFiles: AttachedFile[];
 }
 
 export function useAgent() {
   const agentRef = useRef<Agent | null>(null);
+  const attachedFilesRef = useRef<AttachedFile[]>([]);
 
   const [state, setState] = useState<AgentState>({
     messages: [],
     isStreaming: false,
     streamingText: '',
     tokensUsed: 0,
+    cost: 0,
     toolCalls: [],
     pendingPermission: null,
     error: null,
+    isPickingModel: false,
+    attachedFiles: [],
   });
 
   const permissionCallback = useCallback((toolName: string, args?: Record<string, unknown>) => {
@@ -70,16 +83,20 @@ export function useAgent() {
 
   const sendMessage = useCallback(async (content: string) => {
     const agent = getAgent();
+    // Read from ref — avoids stale closure since useCallback deps don't include state
+    const currentAttachedFiles = attachedFilesRef.current;
+    attachedFilesRef.current = [];
 
     setState((prev) => ({
       ...prev,
       isStreaming: true,
       streamingText: '',
       error: null,
+      attachedFiles: [],
     }));
 
     try {
-      const stream = agent.sendMessage(content);
+      const stream = agent.sendMessage(content, currentAttachedFiles);
 
       for await (const event of stream) {
         if (event.type === 'text-delta' && event.delta) {
@@ -108,6 +125,7 @@ export function useAgent() {
             streamingText: '',
             messages: agent.getMessages(),
             tokensUsed: agent.getTokensUsed(),
+            cost: agent.getCost(),
           }));
         } else if (event.type === 'error') {
           setState((prev) => ({
@@ -151,6 +169,40 @@ export function useAgent() {
       const agent = getAgent();
       agent.switchMode(mode);
       setState((prev) => ({ ...prev }));
+    }, [getAgent]),
+    openModelPicker: useCallback(() => {
+      setState((prev) => ({ ...prev, isPickingModel: true }));
+    }, []),
+    closeModelPicker: useCallback(() => {
+      setState((prev) => ({ ...prev, isPickingModel: false }));
+    }, []),
+    attachFile: useCallback(async (filePath: string) => {
+      try {
+        const content = await fs.readFile(filePath, 'utf-8');
+        const truncated = content.length > 50_000 ? content.slice(0, 50_000) + '\n... [truncated]' : content;
+        const entry = { path: filePath, content: truncated };
+        attachedFilesRef.current = [...attachedFilesRef.current, entry];
+        setState(prev => ({ ...prev, attachedFiles: attachedFilesRef.current }));
+        return true;
+      } catch {
+        return false;
+      }
+    }, []),
+    clearAttachments: useCallback(() => {
+      attachedFilesRef.current = [];
+      setState(prev => ({ ...prev, attachedFiles: [] }));
+    }, []),
+    loadHistory: useCallback((id: string) => {
+      const agent = getAgent();
+      const success = agent.loadHistory(id);
+      if (success) {
+        setState(prev => ({
+          ...prev,
+          messages: agent.getMessages(),
+          tokensUsed: agent.getTokensUsed(),
+        }));
+      }
+      return success;
     }, [getAgent]),
   };
 }
