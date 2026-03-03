@@ -9,3 +9,4 @@ export type { ConversationMeta, SavedConversation } from './persistence/conversa
 export { getFrecency, getBatchFrecency, getTopRecentFiles, recordAccess } from './persistence/frecency.js';
 export { appendHistory, loadHistory } from './persistence/history.js';
 export { getTheme, setTheme, getRecentModels, addRecentModel } from './config/prefs.js';
+export { startDeviceFlow, pollForGitHubToken, saveGitHubToken, getCopilotToken, isCopilotAuthenticated, clearCopilotAuth } from './providers/copilot-auth.js';

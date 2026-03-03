@@ -14,7 +14,8 @@ export type ProviderName =
   | 'deepseek'
   | 'perplexity'
   | 'cerebras'
-  | 'together';
+  | 'together'
+  | 'github-copilot';
 
 export interface ModelConfig {
   id: string;

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
 import { StatusBar } from './components/StatusBar.js';
 import { MessageView } from './components/MessageView.js';
@@ -16,6 +16,10 @@ import { CommandAutocomplete, filterCommands } from './components/CommandAutocom
 import { FileAutocomplete } from './components/FileAutocomplete.js';
 import { SidePanel } from './components/SidePanel.js';
 import { useAgent } from './hooks/useAgent.js';
+import { useOverlay } from './context/OverlayContext.js';
+import { dispatch } from './commands/registry.js';
+import type { CommandContext } from './types/commands.js';
+import { matchKeybinding } from './keybindings/registry.js';
 import { DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
 import {
   setProviderKey, removeProviderKey, readAuth,
@@ -28,9 +32,7 @@ const MAX_VISIBLE_MESSAGES = 20;
 
 export function App() {
   const [inputValue, setInputValue] = useState('');
-  const [isPickingProvider, setIsPickingProvider] = useState(false);
-  const [pendingProviderAdd, setPendingProviderAdd] = useState<string | null>(null);
-  const [showHistory, setShowHistory] = useState(false);
+  const { overlay, open, close } = useOverlay();
   const [scrollOffset, setScrollOffset] = useState(0);
   const [inputHistory, setInputHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -60,6 +62,11 @@ export function App() {
     attachFile, clearAttachments, loadHistory,
   } = useAgent();
   const { exit } = useApp();
+
+  // Derived overlay states for backward compatibility
+  const isPickingProvider = overlay.type === 'provider-manager';
+  const pendingProviderAdd = overlay.type === 'provider-wizard' ? (overlay.props?.providerId as string) : null;
+  const showHistory = overlay.type === 'history';
 
   useEffect(() => { setInputHistory(loadPromptHistory()); }, []);
   useEffect(() => { setScrollOffset(0); }, [messages.length]);
@@ -262,7 +269,7 @@ export function App() {
       await openFileInPanel(fp);
       setInputValue(''); return;
     }
-    if (trimmed.startsWith('/provider')) { setIsPickingProvider(true); setInputValue(''); return; }
+    if (trimmed.startsWith('/provider')) { open('provider-manager'); setInputValue(''); return; }
     if (trimmed.startsWith('/add ')) {
       const fp = trimmed.slice(5).trim();
       const ok = await attachFile(fp);
@@ -272,7 +279,7 @@ export function App() {
     if (trimmed === '/add --clear' || trimmed === '/detach') {
       clearAttachments(); addSystemMessage('Cleared attached files.'); setInputValue(''); return;
     }
-    if (trimmed === '/history') { setShowHistory(true); setInputValue(''); return; }
+    if (trimmed === '/history') { open('history'); setInputValue(''); return; }
     if (trimmed === '/compact') { addSystemMessage('Compacting conversation…'); setInputValue(''); return; }
     if (trimmed === '/copy') {
       const last = messages.filter(m => m.role === 'assistant').pop();
@@ -366,26 +373,29 @@ export function App() {
                 {isPickingProvider && (
                     <ProviderManager
                     configuredProviders={Object.keys(readAuth())}
-                    onAdd={(id) => { setIsPickingProvider(false); setPendingProviderAdd(id); }}
+                    onAdd={(id) => { open('provider-wizard', { providerId: id }); }}
                     onRemove={(id) => { removeProviderKey(id); addSystemMessage(`Removed key for ${id}.`); }}
-                    onClose={() => setIsPickingProvider(false)}
+                    onClose={() => close()}
                     />
                 )}
                 {pendingProviderAdd && (
                     <ProviderWizard
                     providerName={pendingProviderAdd}
                     onSave={(key) => {
-                        setProviderKey(pendingProviderAdd, key);
-                        addSystemMessage(`Saved API key for ${pendingProviderAdd}.`);
-                        setPendingProviderAdd(null);
+                        // 'oauth' is a sentinel for OAuth flows where the key is already persisted
+                        if (key !== 'oauth') {
+                            setProviderKey(pendingProviderAdd, key);
+                        }
+                        addSystemMessage(`Configured ${pendingProviderAdd}.`);
+                        close();
                     }}
-                    onClose={() => setPendingProviderAdd(null)}
+                    onClose={() => close()}
                     />
                 )}
                 {showHistory && (
                     <HistoryPicker
-                    onSelect={(id) => { loadHistory(id); setShowHistory(false); addSystemMessage('Conversation loaded.'); }}
-                    onClose={() => setShowHistory(false)}
+                    onSelect={(id) => { loadHistory(id); close(); addSystemMessage('Conversation loaded.'); }}
+                    onClose={() => close()}
                     />
                 )}
                 </Box>

@@ -14,7 +14,6 @@ interface AttachedFile {
 interface AgentState {
   messages: Message[];
   isStreaming: boolean;
-  streamingText: string;
   tokensUsed: number;
   cost: number;
   toolCalls: ToolCallInfo[];
@@ -29,10 +28,12 @@ export function useAgent() {
   const agentRef = useRef<Agent | null>(null);
   const attachedFilesRef = useRef<AttachedFile[]>([]);
 
+  // Split streamingText into isolated state to prevent re-renders of the main state tree
+  const [streamingText, setStreamingText] = useState('');
+
   const [state, setState] = useState<AgentState>({
     messages: [],
     isStreaming: false,
-    streamingText: '',
     tokensUsed: 0,
     cost: 0,
     toolCalls: [],
@@ -89,10 +90,10 @@ export function useAgent() {
     const currentAttachedFiles = attachedFilesRef.current;
     attachedFilesRef.current = [];
 
+    setStreamingText('');
     setState((prev) => ({
       ...prev,
       isStreaming: true,
-      streamingText: '',
       error: null,
       attachedFiles: [],
     }));
@@ -102,47 +103,14 @@ export function useAgent() {
 
       for await (const event of stream) {
         if (event.type === 'text-delta' && event.delta) {
-          setState((prev) => ({
-            ...prev,
-            streamingText: prev.streamingText + event.delta,
-          }));
-        } else if (event.type === 'tool-call-start' && event.toolCall) {
-          setState((prev) => ({
-            ...prev,
-            toolCalls: [...prev.toolCalls, event.toolCall!],
-          }));
-        } else if (event.type === 'tool-call-result' && event.toolCall) {
-          setState((prev) => ({
-            ...prev,
-            toolCalls: prev.toolCalls.map((tc) =>
-              tc.toolCallId === event.toolCall!.toolCallId
-                ? { ...tc, result: event.toolCall!.result, error: event.toolCall!.error }
-                : tc
-            ),
-          }));
-        } else if (event.type === 'finish') {
-          setState((prev) => ({
-            ...prev,
-            isStreaming: false,
-            streamingText: '',
-            messages: agent.getMessages(),
-            tokensUsed: agent.getTokensUsed(),
-            cost: agent.getCost(),
-          }));
-        } else if (event.type === 'error') {
-          setState((prev) => ({
-            ...prev,
-            isStreaming: false,
-            streamingText: '',
-            error: event.error?.message ?? 'Unknown error',
-          }));
+          setStreamingText((prev) => prev + event.delta);
         }
       }
     } catch (err) {
+      setStreamingText('');
       setState((prev) => ({
         ...prev,
         isStreaming: false,
-        streamingText: '',
         error: err instanceof Error ? err.message : String(err),
       }));
     }
@@ -150,6 +118,7 @@ export function useAgent() {
 
   return {
     ...state,
+    streamingText,
     activeModel,
     sendMessage,
     addSystemMessage: useCallback((msg: string) => {

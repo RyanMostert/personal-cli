@@ -3,6 +3,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { type LanguageModel } from 'ai';
 import type { ActiveModel, ProviderName } from '@personal-cli/shared';
 import { getProviderKey } from '../config/auth.js';
+import { getCopilotToken } from './copilot-auth.js';
 
 export interface ProviderManagerOptions {
   provider: ProviderName;
@@ -175,9 +176,25 @@ export class ProviderManager {
         return client.chat(modelId);
       }
 
+      case 'github-copilot': {
+        // Copilot uses a short-lived token that must be fetched/refreshed dynamically.
+        // We fetch it now (cached in memory); createOpenAI will use this token value.
+        const copilotToken = await getCopilotToken();
+        const client = createOpenAI({
+          apiKey: copilotToken,
+          baseURL: 'https://api.githubcopilot.com',
+          headers: {
+            'Editor-Version': 'personal-cli/1.0.0',
+            'Editor-Plugin-Version': 'personal-cli/1.0.0',
+            'Copilot-Integration-Id': 'copilot-chat',
+          },
+        });
+        return client.chat(modelId);
+      }
+
       default:
         throw new Error(
-          `Provider "${provider}" is not yet supported. Supported: anthropic, openai, google, mistral, ollama, opencode-zen, openrouter, groq, xai, deepseek, perplexity, cerebras, together, custom.`,
+          `Provider "${provider}" is not yet supported. Supported: anthropic, openai, google, mistral, ollama, opencode-zen, openrouter, groq, xai, deepseek, perplexity, cerebras, together, github-copilot, custom.`,
         );
     }
   }
