@@ -1,8 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import TextInput from 'ink-text-input';
-// @ts-expect-error Types missing for ink-gradient
-import Gradient from 'ink-gradient';
 
 interface Props {
   value: string;
@@ -28,13 +26,7 @@ export function InputBox({ value, onChange, onSubmit, isDisabled = false }: Prop
     >
       <Box>
         <Box marginRight={1} flexShrink={0}>
-          {isDisabled ? (
-            <Text color="#484F58">⚡</Text>
-          ) : (
-            <Gradient name="pastel">
-              <Text bold>⚡</Text>
-            </Gradient>
-          )}
+          <Text color={isDisabled ? '#484F58' : '#79C0FF'} bold>⚡</Text>
         </Box>
         <Box flexGrow={1} flexDirection="column">
           <TextInput

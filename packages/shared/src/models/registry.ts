@@ -86,6 +86,16 @@ export const MODEL_REGISTRY: ModelEntry[] = [
   { provider: 'together', id: 'Qwen/Qwen2.5-Coder-32B-Instruct',         label: 'Qwen 2.5 Coder 32B',  contextWindow: 32_768,  inputCostPer1M: 0.8,  outputCostPer1M: 0.8,  free: false, tags: ['coding'] },
   { provider: 'together', id: 'deepseek-ai/DeepSeek-R1',                  label: 'DeepSeek R1 Full',    contextWindow: 64_000,  inputCostPer1M: 7,    outputCostPer1M: 7,    free: false, tags: ['reasoning', 'large'] },
 
+  // github-copilot — available with Copilot Pro/Enterprise subscription
+  // Cost is $0 (covered by subscription), so inputCostPer1M/outputCostPer1M are null
+  { provider: 'github-copilot', id: 'gpt-4o',               label: 'GPT-4o (Copilot)',          contextWindow: 128_000,   inputCostPer1M: null, outputCostPer1M: null, free: true,  tags: ['coding'] },
+  { provider: 'github-copilot', id: 'gpt-4o-mini',           label: 'GPT-4o Mini (Copilot)',      contextWindow: 128_000,   inputCostPer1M: null, outputCostPer1M: null, free: true,  tags: ['coding', 'fast'] },
+  { provider: 'github-copilot', id: 'gpt-4.1',               label: 'GPT-4.1 (Copilot)',          contextWindow: 1_047_576, inputCostPer1M: null, outputCostPer1M: null, free: true,  tags: ['coding', 'large'] },
+  { provider: 'github-copilot', id: 'claude-3.5-sonnet',     label: 'Claude 3.5 Sonnet (Copilot)', contextWindow: 200_000,  inputCostPer1M: null, outputCostPer1M: null, free: true,  tags: ['coding', 'reasoning'] },
+  { provider: 'github-copilot', id: 'claude-3.7-sonnet',     label: 'Claude 3.7 Sonnet (Copilot)', contextWindow: 200_000,  inputCostPer1M: null, outputCostPer1M: null, free: true,  tags: ['coding', 'reasoning'] },
+  { provider: 'github-copilot', id: 'o3-mini',               label: 'o3 Mini (Copilot)',           contextWindow: 200_000,  inputCostPer1M: null, outputCostPer1M: null, free: true,  tags: ['reasoning', 'fast'] },
+  { provider: 'github-copilot', id: 'gemini-2.0-flash',      label: 'Gemini 2.0 Flash (Copilot)',  contextWindow: 1_048_576, inputCostPer1M: null, outputCostPer1M: null, free: true,  tags: ['fast'] },
+
   // openrouter — free tier
   { provider: 'openrouter', id: 'meta-llama/llama-3.1-8b-instruct:free',        label: 'Llama 3.1 8B',         contextWindow: 131_072,   inputCostPer1M: null, outputCostPer1M: null, free: true,  tags: ['fast'] },
   { provider: 'openrouter', id: 'meta-llama/llama-3.3-70b-instruct:free',       label: 'Llama 3.3 70B',        contextWindow: 131_072,   inputCostPer1M: null, outputCostPer1M: null, free: true },

@@ -1,41 +1,56 @@
 import React from 'react';
 import { Box, Text } from 'ink';
+import { getCommands } from '../commands/registry.js';
+import type { Command } from '../commands/registry.js';
 
-export interface Command {
-  cmd: string;
-  description: string;
-  hint: string;
+// Re-export for backward compatibility
+export type { Command };
+
+// Build hint from command and description
+function buildHint(cmd: Command): string {
+  // Simple heuristic to build hints
+  const hints: Record<string, string> = {
+    '/add': '/add <path>',
+    '/clear': '/clear',
+    '/compact': '/compact',
+    '/copy': '/copy',
+    '/cost': '/cost',
+    '/exit': '/exit',
+    '/export': '/export [path]',
+    '/help': '/help',
+    '/history': '/history',
+    '/model': '/model [provider/id]',
+    '/mode': '/mode <ask|auto|build>',
+    '/open': '/open <path>',
+    '/provider': '/provider',
+    '/rename': '/rename <title>',
+    '/theme': '/theme [name]',
+  };
+  return hints[cmd.cmd] || cmd.cmd;
 }
 
-export const COMMANDS: Command[] = [
-  { cmd: '/add',      description: 'Attach file to context',       hint: '/add <path>' },
-  { cmd: '/clear',    description: 'Clear conversation history',   hint: '/clear' },
-  { cmd: '/compact',  description: 'Summarize conversation',       hint: '/compact' },
-  { cmd: '/copy',     description: 'Copy last response',           hint: '/copy' },
-  { cmd: '/cost',     description: 'Show session cost & tokens',   hint: '/cost' },
-  { cmd: '/detach',   description: 'Remove all attached files',    hint: '/detach' },
-  { cmd: '/exit',     description: 'Exit the app',                 hint: '/exit' },
-  { cmd: '/export',   description: 'Export conversation to file',  hint: '/export [path]' },
-  { cmd: '/help',     description: 'Show help',                    hint: '/help' },
-  { cmd: '/history',  description: 'Browse conversation history',  hint: '/history' },
-  { cmd: '/model',    description: 'Switch AI model',              hint: '/model [provider/id]' },
-  { cmd: '/mode',     description: 'Switch agent mode',            hint: '/mode <ask|auto|build>' },
-  { cmd: '/open',     description: 'Open file in side view',       hint: '/open <path>' },
-  { cmd: '/provider', description: 'Manage API keys',              hint: '/provider' },
-  { cmd: '/rename',   description: 'Rename this conversation',     hint: '/rename <title>' },
-  { cmd: '/theme',    description: 'Switch color theme',           hint: '/theme [name]' },
-];
+// Convert registry commands to display format
+function getDisplayCommands(): Array<Command & { hint: string }> {
+  return getCommands().map(cmd => ({
+    ...cmd,
+    hint: buildHint(cmd),
+  }));
+}
 
-export function filterCommands(prefix: string): Command[] {
+export function filterCommands(prefix: string): Array<Command & { hint: string }> {
   const q = prefix.toLowerCase();
-  return COMMANDS.filter(
+  return getDisplayCommands().filter(
     c => c.cmd.toLowerCase().startsWith(q) ||
          c.description.toLowerCase().includes(q.slice(1))
   ).slice(0, 8);
 }
 
+interface DisplayCommand extends Command {
+  hint: string;
+}
+
 interface Props {
-  filtered: Command[];
+  filtered: DisplayCommand[];
   selectedIndex: number;
   visible: boolean;
 }
