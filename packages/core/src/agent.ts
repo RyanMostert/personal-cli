@@ -1,5 +1,5 @@
-import { streamText } from 'ai';
-import { generateId, type Message, type StreamEvent, type ActiveModel, type AgentMode, getModelEntry } from '@personal-cli/shared';
+import { streamText, type ModelMessage } from 'ai';
+import { generateId, type Message, type StreamEvent, type ActiveModel, type AgentMode, type ProviderName, getModelEntry } from '@personal-cli/shared';
 import { DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
 import { ProviderManager } from './providers/manager.js';
 import { saveConversation, loadConversation } from './persistence/conversations.js';
@@ -17,6 +17,7 @@ import { COMPACTION_PROMPT } from './prompts/compaction.js'; export interface Ag
 
 export class Agent {
   private messages: Message[] = [];
+  private coreMessages: ModelMessage[] = [];
   private providerManager: ProviderManager;
   private systemPrompt: string;
   private tokenBudget: number;
@@ -55,8 +56,8 @@ export class Agent {
     return this.totalCost;
   }
 
-  switchModel(provider: string, modelId: string) {
-    this.providerManager.switchModel(provider as any, modelId);
+  switchModel(provider: ProviderName, modelId: string) {
+    this.providerManager.switchModel(provider, modelId);
   }
 
   switchMode(mode: AgentMode) {
@@ -74,6 +75,7 @@ export class Agent {
 
   clearHistory() {
     this.messages = [];
+    this.coreMessages = [];
   }
 
   addSystemMessage(content: string) {
@@ -100,10 +102,11 @@ export class Agent {
     };
     this.messages.push(userMessage);
 
+    // Add user message to coreMessages
+    this.coreMessages.push({ role: 'user', content: fullContent });
+
     const model = await this.providerManager.getModel();
-    const apiMessages = this.messages
-      .filter((m) => m.role !== 'system')
-      .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+    const apiMessages = this.coreMessages;
 
     this.currentAbortController = new AbortController();
 
@@ -160,6 +163,12 @@ export class Agent {
       const completionTokens = usage.outputTokens ?? 0;
       this.totalTokensUsed += promptTokens + completionTokens;
 
+      // Capture response messages from this streamText call (tool-call/result + assistant)
+      const response = await result.response;
+      for (const msg of response.messages) {
+        this.coreMessages.push(msg);
+      }
+
       // Calculate cost based on model pricing
       const entry = getModelEntry(this.providerManager.getActiveModel().provider, this.providerManager.getActiveModel().modelId);
       if (entry?.inputCostPer1M != null) {
@@ -207,6 +216,7 @@ export class Agent {
       // that Node.js would dump to stderr before Ink can render the error cleanly.
       Promise.resolve(result.usage).catch(() => { });
       this.messages.pop();
+      this.coreMessages.pop(); // also remove the user message added at the start
       yield { type: 'error', error: err instanceof Error ? err : new Error(String(err)) };
     } finally {
       this.currentAbortController = null;
@@ -217,6 +227,10 @@ export class Agent {
     const saved = loadConversation(id);
     if (!saved) return false;
     this.messages = saved.messages;
+    // Rebuild coreMessages from plain text messages (tool-call/result lost)
+    this.coreMessages = this.messages
+      .filter(m => m.role !== 'system')
+      .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
     return true;
   }
 
@@ -251,6 +265,7 @@ export class Agent {
       content: `**Conversation Summary:**\n\n${summary}`,
       timestamp: Date.now(),
     }];
+    this.coreMessages = [{ role: 'assistant', content: `**Conversation Summary:**\n\n${summary}` }];
 
     return 'Conversation compacted successfully.';
   }

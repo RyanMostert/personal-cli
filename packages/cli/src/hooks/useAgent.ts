@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { Agent, ProviderManager, loadConfig, getDefaultModel, loadSettings } from '@personal-cli/core';
-import type { Message, StreamEvent, ToolCallInfo, AgentMode } from '@personal-cli/shared';
+import type { Message, StreamEvent, ToolCallInfo, AgentMode, ProviderName } from '@personal-cli/shared';
 import { DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
 import type { PendingPermission } from '../components/PermissionPrompt.js';
 import { promises as fs } from 'fs';
@@ -177,7 +177,7 @@ export function useAgent() {
       agent.clearHistory();
       setState((prev) => ({ ...prev, messages: agent.getMessages(), tokensUsed: 0 }));
     }, [getAgent]),
-    switchModel: useCallback((provider: string, modelId: string) => {
+    switchModel: useCallback((provider: ProviderName, modelId: string) => {
       const agent = getAgent();
       agent.switchModel(provider, modelId);
       setState((prev) => ({ ...prev }));
