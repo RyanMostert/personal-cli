@@ -49,6 +49,12 @@ export type PermissionCallback = (
   args: Record<string, unknown>,
 ) => Promise<boolean>;
 
+/** Called after a successful file write with the absolute path and before/after content. */
+export type WriteCallback = (path: string, before: string | null, after: string) => void;
+
+/** Called when the question tool needs the user to answer something mid-task. */
+export type QuestionCallback = (header: string, options: string[]) => Promise<string>;
+
 export interface ToolResult {
   output?: string;
   error?: string;

@@ -17,5 +17,8 @@ export interface CommandContext {
   exportConversation: (path?: string) => string;
   compact: () => Promise<string>;
   renameConversation: (title: string) => boolean;
+  undo: () => string;
+  redo: () => string;
+  initProject: () => Promise<string>;
   exit: () => void;
 }

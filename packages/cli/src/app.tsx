@@ -8,6 +8,7 @@ import { GameOverScreen } from './components/GameOverScreen.js';
 import { InputBox } from './components/InputBox.js';
 import { ToolCallView } from './components/ToolCallView.js';
 import { PermissionPrompt } from './components/PermissionPrompt.js';
+import { QuestionPrompt } from './components/QuestionPrompt.js';
 import { ModelPicker } from './components/ModelPicker.js';
 import { ProviderManager } from './components/ProviderManager.js';
 import { ProviderWizard } from './components/ProviderWizard.js';
@@ -59,10 +60,11 @@ export function App() {
 
   const {
     messages, isStreaming, streamingText, tokensUsed, cost, toolCalls,
-    pendingPermission, error, activeModel, attachedFiles, mode,
+    pendingPermission, pendingQuestion, error, activeModel, attachedFiles, mode,
     sendMessage, abort, addSystemMessage, clearMessages, switchModel, switchMode,
     isPickingModel, openModelPicker, closeModelPicker,
     attachFile, clearAttachments, loadHistory, compact, renameConversation,
+    undo, redo, initProject,
   } = useAgent();
   const { exit } = useApp();
 
@@ -251,7 +253,7 @@ export function App() {
     if (trimmed === '/exit' || trimmed === '/quit') { setIsGameOver(true); return; }
     if (trimmed === '/clear') { clearMessages(); setInputValue(''); return; }
     if (trimmed === '/help') {
-      addSystemMessage('Commands: /model /mode /provider /add /history /compact /copy /export /rename /theme /cost /clear /help /exit\nType / and use ↑↓ to browse with autocomplete.');
+      addSystemMessage('Commands: /model /mode /provider /add /history /compact /copy /export /rename /theme /cost /clear /undo /redo /init /help /exit\nType / and use ↑↓ to browse with autocomplete.');
       setInputValue(''); return;
     }
     if (trimmed === '/cost') {
@@ -334,6 +336,18 @@ export function App() {
       addSystemMessage(`Theme: ${name}`);
       setInputValue(''); return;
     }
+    if (trimmed === '/undo') {
+      addSystemMessage(undo()); setInputValue(''); return;
+    }
+    if (trimmed === '/redo') {
+      addSystemMessage(redo()); setInputValue(''); return;
+    }
+    if (trimmed === '/init') {
+      addSystemMessage('Analyzing project and generating AGENTS.md…');
+      setInputValue('');
+      initProject().then(result => addSystemMessage(result));
+      return;
+    }
     if (trimmed.startsWith('/')) {
       addSystemMessage(`Unknown command: ${trimmed}. Type / for autocomplete.`);
       setInputValue(''); return;
@@ -350,6 +364,7 @@ export function App() {
     sendMessage, clearMessages, addSystemMessage, compact,
     tokensUsed, cost, switchModel, switchMode, openModelPicker,
     attachFile, clearAttachments, messages, activeModel, openFileInPanel,
+    undo, redo, initProject,
   ]);
 
   // ── Visible message window ───────────────────────────────────────────────
@@ -444,6 +459,7 @@ export function App() {
               {toolCalls.map(tc => <ToolCallView key={tc.toolCallId} tool={tc} />)}
               {isStreaming && <StreamingMessage text={streamingText} />}
               {pendingPermission && <PermissionPrompt permission={pendingPermission} />}
+              {pendingQuestion && <QuestionPrompt question={pendingQuestion} />}
               {error && (
                 <Box marginBottom={1} flexDirection="column">
                   <Text color="#F85149">Error: {error}</Text>

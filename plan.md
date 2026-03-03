@@ -177,10 +177,10 @@
 
 **Tasks**:
 
-- [ ] Create `UndoStack` class: `push(path, before, after)`, `undo()`, `redo()`
-- [ ] Patch `write_file` and `edit_file` tools to push before every write
-- [ ] Add `/undo` — restore last changed file(s)
-- [ ] Add `/redo` — re-apply undone change
+- [x] Create `UndoStack` class: `push(path, before, after)`, `undo()`, `redo()`
+- [x] Patch `write_file` and `edit_file` tools to push before every write
+- [x] Add `/undo` — restore last changed file(s)
+- [x] Add `/redo` — re-apply undone change
 
 ---
 
@@ -191,9 +191,9 @@
 
 **Tasks**:
 
-- [ ] Create `todowrite` — write/update a session-scoped task list (in-memory Map + temp file)
-- [ ] Create `todoread` — read current task list
-- [ ] Register both in tool index
+- [x] Create `todowrite` — write/update a session-scoped task list (in-memory Map + temp file)
+- [x] Create `todoread` — read current task list
+- [x] Register both in tool index
 
 ---
 
@@ -208,9 +208,9 @@
 
 **Tasks**:
 
-- [ ] Build `question` tool that emits a `question` event with header + options
-- [ ] Build `QuestionPrompt` component (multiple choice or free text)
-- [ ] Wire into `useAgent` event loop alongside `pendingPermission`
+- [x] Build `question` tool that emits a `question` event with header + options
+- [x] Build `QuestionPrompt` component (multiple choice or free text)
+- [x] Wire into `useAgent` event loop alongside `pendingPermission`
 
 ---
 
@@ -225,8 +225,8 @@
 
 **Tasks**:
 
-- [ ] Add `/init` command that sends a one-shot analysis prompt and writes `AGENTS.md`
-- [ ] On startup, `existsSync('AGENTS.md')` → prepend to system prompt
+- [x] Add `/init` command that sends a one-shot analysis prompt and writes `AGENTS.md`
+- [x] On startup, `existsSync('AGENTS.md')` → prepend to system prompt
 - [ ] Document in welcome screen
 
 ---
@@ -238,9 +238,9 @@
 
 **Tasks**:
 
-- [ ] Create `web_search` tool using DuckDuckGo instant answers (free, no key required)
-- [ ] Add Tavily as upgrade path when `TAVILY_API_KEY` is set
-- [ ] Register in tool index
+- [x] Create `web_search` tool using DuckDuckGo instant answers (free, no key required)
+- [x] Add Tavily as upgrade path when `TAVILY_API_KEY` is set
+- [x] Register in tool index
 
 ---
 
@@ -288,9 +288,8 @@
 
 **Tasks**:
 
-- [ ] `pnpm add diff` in `packages/tools`
-- [ ] Create `patch` tool that applies a unified diff string to a file
-- [ ] Register in tool index
+- [x] Create `patch` tool that applies a unified diff string to a file (no extra package needed)
+- [x] Register in tool index
 
 ---
 

@@ -3,6 +3,7 @@ import { Agent, ProviderManager, loadConfig, getDefaultModel, loadSettings } fro
 import type { Message, StreamEvent, ToolCallInfo, AgentMode, ProviderName } from '@personal-cli/shared';
 import { DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
 import type { PendingPermission } from '../components/PermissionPrompt.js';
+import type { PendingQuestion } from '../components/QuestionPrompt.js';
 import { promises as fs } from 'fs';
 
 interface AttachedFile {
@@ -17,6 +18,7 @@ interface AgentState {
   cost: number;
   toolCalls: ToolCallInfo[];
   pendingPermission: PendingPermission | null;
+  pendingQuestion: PendingQuestion | null;
   error: string | null;
   isPickingModel: boolean;
   attachedFiles: AttachedFile[];
@@ -37,6 +39,7 @@ export function useAgent() {
     cost: 0,
     toolCalls: [],
     pendingPermission: null,
+    pendingQuestion: null,
     error: null,
     isPickingModel: false,
     attachedFiles: [],
@@ -53,6 +56,22 @@ export function useAgent() {
           resolve: (allow: boolean) => {
             setState((p) => ({ ...p, pendingPermission: null }));
             resolve(allow);
+          },
+        },
+      }));
+    });
+  }, []);
+
+  const questionCallback = useCallback((header: string, options: string[]) => {
+    return new Promise<string>((resolve) => {
+      setState((prev) => ({
+        ...prev,
+        pendingQuestion: {
+          header,
+          options,
+          resolve: (answer: string) => {
+            setState((p) => ({ ...p, pendingQuestion: null }));
+            resolve(answer);
           },
         },
       }));
@@ -77,6 +96,7 @@ export function useAgent() {
         maxSteps: settings.maxSteps ?? 20,
         mode: state.mode,
         permissionFn: permissionCallback,
+        questionFn: questionCallback,
       });
     }
     return agentRef.current;
@@ -243,6 +263,15 @@ export function useAgent() {
         tokensUsed: agent.getTokensUsed(),
       }));
       return result;
+    }, [getAgent]),
+    undo: useCallback(() => {
+      return getAgent().undo();
+    }, [getAgent]),
+    redo: useCallback(() => {
+      return getAgent().redo();
+    }, [getAgent]),
+    initProject: useCallback(async () => {
+      return getAgent().initProject();
     }, [getAgent]),
   };
 }
