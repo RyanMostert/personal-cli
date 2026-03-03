@@ -9,24 +9,30 @@
 ## The Concept
 
 Your CLI becomes a **commander of CLI agents** — it spins up real interactive terminal sessions
-(PTYs) running Claude Code, OpenCode, or other CLI agents, and orchestrates them with a
-thinker/builder split:
+(PTYs) running OpenCode (with different models) and orchestrates them with a thinker/builder split.
+
+The key insight: **OpenCode supports GitHub Copilot as a provider natively** (`copilot/claude-sonnet-4-5`).
+This means you can run both agents inside OpenCode, just with different models and modes — one
+parser to write, consistent output format, and the thinker runs on free Copilot quota.
 
 ```
 User prompt
     ↓
 Commander (your app) — routes, coordinates, displays
-    ├── Thinker PTY → claude (plan mode)
+    ├── Thinker PTY → opencode --model copilot/claude-sonnet-4-5 (plan mode, read-only)
+    │     Uses FREE GitHub Copilot quota
     │     "Analyze X, produce a structured plan. Do not make changes."
     │     Returns: step-by-step plan (markdown/JSON)
     │
-    └── Builder PTY → claude / opencode (build mode)
+    └── Builder PTY → claude (build mode, full access)
+          Uses Claude Code (paid, but only for actual execution)
           "Execute this plan: [plan from thinker]"
           Makes actual file changes, runs commands
 ```
 
 The commander sees everything: both agents' output streams, permission prompts, errors, file
-changes — and surfaces a unified view to the user.
+changes — and surfaces a unified view to the user. **The user can interact directly with either
+agent at any time** by focusing their panel.
 
 ---
 
@@ -34,12 +40,49 @@ changes — and surfaces a unified view to the user.
 
 | Tool | What it does |
 |---|---|
-| Claude Code | Single agent, single session |
+| Claude Code | Single agent, single session, paid |
 | OpenCode | Single agent, single session |
-| Copilot CLI | Two commands (`explain`, `suggest`) — not agentic |
-| **Your app** | **Orchestrates multiple CLI agents, splits thinking from building, user stays in control** |
+| Copilot CLI | Only `explain` + `suggest` — not agentic, can't be a thinker |
+| **Your app** | **Orchestrates multiple CLI agents, burns free Copilot quota on thinking, only pays for execution, user can talk to any agent directly** |
 
 No existing tool does cross-agent PTY orchestration at the CLI level.
+
+---
+
+## Agent Stack
+
+| Role | Runtime | Model | Cost | Mode |
+|---|---|---|---|---|
+| **Thinker** | OpenCode | `copilot/claude-sonnet-4-5` | 🟢 Free (Copilot sub) | plan (read-only) |
+| **Builder** | Claude Code | `claude-sonnet-4` or `claude-opus-4` | 🔴 Paid per token | build (full access) |
+| **Commander** | Your app | Any provider | 🟡 Pay per use | routing + Q&A |
+
+**Cost strategy**: The expensive part of any coding task is *analysis* — reading files, understanding
+the codebase, forming a plan. That's exactly what Copilot quota covers for free. You only pay
+Claude Code tokens when actually writing/running code.
+
+---
+
+## Three Interaction Modes
+
+The user is never locked out — they can always drop into either raw session:
+
+```
+Commander mode (default):
+  User talks to YOUR app → routes to thinker/builder automatically
+  Commander abstracts away which agent is doing what
+
+Focus Thinker mode (press T):
+  User types directly into the Thinker PTY
+  Talk to OpenCode+Copilot directly, ask follow-up questions, redirect analysis
+
+Focus Builder mode (press B):
+  User types directly into the Builder PTY (Claude Code)
+  Answer permission prompts, redirect mid-task, add context
+
+Back to Commander (press Esc):
+  Return to the routing layer
+```
 
 ---
 
@@ -52,7 +95,7 @@ packages/
 ├── tools/            ← KEEP — built-in tools still used by the commander itself
 ├── shared/           ← KEEP — types, constants, models
 ├── pty-manager/      ← NEW  — PTY session lifecycle
-├── output-parser/    ← NEW  — ANSI → structured events
+├── output-parser/    ← NEW  — ANSI → structured events (one parser, both agents use OpenCode format)
 └── agent-router/     ← NEW  — decides thinker vs builder vs local
 ```
 
@@ -80,8 +123,8 @@ export class PtySession {
 }
 
 export class PtySessionManager {
-  createThinker(cwd: string): PtySession   // claude in plan mode
-  createBuilder(cwd: string): PtySession   // claude in build mode / opencode
+  createThinker(cwd: string): PtySession   // opencode + copilot model, plan mode
+  createBuilder(cwd: string): PtySession   // claude code, build mode
   list(): PtySession[]
   killAll(): void
 }
@@ -119,12 +162,13 @@ export class OutputParser {
 
 **Key dependencies**: `strip-ansi`, `ansi-regex`
 
-**Parsing targets** (Claude Code specific):
+**Parsing targets** (OpenCode output format — same for both thinker and builder):
 
 - `✓ Read file.ts` → tool-result
 - `⚠ Permission required` → permission-prompt
 - `>` at start of line after idle period → idle
 - Structured JSON blocks → plan extraction
+- Spinner frames (`⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`) → thinking indicator
 
 ---
 
@@ -157,37 +201,44 @@ Routing heuristics:
 
 ## UI Changes (`packages/cli/`)
 
-### New layout — split panel view
+### New layout — split panel view with focus modes
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  Commander │ claude:thinker ● │ claude:builder ●    │
-├──────────────────────────────┬──────────────────────┤
-│  Commander chat              │  Active agent output │
-│                              │                      │
-│  You: Refactor auth to JWT   │  🧠 Thinker          │
-│                              │  Reading auth.ts...  │
-│  ┌─ Plan ready ─────────┐   │  Plan:               │
-│  │ 1. Add jsonwebtoken  │   │  1. Add dependency   │
-│  │ 2. Create jwt.ts     │   │  2. Create helpers   │
-│  │ 3. Update handler    │   │  3. Update handler   │
-│  └──────────────────────┘   │                      │
-│                              │  🔨 Builder          │
-│  [Approve] [Edit] [Cancel]   │  Writing jwt.ts...   │
-│                              │                      │
-├──────────────────────────────┴──────────────────────┤
-│  > Type a message...                      [T][B][?] │
-└─────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  Commander  │  🧠 opencode:copilot [THINKER] ●  │  🔨 claude ● │
+├─────────────────────────────┬────────────────────────────────┤
+│  Commander chat             │  Active agent output           │
+│                             │                                │
+│  You: Refactor auth to JWT  │  🧠 Thinker (Copilot — free)  │
+│                             │  Reading auth.ts...            │
+│  ┌─ Plan ready ──────────┐  │  Reading handler.ts...         │
+│  │ 1. Add jsonwebtoken   │  │                                │
+│  │ 2. Create jwt.ts      │  │  Plan:                         │
+│  │ 3. Update handler.ts  │  │  1. Add jsonwebtoken dep       │
+│  └───────────────────────┘  │  2. Create src/auth/jwt.ts     │
+│                             │  3. Update handler.ts          │
+│  [Approve] [Edit] [Cancel]  │                                │
+│                             │  🔨 Builder (Claude Code)      │
+│                             │  Writing src/auth/jwt.ts...    │
+├─────────────────────────────┴────────────────────────────────┤
+│  > Type a message...   [C]Commander [T]Thinker [B]Builder    │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-`[T]` = focus thinker, `[B]` = focus builder, `[?]` = commander help
+**Focus modes** — press to talk directly to that agent:
+
+- `[C]` Commander mode (default) — your app routes automatically
+- `[T]` Focus Thinker — user types directly into OpenCode+Copilot PTY
+- `[B]` Focus Builder — user types directly into Claude Code PTY
+- `Esc` — always returns to Commander mode
 
 ### New components needed
 
-- `PtyOutputView.tsx` — renders live PTY stream, ANSI-aware
-- `PlanReview.tsx` — shows thinker's plan, approve/edit/cancel
-- `AgentStatusBar.tsx` — shows both PTY sessions status + cost
-- `SplitView.tsx` — resizable left/right panels
+- `PtyOutputView.tsx` — renders live PTY stream, ANSI-aware, per agent
+- `PlanReview.tsx` — shows thinker's plan with Approve/Edit/Cancel
+- `AgentStatusBar.tsx` — shows both PTY sessions status, model, cost per session
+- `SplitView.tsx` — resizable left (commander) / right (agent output) panels
+- `FocusIndicator.tsx` — clear visual showing which agent the user is talking to
 
 ---
 
@@ -216,15 +267,22 @@ Builder receives: `"Execute this plan step by step: [JSON plan]\nDo not deviate 
 
 ## Cost Management
 
-Each PTY session is a full Claude Code session — tokens add up fast.
+**The big win**: Thinker runs on free Copilot quota. Analysis is the most token-intensive
+phase — reading files, understanding architecture, forming a plan. You burn $0 on all of that.
+You only pay Claude Code tokens when writing/running actual code.
 
-Strategy:
+| Phase | Agent | Cost |
+|---|---|---|
+| Simple Q&A | Local agent (your app) | ~$0.001 |
+| Analyze / Plan | Thinker (Copilot via OpenCode) | **$0 free** |
+| Build / Execute | Builder (Claude Code) | $0.01–$0.10 typical task |
 
-- Route simple Q&A to **local agent** (your own Vercel AI SDK loop) — cheapest
-- Only spawn PTYs for tasks that genuinely need it
-- Show per-session cost in `AgentStatusBar`
-- Let user set a session budget cap → auto-abort if exceeded
-- Cache thinker output — if user asks same thing twice, reuse the plan
+Additional strategies:
+
+- Route simple Q&A to **local agent** (your own Vercel AI SDK loop) — cheapest path, no PTY overhead
+- Show per-session cost in `AgentStatusBar` (commander cost + builder cost separately)
+- Let user set a builder budget cap → auto-pause and ask before continuing if exceeded
+- Cache thinker plans — if user modifies prompt slightly, offer to reuse existing plan
 
 ---
 
