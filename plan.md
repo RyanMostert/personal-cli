@@ -93,9 +93,9 @@
 
 **Tasks**:
 
-- [ ] Before each LLM call, check `totalTokensUsed > tokenBudget * 0.85`
-- [ ] If over threshold, call `this.compact()` automatically
-- [ ] Emit a `system` type event to TUI: "Auto-compacted context to save tokens"
+- [x] Before each LLM call, check `totalTokensUsed > tokenBudget * 0.85`
+- [x] If over threshold, call `this.compact()` automatically
+- [x] Emit a `system` type event to TUI: "Auto-compacted context to save tokens"
 
 ---
 
