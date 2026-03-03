@@ -220,7 +220,9 @@ const PROVIDER_REGISTRY: ProviderDef[] = [
   {
     id: 'google-vertex',
     create: async ({ modelId }) => {
+      // @ts-ignore - optional peer dep
       const { createVertex } = await import('@ai-sdk/google-vertex');
+      // @ts-ignore - optional peer dep
       const { GoogleAuth } = await import('google-auth-library');
 
       const project = process.env.GOOGLE_CLOUD_PROJECT
@@ -236,7 +238,7 @@ const PROVIDER_REGISTRY: ProviderDef[] = [
       const client = createVertex({
         project,
         location,
-        fetch: async (input, init) => {
+        fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
           const token = await auth.getAccessToken();
           const headers = new Headers(init?.headers);
           headers.set('Authorization', `Bearer ${token}`);
@@ -262,7 +264,9 @@ const PROVIDER_REGISTRY: ProviderDef[] = [
   {
     id: 'amazon-bedrock',
     create: async ({ modelId }) => {
+      // @ts-ignore - optional peer dep
       const { createAmazonBedrock } = await import('@ai-sdk/amazon-bedrock');
+      // @ts-ignore - optional peer dep
       const { fromNodeProviderChain } = await import('@aws-sdk/credential-providers');
       const region = process.env.AWS_REGION ?? 'us-east-1';
       const client = createAmazonBedrock({
@@ -276,6 +280,7 @@ const PROVIDER_REGISTRY: ProviderDef[] = [
     id: 'azure',
     envVar: 'AZURE_API_KEY',
     create: async ({ apiKey, modelId }) => {
+      // @ts-ignore - optional peer dep
       const { createAzure } = await import('@ai-sdk/azure');
       const client = createAzure({
         apiKey,
