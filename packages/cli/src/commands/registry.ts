@@ -107,7 +107,11 @@ const commands: Command[] = [
   {
     cmd: '/compact',
     description: 'Compact conversation context',
-    handler: (_, ctx) => ctx.addSystemMessage('Compacting conversation…'),
+    handler: async (_, ctx) => {
+      ctx.addSystemMessage('Compacting conversation…');
+      const result = await ctx.compact();
+      ctx.addSystemMessage(result);
+    },
   },
   {
     cmd: '/help',

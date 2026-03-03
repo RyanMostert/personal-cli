@@ -225,5 +225,15 @@ export function useAgent() {
       }
       return success;
     }, [getAgent]),
+    compact: useCallback(async () => {
+      const agent = getAgent();
+      const result = await agent.compact();
+      setState(prev => ({
+        ...prev,
+        messages: agent.getMessages(),
+        tokensUsed: agent.getTokensUsed(),
+      }));
+      return result;
+    }, [getAgent]),
   };
 }

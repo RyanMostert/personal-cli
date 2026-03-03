@@ -59,7 +59,7 @@ export function App() {
     pendingPermission, error, activeModel, attachedFiles, mode,
     sendMessage, abort, addSystemMessage, clearMessages, switchModel, switchMode,
     isPickingModel, openModelPicker, closeModelPicker,
-    attachFile, clearAttachments, loadHistory,
+    attachFile, clearAttachments, loadHistory, compact,
   } = useAgent();
   const { exit } = useApp();
 
@@ -285,7 +285,12 @@ export function App() {
       clearAttachments(); addSystemMessage('Cleared attached files.'); setInputValue(''); return;
     }
     if (trimmed === '/history') { open('history'); setInputValue(''); return; }
-    if (trimmed === '/compact') { addSystemMessage('Compacting conversation…'); setInputValue(''); return; }
+    if (trimmed === '/compact') {
+      addSystemMessage('Compacting conversation…');
+      setInputValue('');
+      compact().then(result => addSystemMessage(result));
+      return;
+    }
     if (trimmed === '/copy') {
       const last = messages.filter(m => m.role === 'assistant').pop();
       addSystemMessage(last ? 'Copied last response.' : 'No assistant response to copy.');
@@ -321,7 +326,7 @@ export function App() {
     sendMessage(trimmed);
   }, [
     isStreaming, showCommandAutocomplete, showFileAutocomplete,
-    sendMessage, clearMessages, addSystemMessage,
+    sendMessage, clearMessages, addSystemMessage, compact,
     tokensUsed, cost, switchModel, switchMode, openModelPicker,
     attachFile, clearAttachments, messages, activeModel, openFileInPanel,
   ]);
