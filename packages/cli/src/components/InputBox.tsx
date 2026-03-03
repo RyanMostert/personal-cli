@@ -7,9 +7,10 @@ interface Props {
   onChange: (value: string) => void;
   onSubmit: (value: string) => void;
   isDisabled?: boolean;
+  isStreaming?: boolean;
 }
 
-export function InputBox({ value, onChange, onSubmit, isDisabled = false }: Props) {
+export function InputBox({ value, onChange, onSubmit, isDisabled = false, isStreaming = false }: Props) {
   const lines = value.split('\n');
   const lineCount = lines.length;
   const isMultiLine = lineCount > 1;
@@ -17,7 +18,7 @@ export function InputBox({ value, onChange, onSubmit, isDisabled = false }: Prop
   return (
     <Box
       borderStyle="round"
-      borderColor={isDisabled ? '#484F58' : '#79C0FF'}
+      borderColor={isStreaming ? '#FF9E64' : (isDisabled ? '#484F58' : '#79C0FF')}
       paddingX={1}
       paddingY={0}
       marginBottom={0}
@@ -33,8 +34,8 @@ export function InputBox({ value, onChange, onSubmit, isDisabled = false }: Prop
             value={value}
             onChange={onChange}
             onSubmit={onSubmit}
-            placeholder={isDisabled ? 'Waiting for agent...' : 'Type a command or question... (/help)'}
-            focus={!isDisabled}
+            placeholder={isStreaming ? 'Esc to stop...' : isDisabled ? 'Waiting...' : 'Type a command or question... (/help)'}
+            focus={!isDisabled && !isStreaming}
           />
         </Box>
         {!isDisabled && (

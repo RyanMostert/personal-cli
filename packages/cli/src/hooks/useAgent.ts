@@ -1,8 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
-import { Agent, ProviderManager, loadConfig, getDefaultModel } from '@personal-cli/core';
+import { Agent, ProviderManager, loadConfig, getDefaultModel, loadSettings } from '@personal-cli/core';
 import type { Message, StreamEvent, ToolCallInfo, AgentMode } from '@personal-cli/shared';
 import { DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
-import { createTools } from '@personal-cli/tools';
 import type { PendingPermission } from '../components/PermissionPrompt.js';
 import { promises as fs } from 'fs';
 
@@ -41,7 +40,7 @@ export function useAgent() {
     error: null,
     isPickingModel: false,
     attachedFiles: [],
-    mode: 'ask',
+    mode: loadSettings().defaultMode ?? 'ask',
   });
 
   const permissionCallback = useCallback((toolName: string, args?: Record<string, unknown>) => {
@@ -70,10 +69,14 @@ export function useAgent() {
         modelId,
       });
 
+      const settings = loadSettings();
+
       agentRef.current = new Agent({
         providerManager: manager,
-        tokenBudget: DEFAULT_TOKEN_BUDGET,
-        tools: createTools(permissionCallback),
+        tokenBudget: settings.tokenBudget ?? DEFAULT_TOKEN_BUDGET,
+        maxSteps: settings.maxSteps ?? 20,
+        mode: state.mode,
+        permissionFn: permissionCallback,
       });
     }
     return agentRef.current;
@@ -95,6 +98,7 @@ export function useAgent() {
       ...prev,
       isStreaming: true,
       error: null,
+      toolCalls: [],
       attachedFiles: [],
     }));
 
@@ -102,25 +106,67 @@ export function useAgent() {
       const stream = agent.sendMessage(content, currentAttachedFiles);
 
       for await (const event of stream) {
-        if (event.type === 'text-delta' && event.delta) {
-          setStreamingText((prev) => prev + event.delta);
+        switch (event.type) {
+          case 'text-delta':
+            if (event.delta) setStreamingText((prev) => prev + event.delta);
+            break;
+          case 'tool-call-start':
+            setState((prev) => ({
+              ...prev,
+              toolCalls: [...prev.toolCalls, {
+                toolCallId: event.toolCall!.toolCallId,
+                toolName: event.toolCall!.toolName,
+                args: event.toolCall!.args,
+              }],
+            }));
+            break;
+          case 'tool-call-result':
+            setState((prev) => ({
+              ...prev,
+              toolCalls: prev.toolCalls.map(tc =>
+                tc.toolCallId === event.toolCall!.toolCallId
+                  ? { ...tc, result: event.toolCall!.result }
+                  : tc
+              ),
+            }));
+            break;
+          case 'error':
+            throw event.error;
         }
       }
+
+      // Stream completed (normal finish or after abort) — always runs
+      setState((prev) => ({
+        ...prev,
+        isStreaming: false,
+        messages: agent.getMessages(),
+        tokensUsed: agent.getTokensUsed(),
+        cost: agent.getCost(),
+        toolCalls: [],
+      }));
+      setStreamingText('');
+
     } catch (err) {
       setStreamingText('');
       setState((prev) => ({
         ...prev,
         isStreaming: false,
+        toolCalls: [],
         error: err instanceof Error ? err.message : String(err),
       }));
     }
   }, [getAgent]);
+
+  const abort = useCallback(() => {
+    agentRef.current?.abort();
+  }, []);
 
   return {
     ...state,
     streamingText,
     activeModel,
     sendMessage,
+    abort,
     addSystemMessage: useCallback((msg: string) => {
       const agent = getAgent();
       agent.addSystemMessage(msg);

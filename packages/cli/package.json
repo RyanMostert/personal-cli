@@ -7,8 +7,8 @@
     "pcli": "./dist/bin.js"
   },
   "scripts": {
-    "build": "tsup src/bin.ts src/app.tsx --format esm --dts --external ink react",
-    "dev": "tsup src/bin.ts src/app.tsx --format esm --watch --external ink react",
+    "build": "tsup src/bin.ts src/app.tsx --format esm --dts --external ink react --external @personal-cli/core --external @personal-cli/shared --external @personal-cli/tools --platform node",
+    "dev": "tsup src/bin.ts src/app.tsx --format esm --watch --external ink react --external @personal-cli/core --external @personal-cli/shared --external @personal-cli/tools --platform node",
     "start": "node dist/bin.js",
     "clean": "rm -rf dist"
   },

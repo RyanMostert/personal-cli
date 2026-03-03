@@ -28,7 +28,7 @@ function listRecursive(dir: string, root: string, depth: number, maxDepth: numbe
 
 export const listDir = tool({
   description: 'List the contents of a directory. Shows a tree view.',
-  parameters: z.object({
+  inputSchema: z.object({
     path: z.string().default('.').describe('Directory path (default: current directory)'),
     recursive: z.boolean().default(false).describe('List recursively'),
     maxDepth: z.number().int().min(1).max(6).default(2).describe('Max depth for recursive listing'),

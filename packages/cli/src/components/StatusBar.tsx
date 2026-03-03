@@ -25,10 +25,10 @@ function getFileIcon(p: string) {
 }
 
 function getRarity(p: string) {
-    const ext = p.split('.').pop()?.toLowerCase();
-    if (['tsx', 'ts'].includes(ext!)) return { label: 'LEGENDARY', color: '#AA00FF' };
-    if (['js', 'json'].includes(ext!)) return { label: 'RARE', color: '#00E5FF' };
-    return { label: 'COMMON', color: '#8C959F' };
+  const ext = p.split('.').pop()?.toLowerCase();
+  if (['tsx', 'ts'].includes(ext!)) return { label: 'LEGENDARY', color: '#AA00FF' };
+  if (['js', 'json'].includes(ext!)) return { label: 'RARE', color: '#00E5FF' };
+  return { label: 'COMMON', color: '#8C959F' };
 }
 
 function formatTokens(n: number): string {
@@ -45,19 +45,19 @@ function renderBar(used: number, total: number, width: number = 10, isReverse: b
   return '█'.repeat(filled) + '░'.repeat(empty);
 }
 
-export function StatusBar({ 
-  provider, 
-  modelId, 
-  tokensUsed, 
-  tokenBudget, 
-  isStreaming, 
+export function StatusBar({
+  provider,
+  modelId,
+  tokensUsed,
+  tokenBudget,
+  isStreaming,
   attachedFiles = [],
   mode = 'ASK',
   contextWindow = 128000
 }: Props) {
   const [spinnerIdx, setSpinnerIdx] = useState(0);
   const [flicker, setFlicker] = useState(true);
-  
+
   useEffect(() => {
     const timer = setInterval(() => {
       setSpinnerIdx((prev) => (prev + 1) % SPINNER_FRAMES.length);
@@ -80,14 +80,14 @@ export function StatusBar({
   const modeColor = modeColors[mode.toUpperCase()] ?? '#8C959F';
 
   const contextUsed = Math.min(tokensUsed, contextWindow);
-  
+
   // Player Level based on tokens
   const level = Math.floor(tokensUsed / 5000) + 1;
 
   return (
     <Box flexDirection="column" marginBottom={1}>
       <MarioHeader title={APP_NAME} />
-      
+
       <Box flexDirection="row">
         {/* Main Stats Panel */}
         <Box
@@ -106,12 +106,15 @@ export function StatusBar({
               <Text color="white" bold>{provider}/{modelId}</Text>
               <Text color="#484F58"> │ </Text>
               <Text color={modeColor} bold> {mode.toUpperCase()}_MODE </Text>
+              {(mode.toLowerCase() === 'ask' || mode.toLowerCase() === 'plan') && (
+                <Text color="#FFB86C"> [READ ONLY]</Text>
+              )}
             </Box>
             <Box marginTop={1}>
-                 <Text color="#484F58">EXP: {formatTokens(tokensUsed)} / NEXT: {formatTokens((level) * 5000)} </Text>
+              <Text color="#484F58">EXP: {formatTokens(tokensUsed)} / NEXT: {formatTokens((level) * 5000)} </Text>
             </Box>
           </Box>
-          
+
           <Box flexDirection="column" alignItems="flex-end">
             <Box>
               <Text color="#484F58" bold>HP </Text>
@@ -129,32 +132,32 @@ export function StatusBar({
 
         {/* Inventory Sidebar */}
         {attachedFiles.length > 0 && (
-            <Box 
-                flexDirection="column" 
-                marginLeft={1} 
-                paddingX={1} 
-                borderStyle="single" 
-                borderColor="#AA00FF"
-                width={30}
-            >
-                <Text color="#AA00FF" bold> ╭─ EQUIPMENT ──</Text>
-                {attachedFiles.map((f, i) => {
-                    const rarity = getRarity(f.path);
-                    const durability = Math.max(0, Math.floor(100 - (f.content.length / 500)));
-                    return (
-                        <Box key={i} flexDirection="column" marginBottom={0}>
-                            <Box justifyContent="space-between">
-                                <Text color="white" bold>{getFileIcon(f.path)} {f.path.split(/[\\/]/).pop()?.slice(0, 10)}</Text>
-                                <Text color={rarity.color} bold>{rarity.label}</Text>
-                            </Box>
-                            <Box>
-                                <Text color="#484F58">DUR: </Text>
-                                <Text color={durability < 20 ? '#FF00AA' : '#3FB950'}>{durability}%</Text>
-                            </Box>
-                        </Box>
-                    );
-                })}
-            </Box>
+          <Box
+            flexDirection="column"
+            marginLeft={1}
+            paddingX={1}
+            borderStyle="single"
+            borderColor="#AA00FF"
+            width={30}
+          >
+            <Text color="#AA00FF" bold> ╭─ EQUIPMENT ──</Text>
+            {attachedFiles.map((f, i) => {
+              const rarity = getRarity(f.path);
+              const durability = Math.max(0, Math.floor(100 - (f.content.length / 500)));
+              return (
+                <Box key={i} flexDirection="column" marginBottom={0}>
+                  <Box justifyContent="space-between">
+                    <Text color="white" bold>{getFileIcon(f.path)} {f.path.split(/[\\/]/).pop()?.slice(0, 10)}</Text>
+                    <Text color={rarity.color} bold>{rarity.label}</Text>
+                  </Box>
+                  <Box>
+                    <Text color="#484F58">DUR: </Text>
+                    <Text color={durability < 20 ? '#FF00AA' : '#3FB950'}>{durability}%</Text>
+                  </Box>
+                </Box>
+              );
+            })}
+          </Box>
         )}
       </Box>
     </Box>

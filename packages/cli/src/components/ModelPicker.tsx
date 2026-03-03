@@ -262,7 +262,7 @@ export function ModelPicker({ onSelect, onClose }: Props) {
           // Model row
           const m = row.model;
           return (
-            <Box key={`m-${m.provider}-${m.id}`} paddingLeft={2} backgroundColor={focused ? '#161b22' : undefined}>
+            <Box key={`m-${i}-${m.provider}-${m.id}`} paddingLeft={2} backgroundColor={focused ? '#161b22' : undefined}>
               <Text color={focused ? '#FF00AA' : '#484F58'}>{focused ? '❯❯ ' : '   '}</Text>
               <Text color={focused ? 'white' : '#8C959F'} bold={focused}>
                 {m.id.padEnd(40)}

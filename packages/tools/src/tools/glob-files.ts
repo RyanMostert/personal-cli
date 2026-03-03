@@ -5,7 +5,7 @@ import { TOOL_OUTPUT_MAX_CHARS } from '@personal-cli/shared';
 
 export const globFiles = tool({
   description: 'Find files matching a glob pattern (e.g. "src/**/*.ts", "**/*.test.js").',
-  parameters: z.object({
+  inputSchema: z.object({
     pattern: z.string().describe('Glob pattern to match files'),
     cwd: z.string().optional().describe('Base directory (default: cwd)'),
     ignore: z

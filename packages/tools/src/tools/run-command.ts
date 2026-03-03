@@ -11,7 +11,7 @@ export function createRunCommand(permissionFn?: PermissionCallback) {
   return tool({
     description:
       'Execute a shell command and return stdout/stderr. Use for running tests, builds, scripts, etc.',
-    parameters: z.object({
+    inputSchema: z.object({
       command: z.string().describe('Shell command to run'),
       cwd: z.string().optional().describe('Working directory (default: cwd)'),
       timeout: z

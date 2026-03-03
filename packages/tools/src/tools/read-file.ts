@@ -7,7 +7,7 @@ import { TOOL_OUTPUT_MAX_CHARS } from '@personal-cli/shared';
 export const readFile = tool({
   description:
     'Read the contents of a file. Optionally specify a line range. Returns truncated output for very large files.',
-  parameters: z.object({
+  inputSchema: z.object({
     path: z.string().describe('Path to the file (absolute or relative to cwd)'),
     startLine: z.number().int().positive().optional().describe('First line to read (1-indexed)'),
     endLine: z.number().int().positive().optional().describe('Last line to read (inclusive)'),

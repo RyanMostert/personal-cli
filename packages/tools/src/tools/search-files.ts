@@ -44,7 +44,7 @@ function searchDir(dir: string, root: string, query: RegExp, results: Match[], f
 
 export const searchFiles = tool({
   description: 'Search for a string or regex pattern across files in a directory.',
-  parameters: z.object({
+  inputSchema: z.object({
     query: z.string().describe('Search query (supports regex)'),
     path: z.string().default('.').describe('Directory to search in'),
     filePattern: z.string().optional().describe('Filter files by name pattern (e.g. "*.ts")'),

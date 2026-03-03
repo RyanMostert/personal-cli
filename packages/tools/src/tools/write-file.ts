@@ -7,7 +7,7 @@ import type { PermissionCallback } from '../types.js';
 export function createWriteFile(permissionFn?: PermissionCallback) {
   return tool({
     description: 'Write content to a file, creating it (and any parent directories) if needed.',
-    parameters: z.object({
+    inputSchema: z.object({
       path: z.string().describe('File path to write'),
       content: z.string().describe('Content to write'),
     }),
