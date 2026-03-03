@@ -17,6 +17,7 @@ import { FileAutocomplete } from './components/FileAutocomplete.js';
 import { SidePanel } from './components/SidePanel.js';
 import { useAgent } from './hooks/useAgent.js';
 import { useOverlay } from './context/OverlayContext.js';
+import { useSetTheme } from './context/ThemeContext.js';
 import { dispatch } from './commands/registry.js';
 import type { CommandContext } from './types/commands.js';
 import { matchKeybinding } from './keybindings/registry.js';
@@ -27,12 +28,14 @@ import {
   exportConversation, recordAccess,
 } from '@personal-cli/core';
 import { promises as fs } from 'fs';
+import clipboardy from 'clipboardy';
 
 const MAX_VISIBLE_MESSAGES = 20;
 
 export function App() {
   const [inputValue, setInputValue] = useState('');
   const { overlay, open, close } = useOverlay();
+  const setThemeName = useSetTheme();
   const [scrollOffset, setScrollOffset] = useState(0);
   const [inputHistory, setInputHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -59,7 +62,7 @@ export function App() {
     pendingPermission, error, activeModel, attachedFiles, mode,
     sendMessage, abort, addSystemMessage, clearMessages, switchModel, switchMode,
     isPickingModel, openModelPicker, closeModelPicker,
-    attachFile, clearAttachments, loadHistory, compact,
+    attachFile, clearAttachments, loadHistory, compact, renameConversation,
   } = useAgent();
   const { exit } = useApp();
 
@@ -300,7 +303,13 @@ export function App() {
     }
     if (trimmed === '/copy') {
       const last = messages.filter(m => m.role === 'assistant').pop();
-      addSystemMessage(last ? 'Copied last response.' : 'No assistant response to copy.');
+      if (last) {
+        clipboardy.write(last.content)
+          .then(() => addSystemMessage('Copied last response to clipboard.'))
+          .catch(() => addSystemMessage('Failed to write to clipboard.'));
+      } else {
+        addSystemMessage('No assistant response to copy.');
+      }
       setInputValue(''); return;
     }
     if (trimmed.startsWith('/export')) {
@@ -310,7 +319,9 @@ export function App() {
     }
     if (trimmed.startsWith('/rename ')) {
       const t = trimmed.slice(8).trim();
-      addSystemMessage(t ? `Renamed to: ${t}` : 'Usage: /rename <title>');
+      if (!t) { addSystemMessage('Usage: /rename <title>'); setInputValue(''); return; }
+      const ok = renameConversation(t);
+      addSystemMessage(ok ? `Renamed to: ${t}` : 'Nothing to rename yet — send a message first.');
       setInputValue(''); return;
     }
     if (trimmed === '/theme') {
@@ -318,7 +329,10 @@ export function App() {
       setInputValue(''); return;
     }
     if (trimmed.startsWith('/theme ')) {
-      addSystemMessage(`Theme: ${trimmed.slice(7).trim()}`); setInputValue(''); return;
+      const name = trimmed.slice(7).trim();
+      setThemeName(name);
+      addSystemMessage(`Theme: ${name}`);
+      setInputValue(''); return;
     }
     if (trimmed.startsWith('/')) {
       addSystemMessage(`Unknown command: ${trimmed}. Type / for autocomplete.`);

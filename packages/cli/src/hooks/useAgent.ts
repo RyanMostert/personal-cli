@@ -231,6 +231,9 @@ export function useAgent() {
       }
       return success;
     }, [getAgent]),
+    renameConversation: useCallback((newTitle: string) => {
+      return getAgent().renameConversation(newTitle);
+    }, [getAgent]),
     compact: useCallback(async () => {
       const agent = getAgent();
       const result = await agent.compact();

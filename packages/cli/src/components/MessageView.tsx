@@ -2,12 +2,14 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import type { Message } from '@personal-cli/shared';
 import { MarkdownRenderer } from './MarkdownRenderer.js';
+import { useTheme } from '../context/ThemeContext.js';
 
 interface Props {
   message: Message;
 }
 
 export function MessageView({ message }: Props) {
+  const theme = useTheme();
   const [flicker, setFlicker] = React.useState(true);
 
   React.useEffect(() => {
@@ -18,18 +20,18 @@ export function MessageView({ message }: Props) {
   if (message.role === 'user') {
     return (
       <Box flexDirection="column" alignItems="flex-end" marginBottom={1} paddingRight={1} width="100%">
-        <Box 
-          borderStyle="single" 
-          borderColor="#00E5FF" 
-          backgroundColor="#0A0A0A" 
-          paddingX={2} 
+        <Box
+          borderStyle="single"
+          borderColor={theme.userLabel}
+          backgroundColor="#0A0A0A"
+          paddingX={2}
           paddingY={0}
           flexDirection="column"
         >
           <Box marginBottom={0} justifyContent="flex-end">
-            <Text color="#00E5FF" bold>P1_READY 👾</Text>
+            <Text color={theme.userLabel} bold>P1_READY 👾</Text>
           </Box>
-          <Text color="white" bold wrap="wrap">
+          <Text color={theme.text} bold wrap="wrap">
             {message.content}
           </Text>
         </Box>
@@ -40,8 +42,8 @@ export function MessageView({ message }: Props) {
   if (message.role === 'system') {
     return (
       <Box flexDirection="column" alignItems="center" marginBottom={1} width="100%">
-        <Box borderStyle="round" borderColor="#484F58" backgroundColor="#1A1A1A" paddingX={4}>
-          <Text color="#FFB86C" wrap="wrap" bold>
+        <Box borderStyle="round" borderColor={theme.dim} backgroundColor="#1A1A1A" paddingX={4}>
+          <Text color={theme.warning} wrap="wrap" bold>
             ⚠️ {message.content}
           </Text>
         </Box>
@@ -51,16 +53,16 @@ export function MessageView({ message }: Props) {
 
   // Assistant Message (JRPG Dialogue Box)
   return (
-    <Box 
-      flexDirection="column" 
-      alignItems="flex-start" 
-      marginBottom={1} 
-      paddingLeft={0} 
+    <Box
+      flexDirection="column"
+      alignItems="flex-start"
+      marginBottom={1}
+      paddingLeft={0}
       width="100%"
     >
-      <Box 
+      <Box
         borderStyle="bold"
-        borderColor="#FF00AA"
+        borderColor={theme.assistantLabel}
         paddingLeft={2}
         paddingRight={2}
         paddingTop={0}
@@ -70,14 +72,14 @@ export function MessageView({ message }: Props) {
         width="100%"
       >
         {/* Dialogue Header with Portrait */}
-        <Box marginBottom={1} borderBottom borderStyle="single" borderColor="#484F58" justifyContent="space-between">
+        <Box marginBottom={1} borderBottom borderStyle="single" borderColor={theme.dim} justifyContent="space-between">
            <Box>
-                <Text bold color="#FF00AA">🤖 CPU_LINK_ESTABLISHED </Text>
-                <Text color="#484F58"> ▐ </Text>
-                <Text color="#00E5FF"> [A.I. MATRIX] </Text>
+                <Text bold color={theme.assistantLabel}>🤖 CPU_LINK_ESTABLISHED </Text>
+                <Text color={theme.dim}> ▐ </Text>
+                <Text color={theme.primary}> [A.I. MATRIX] </Text>
            </Box>
            <Box>
-                <Text color="#00E5FF" bold> ( •_•) </Text>
+                <Text color={theme.primary} bold> ( •_•) </Text>
            </Box>
         </Box>
 
@@ -88,7 +90,7 @@ export function MessageView({ message }: Props) {
 
         {/* Blinking Next Arrow */}
         <Box alignSelf="flex-end">
-            <Text color={flicker ? "#FF00AA" : "transparent"} bold> ▼ </Text>
+            <Text color={flicker ? theme.assistantLabel : 'transparent'} bold> ▼ </Text>
         </Box>
       </Box>
     </Box>

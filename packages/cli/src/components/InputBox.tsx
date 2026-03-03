@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import TextInput from 'ink-text-input';
+import { useTheme } from '../context/ThemeContext.js';
 
 interface Props {
   value: string;
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function InputBox({ value, onChange, onSubmit, isDisabled = false, isStreaming = false }: Props) {
+  const theme = useTheme();
   const lines = value.split('\n');
   const lineCount = lines.length;
   const isMultiLine = lineCount > 1;
@@ -18,7 +20,7 @@ export function InputBox({ value, onChange, onSubmit, isDisabled = false, isStre
   return (
     <Box
       borderStyle="round"
-      borderColor={isStreaming ? '#FF9E64' : (isDisabled ? '#484F58' : '#79C0FF')}
+      borderColor={isStreaming ? theme.warning : (isDisabled ? theme.dim : theme.primary)}
       paddingX={1}
       paddingY={0}
       marginBottom={0}
@@ -27,7 +29,7 @@ export function InputBox({ value, onChange, onSubmit, isDisabled = false, isStre
     >
       <Box>
         <Box marginRight={1} flexShrink={0}>
-          <Text color={isDisabled ? '#484F58' : '#79C0FF'} bold>⚡</Text>
+          <Text color={isDisabled ? theme.dim : theme.primary} bold>⚡</Text>
         </Box>
         <Box flexGrow={1} flexDirection="column">
           <TextInput
