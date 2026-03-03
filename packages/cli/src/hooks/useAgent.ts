@@ -130,6 +130,12 @@ export function useAgent() {
               ),
             }));
             break;
+          case 'system':
+            if (event.message) {
+              agent.addSystemMessage(event.message);
+              setState((prev) => ({ ...prev, messages: agent.getMessages() }));
+            }
+            break;
           case 'error':
             throw event.error;
         }

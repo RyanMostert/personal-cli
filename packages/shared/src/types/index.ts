@@ -101,7 +101,8 @@ export type StreamEventType =
   | 'tool-call-start'
   | 'tool-call-result'
   | 'finish'
-  | 'error';
+  | 'error'
+  | 'system';
 
 export interface ToolCallInfo {
   toolCallId: string;
@@ -114,6 +115,7 @@ export interface ToolCallInfo {
 export interface StreamEvent {
   type: StreamEventType;
   delta?: string;
+  message?: string;
   toolCall?: ToolCallInfo;
   error?: Error | { message: string; name?: string; stack?: string };
   usage?: {
