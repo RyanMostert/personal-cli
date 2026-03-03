@@ -106,9 +106,9 @@
 
 **Tasks**:
 
-- [ ] In `createTools()`, when `mode === 'plan'`, force `write_file`, `edit_file`, `run_command` through `permissionFn` (always ask)
-- [ ] Add **Tab key** in `app.tsx` to cycle `ask → build → plan → ask` (opencode's UX)
-- [ ] Update `StatusBar` to show mode with colours (green=build, yellow=ask, red=plan)
+- [x] In `createTools()`, when `mode === 'plan'`, force `write_file`, `edit_file`, `run_command` through `permissionFn` (always ask)
+- [x] Add **Tab key** in `app.tsx` to cycle `ask → build → plan → ask` (opencode's UX)
+- [x] Update `StatusBar` to show mode with colours (green=build, yellow=ask, red=plan)
 
 ---
 
