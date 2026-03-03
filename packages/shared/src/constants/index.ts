@@ -7,7 +7,7 @@ export const DEFAULT_MODEL = 'kimi-k2.5-free' as const;
 export const DEFAULT_MAX_TOKENS = 200_000;
 export const DEFAULT_TOKEN_BUDGET = 100_000;
 export const DEFAULT_MAX_ITERATIONS = 10;
-export const TOOL_OUTPUT_MAX_CHARS = 2_000;
+export const TOOL_OUTPUT_MAX_CHARS = 20_000;
 
 export const CONFIG_DIR = '.personal-cli';
 export const CONFIG_PROVIDERS_FILE = 'providers.yaml';

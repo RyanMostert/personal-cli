@@ -7,13 +7,17 @@ function htmlToText(html: string): string {
   return html
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
+    // Convert block-level elements to newlines before stripping all tags
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(?:p|div|h[1-6]|li|tr|section|article|header|footer|nav|main|aside|blockquote|pre)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/g, ' ')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
-    .replace(/\s{2,}/g, ' ')
+    .replace(/&#\d+;/g, '')
+    .replace(/[ \t]{2,}/g, ' ')   // collapse horizontal whitespace only — not newlines
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
@@ -40,7 +44,12 @@ export function createWebFetch(permissionFn?: PermissionCallback) {
 
         const contentType = res.headers.get('content-type') ?? '';
         const raw = await res.text();
-        const text = contentType.includes('html') ? htmlToText(raw) : raw;
+        let text = contentType.includes('html') ? htmlToText(raw) : raw;
+
+        // If stripping left almost nothing, the page is likely JS-rendered
+        if (contentType.includes('html') && text.length < 200) {
+          text = `[This page appears to be JavaScript-rendered and returned little or no static text content. Raw length: ${raw.length} bytes. URL: ${url}]`;
+        }
 
         let output = text;
         if (output.length > TOOL_OUTPUT_MAX_CHARS) {

@@ -308,6 +308,16 @@ export class ProviderManager {
     }
 
     const apiKey = this.resolveKey(provider, def.envVar ?? '');
+    
+    // Validate API key for providers that require it
+    const noKeyProviders = ['ollama', 'github-copilot', 'google-vertex', 'amazon-bedrock'];
+    if (!apiKey && !noKeyProviders.includes(provider)) {
+      throw new Error(
+        `No API key found for provider "${provider}". ` +
+        `Set ${def.envVar || 'CUSTOM_API_KEY'} environment variable or configure via provider manager.`,
+      );
+    }
+
     return def.create({ apiKey, baseUrl, modelId });
   }
 

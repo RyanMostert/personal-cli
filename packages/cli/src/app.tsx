@@ -20,7 +20,7 @@ import { useOverlay } from './context/OverlayContext.js';
 import { dispatch } from './commands/registry.js';
 import type { CommandContext } from './types/commands.js';
 import { matchKeybinding } from './keybindings/registry.js';
-import { DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
+import { DEFAULT_TOKEN_BUDGET, type ProviderName } from '@personal-cli/shared';
 import {
   setProviderKey, removeProviderKey, readAuth,
   appendHistory, loadHistory as loadPromptHistory,
@@ -254,7 +254,7 @@ export function App() {
       const rest = trimmed.slice(7).trim();
       const parts = rest.includes('/') ? rest.split('/') : rest.split(' ');
       if (parts.length >= 2) {
-        switchModel(parts[0], parts.slice(1).join('/'));
+        switchModel(parts[0] as ProviderName, parts.slice(1).join('/'));
         addSystemMessage(`Switched to ${parts[0]}/${parts.slice(1).join('/')}`);
       } else {
         addSystemMessage('Usage: /model <provider/modelId>  or  /model to browse');

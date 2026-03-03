@@ -1,137 +1,102 @@
-# Fix: isStreaming stuck + Escape abort + Duplicate model keys
+# Bug: Web-fetch Tool Returns Empty Output
 
-## Bug 1 — `isStreaming` never clears (root cause of all streaming issues)
+## Problem
 
-**File**: `packages/cli/src/hooks/useAgent.ts`
+When the AI uses the `webFetch` tool, the tool executes successfully but returns empty content. The model does not see the fetched data, so it cannot respond with meaningful information.
 
-`sendMessage` has a `for await` loop over the agent stream, but there is **no code after the loop** to set `isStreaming: false`. The only place `isStreaming: false` is set is in the `catch` block. On any successful completion (including after abort), the loop simply exits and the UI stays stuck in `⠇ COMPUTING...` forever.
+### Observed Behavior
+- User: "Fetch the latest Steam games"
+- AI: Uses webFetch tool ✓ (executes without errors)
+- Tool returns: `{ output: "" }` (empty string)
+- AI responds: "I couldn't get the content" or no meaningful response
 
+### Expected Behavior
+- Tool should return fetched HTML/text content
+- AI should summarize or analyze the content
+- User gets actual information
+
+---
+
+## Investigation Needed
+
+### 1. Check webFetch tool implementation
+**File**: `packages/tools/src/tools/web-fetch.ts`
+
+Possible issues:
+- `fetch()` succeeds but returns empty body
+- `htmlToText()` function is too aggressive and strips all content
+- `content-type` detection is incorrect
+- Response parsing fails silently
+- Output is being truncated to empty
+
+### 2. Debug the htmlToText function (lines 6-18)
+
+Current implementation:
 ```typescript
-// Current — nothing runs after the loop:
-for await (const event of stream) {
-  if (event.type === 'text-delta') ...
+function htmlToText(html: string): string {
+  return html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
-// ← isStreaming never cleared here
 ```
 
-**Fix**: After the `for await` loop, always clear streaming state and sync messages from the agent.
+**Suspect**: The `.replace(/\s{2,}/g, ' ')` might collapse entire pages to a single line if they're pre-formatted, or the chain of replacements might eliminate text content.
 
-Also the loop only handles `text-delta`. It silently drops:
-- `type: 'error'` events (yielded by agent on error — the catch block never fires because the generator yields errors rather than throwing)
-- `type: 'tool-call-start'` / `type: 'tool-call-result'` (tool calls never appear in UI after stream starts)
-- `type: 'finish'` (token counts never updated)
+### 3. Test manually
+```bash
+curl -I https://store.steampowered.com/search
+curl https://store.steampowered.com/search 2>/dev/null | head -100
+```
 
-### Fixed `sendMessage` in `useAgent.ts`:
+Check:
+- Does the endpoint return data?
+- Is it HTML, JSON, or something else?
+- Is there CORS blocking?
 
+### 4. Check AbortSignal timeout
+**Line 36**: `signal: AbortSignal.timeout(15_000)` — might be too short for slow sites
+
+---
+
+## Root Causes to Check
+
+| Cause | File | How to Fix |
+|-------|------|-----------|
+| htmlToText too aggressive | `web-fetch.ts:6-18` | Log raw HTML, add selective text extraction instead of all-removing regex |
+| fetch() body is empty | `web-fetch.ts:34-42` | Add error handling for empty responses |
+| Content-Type logic wrong | `web-fetch.ts:41-43` | Log actual header, handle more content types |
+| Timeout too short | `web-fetch.ts:36` | Increase to 30s or make configurable |
+| Steam Games endpoint blocked/JS-rendered | Network | Steam Games page likely uses JS, might need different API |
+
+---
+
+## Root Cause (confirmed)
+
+Line 16 of the original `htmlToText`:
 ```typescript
-const sendMessage = useCallback(async (content: string) => {
-  const agent = getAgent();
-  const currentAttachedFiles = attachedFilesRef.current;
-  attachedFilesRef.current = [];
-
-  setStreamingText('');
-  setState((prev) => ({ ...prev, isStreaming: true, error: null, toolCalls: [], attachedFiles: [] }));
-
-  try {
-    const stream = agent.sendMessage(content, currentAttachedFiles);
-
-    for await (const event of stream) {
-      switch (event.type) {
-        case 'text-delta':
-          if (event.delta) setStreamingText((prev) => prev + event.delta);
-          break;
-        case 'tool-call-start':
-          setState((prev) => ({
-            ...prev,
-            toolCalls: [...prev.toolCalls, {
-              toolCallId: event.toolCall.toolCallId,
-              toolName: event.toolCall.toolName,
-              args: event.toolCall.args,
-            }],
-          }));
-          break;
-        case 'tool-call-result':
-          setState((prev) => ({
-            ...prev,
-            toolCalls: prev.toolCalls.map(tc =>
-              tc.toolCallId === event.toolCall.toolCallId
-                ? { ...tc, result: event.toolCall.result }
-                : tc
-            ),
-          }));
-          break;
-        case 'error':
-          throw event.error; // re-throw so catch block handles it
-      }
-    }
-
-    // Stream completed (normally OR after abort) — always runs
-    setState((prev) => ({
-      ...prev,
-      isStreaming: false,
-      messages: agent.getMessages(),
-      tokensUsed: agent.getTokensUsed(),
-      cost: agent.getCost(),
-      toolCalls: [],
-    }));
-    setStreamingText('');
-
-  } catch (err) {
-    setStreamingText('');
-    setState((prev) => ({
-      ...prev,
-      isStreaming: false,
-      toolCalls: [],
-      error: err instanceof Error ? err.message : String(err),
-    }));
-  }
-}, [getAgent]);
+.replace(/\s{2,}/g, ' ')   // BUG: \s matches \n, so ALL newlines were collapsed to spaces
+.replace(/\n{3,}/g, '\n\n') // dead code — no newlines survived the line above
 ```
 
----
+After stripping `<script>` and all tags, a JS-heavy page like Steam has almost no remaining text — just scattered whitespace. The `\s{2,}` regex collapsed it all to a single space, which `.trim()` reduced to `""`.
 
-## Bug 2 — Escape key has no visible effect (caused by Bug 1)
+## Fix Applied (`packages/tools/src/tools/web-fetch.ts`)
 
-The `abort()` call in `app.tsx` fires correctly, the agent catches the `AbortError` and yields a `finish` event, the generator returns, the `for await` loop exits. But since Bug 1 means `isStreaming` is never cleared, the UI never updates. Fixing Bug 1 fixes this.
-
-One additional issue: `app.tsx` checks `key.escape && isStreaming` but the Escape key handler is deep in `useInput`. Since `isStreaming` locks the `InputBox` (`isDisabled={anyOverlay}` where `anyOverlay` includes `isStreaming`), and `useInput` fires on all keys regardless of InputBox focus — this should work. Verify after Bug 1 is fixed.
-
----
-
-## Bug 3 — Duplicate React keys in ModelPicker
-
-**File**: `packages/cli/src/components/ModelPicker.tsx`
-
-The `rows` array contains models from two sources:
-1. The "★ Recent" section — same `ModelEntry` objects from `MODEL_REGISTRY`
-2. The regular per-provider sections — same objects again
-
-Both render with key `m-${m.provider}-${m.id}` (line 265). If a model is in both sections, the key collides.
-
-**Fix**: Prefix recent section row keys with `recent-`:
-
-```tsx
-// In the rows render, where recent models are rendered:
-<Box key={`recent-m-${m.provider}-${m.id}`} ...>
-
-// Regular provider sections keep their key:
-<Box key={`m-${m.provider}-${m.id}`} ...>
-```
-
-The rows array mixes both via a `kind` field. The render loop needs to know which section a row belongs to. Simplest fix: add a `recent?: boolean` field to the `RowModel` type and use it in the key.
-
----
-
-## Summary
-
-| File | Fix |
-|------|-----|
-| `packages/cli/src/hooks/useAgent.ts` | After `for await` loop: set `isStreaming: false`, sync messages/tokens. Handle all event types in loop. |
-| `packages/cli/src/components/ModelPicker.tsx` | Prefix recent-section row keys with `recent-` to prevent collisions. |
-
----
+1. `htmlToText`: convert block elements to `\n` before stripping tags; use `[ \t]{2,}` (not `\s{2,}`) to collapse only horizontal whitespace; added `&#\d+;` entity stripping.
+2. JS-rendered fallback: if HTML page yields < 200 chars of text, return a message explaining the page is JS-rendered so the AI understands why there's no content.
 
 ## Progress Checklist
 
-- [x] Bug 1+2: Fix `sendMessage` in `useAgent.ts`
-- [x] Bug 3: Fix duplicate keys in `ModelPicker.tsx`
+- [x] Identify which regex is causing content loss — `\s{2,}` on line 16 collapsed newlines
+- [x] Fix htmlToText function
+- [x] Add JS-rendered page fallback
+- [x] Build and verify clean
