@@ -2,7 +2,7 @@ import { streamText, type ModelMessage } from 'ai';
 import { generateId, type Message, type StreamEvent, type ActiveModel, type AgentMode, type ProviderName, getModelEntry } from '@personal-cli/shared';
 import { DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
 import { ProviderManager } from './providers/manager.js';
-import { saveConversation, loadConversation } from './persistence/conversations.js';
+import { saveConversation, loadConversation, renameConversation as persistRename } from './persistence/conversations.js';
 import { createTools, type PermissionCallback } from '@personal-cli/tools';
 import { DEFAULT_SYSTEM_PROMPT } from './prompts/default.js';
 import { generateTitle } from './agent/title.js';
@@ -28,6 +28,7 @@ export class Agent {
   private mode: AgentMode = 'ask';
   private permissionFn?: PermissionCallback;
   private conversationTitle?: string;
+  private conversationId?: string;
   private currentAbortController: AbortController | null = null;
 
   constructor(options: AgentOptions) {
@@ -76,6 +77,14 @@ export class Agent {
   clearHistory() {
     this.messages = [];
     this.coreMessages = [];
+    this.conversationId = undefined;
+    this.conversationTitle = undefined;
+  }
+
+  renameConversation(newTitle: string): boolean {
+    if (!this.conversationId) return false;
+    this.conversationTitle = newTitle;
+    return persistRename(this.conversationId, newTitle);
   }
 
   addSystemMessage(content: string) {
@@ -196,8 +205,10 @@ export class Agent {
       if (this.messages.filter(m => m.role === 'assistant').length === 1) {
         generateTitle(userContent, fullText, model).then(title => {
           this.conversationTitle = title;
-          // Re-save with the new title
-          try { saveConversation(this.messages, this.providerManager.getActiveModel(), userContent, this.conversationTitle); } catch { }
+          try {
+            const id = saveConversation(this.messages, this.providerManager.getActiveModel(), userContent, this.conversationTitle, this.conversationId);
+            if (!this.conversationId) this.conversationId = id;
+          } catch { }
         });
       }
 
@@ -210,8 +221,11 @@ export class Agent {
         },
       };
 
-      // Save conversation
-      try { saveConversation(this.messages, this.providerManager.getActiveModel(), userContent, this.conversationTitle); } catch { }
+      // Save conversation (reuse same file via conversationId)
+      try {
+        const id = saveConversation(this.messages, this.providerManager.getActiveModel(), userContent, this.conversationTitle, this.conversationId);
+        if (!this.conversationId) this.conversationId = id;
+      } catch { }
     } catch (err) {
       // AbortError is not a real error — it's user-initiated
       if (err instanceof Error && err.name === 'AbortError') {

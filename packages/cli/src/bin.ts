@@ -10,6 +10,7 @@ import { render } from 'ink';
 import React from 'react';
 import { App } from './app.js';
 import { OverlayProvider } from './context/OverlayContext.js';
+import { ThemeProvider } from './context/ThemeContext.js';
 import { APP_NAME, APP_VERSION } from '@personal-cli/shared';
 
 const program = new Command();
@@ -20,7 +21,7 @@ program
   .version(APP_VERSION)
   .action(() => {
     const { unmount } = render(
-      React.createElement(OverlayProvider, { children: React.createElement(App) }),
+      React.createElement(ThemeProvider, { children: React.createElement(OverlayProvider, { children: React.createElement(App) }) }),
       {
         exitOnCtrlC: false,
       }

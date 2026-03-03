@@ -119,8 +119,8 @@
 
 **Tasks**:
 
-- [ ] `pnpm add clipboardy` in `packages/cli`
-- [ ] Replace stub with real `clipboardy.write(last.content)` call
+- [x] `pnpm add clipboardy` in `packages/cli`
+- [x] Replace stub with real `clipboardy.write(last.content)` call
 
 ---
 
@@ -136,9 +136,9 @@
 
 **Tasks**:
 
-- [ ] Add `renameConversation(id, title)` to persistence layer
-- [ ] Expose via `useAgent` and `CommandContext`
-- [ ] Wire into `/rename` handler
+- [x] Add `renameConversation(id, title)` to persistence layer
+- [x] Expose via `useAgent` and `CommandContext`
+- [x] Wire into `/rename` handler
 
 ---
 
@@ -154,10 +154,10 @@
 
 **Tasks**:
 
-- [ ] Define 5 themes: `default`, `dracula`, `tokyo-night`, `nord`, `gruvbox`
-- [ ] Create `ThemeContext` with `useTheme()` hook
-- [ ] Wire `/theme <name>` to update context and persist to `settings.json`
-- [ ] Update `StatusBar`, `MessageView`, `ToolCallView`, `InputBox` to use theme colours
+- [x] Define 5 themes: `default`, `dracula`, `tokyo-night`, `nord`, `gruvbox`
+- [x] Create `ThemeContext` with `useTheme()` hook
+- [x] Wire `/theme <name>` to update context and persist to `settings.json`
+- [x] Update `StatusBar`, `MessageView`, `ToolCallView`, `InputBox` to use theme colours
 
 ---
 

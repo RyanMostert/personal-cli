@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import { MinecraftSpinner } from './MinecraftSpinner.js';
 import type { ToolCallInfo } from '@personal-cli/shared';
+import { useTheme } from '../context/ThemeContext.js';
 
 interface Props {
   tool: ToolCallInfo;
@@ -58,11 +59,12 @@ function summarizeResult(result: unknown): { text: string; isError: boolean } {
 }
 
 export function ToolCallView({ tool }: Props) {
+  const theme = useTheme();
   const resultSummary = tool.result !== undefined ? summarizeResult(tool.result) : null;
   const isError = Boolean(tool.error) || resultSummary?.isError === true;
   const isRunFinished = tool.result !== undefined || Boolean(tool.error);
 
-  const borderColor = isError ? '#FF5555' : isRunFinished ? '#3FB950' : '#FFB86C';
+  const borderColor = isError ? theme.error : isRunFinished ? theme.success : theme.warning;
 
   return (
     <Box
@@ -80,25 +82,25 @@ export function ToolCallView({ tool }: Props) {
           {!isRunFinished ? (
             <MinecraftSpinner />
           ) : isError ? (
-            <Text color="#FF5555" bold>💥</Text>
+            <Text color={theme.error} bold>💥</Text>
           ) : (
-            <Text color="#3FB950" bold>★</Text>
+            <Text color={theme.success} bold>★</Text>
           )}
         </Box>
         <Box flexShrink={0} marginRight={1}>
           {!isRunFinished ? (
-            <Text color="#FFB86C" bold> ⚡ SKILL_ACTIVATE: </Text>
+            <Text color={theme.warning} bold> ⚡ SKILL_ACTIVATE: </Text>
           ) : isError ? (
-            <Text color="#FF5555" bold> ❌ SKILL_FAILED: </Text>
+            <Text color={theme.error} bold> ❌ SKILL_FAILED: </Text>
           ) : (
-            <Text color="#3FB950" bold> ✔ SKILL_SUCCESS: </Text>
+            <Text color={theme.success} bold> ✔ SKILL_SUCCESS: </Text>
           )}
-          <Text color={isRunFinished && !isError ? '#00E5FF' : isError ? '#FF5555' : '#FF00AA'} bold>
+          <Text color={isRunFinished && !isError ? theme.toolName : isError ? theme.error : theme.assistantLabel} bold>
             [{tool.toolName.toUpperCase()}]
           </Text>
         </Box>
         <Box paddingLeft={1}>
-          <Text color="#8C959F">
+          <Text color={theme.muted}>
             {tool.args
               ? 'TARGET: ' + JSON.stringify(tool.args).substring(0, 80) + (JSON.stringify(tool.args).length > 80 ? '…' : '')
               : '…'}
@@ -109,8 +111,8 @@ export function ToolCallView({ tool }: Props) {
       {/* Result preview row */}
       {isRunFinished && resultSummary !== null && resultSummary.text && (
         <Box paddingLeft={4}>
-          <Text color="#484F58">└ </Text>
-          <Text color={resultSummary.isError ? '#FF5555' : '#6E7681'} wrap="wrap">
+          <Text color={theme.dim}>└ </Text>
+          <Text color={resultSummary.isError ? theme.error : theme.dim} wrap="wrap">
             {resultSummary.text}
           </Text>
         </Box>

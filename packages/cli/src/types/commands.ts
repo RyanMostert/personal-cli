@@ -16,5 +16,6 @@ export interface CommandContext {
   openFileInPanel: (path: string) => void;
   exportConversation: (path?: string) => string;
   compact: () => Promise<string>;
+  renameConversation: (title: string) => boolean;
   exit: () => void;
 }

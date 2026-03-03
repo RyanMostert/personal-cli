@@ -30,25 +30,18 @@ export function saveConversation(
   messages: Message[],
   model: ActiveModel,
   firstUserMessage: string,
-  title?: string
+  title?: string,
+  existingId?: string,
 ): string {
   ensureDir();
 
-  // If we have a title, we might want to rename the file if it was previously saved with a timestamp
-  // but for simplicity, let's just use the title for the initial save or keep the ID stable.
-  // Actually, the agent calls this on every message.
-
   const timestamp = Date.now();
-  const id = title
+  const id = existingId ?? (title
     ? `${slugify(title)}-${timestamp.toString().slice(-6)}`
-    : `${timestamp}-${Math.random().toString(36).slice(2, 8)}`;
+    : `${timestamp}-${Math.random().toString(36).slice(2, 8)}`);
 
   const title_ = (title ?? firstUserMessage ?? 'Untitled').slice(0, 60);
   const data: SavedConversation = { id, title: title_, date: timestamp, model, messages };
-
-  // To avoid leaving many files, we should probably have a way to track the current conversation ID
-  // but the Agent class doesn't seem to store it yet. 
-  // For now, I'll follow the plan and use the title if provided.
 
   writeFileSync(join(HISTORY_DIR(), `${id}.json`), JSON.stringify(data, null, 2));
   return id;
