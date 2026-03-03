@@ -14,5 +14,6 @@
       "WebFetch(domain:models.dev)",
       "Bash(grep:*)"
     ]
-  }
+  },
+  "outputStyle": "Explanatory"
 }
