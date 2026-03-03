@@ -33,7 +33,7 @@ const filterPingsFetch: typeof globalThis.fetch = async (url, init) => {
         .filter(line => {
           if (!line.startsWith('data:')) return true;
           const payload = line.slice(5).trim();
-          try { if ((JSON.parse(payload) as any)?.type === 'ping') return false; } catch {}
+          try { if ((JSON.parse(payload) as any)?.type === 'ping') return false; } catch { }
           return true;
         })
         .join('\n');
@@ -46,6 +46,245 @@ const filterPingsFetch: typeof globalThis.fetch = async (url, init) => {
     headers: res.headers,
   });
 };
+
+interface ProviderDef {
+  id: ProviderName;
+  envVar?: string;
+  create: (options: { apiKey?: string; baseUrl?: string; modelId: string }) => Promise<LanguageModel>;
+}
+
+const PROVIDER_REGISTRY: ProviderDef[] = [
+  {
+    id: 'anthropic',
+    envVar: 'ANTHROPIC_API_KEY',
+    create: async ({ apiKey, baseUrl, modelId }) => {
+      const client = createAnthropic({
+        apiKey,
+        ...(baseUrl ? { baseURL: baseUrl } : {}),
+      });
+      return client(modelId);
+    },
+  },
+  {
+    id: 'openai',
+    envVar: 'OPENAI_API_KEY',
+    create: async ({ apiKey, baseUrl, modelId }) => {
+      const client = createOpenAI({
+        apiKey,
+        ...(baseUrl ? { baseURL: baseUrl } : {}),
+      });
+      return client(modelId);
+    },
+  },
+  {
+    id: 'google',
+    envVar: 'GOOGLE_API_KEY',
+    create: async ({ apiKey, modelId }) => {
+      const { createGoogleGenerativeAI } = await import('@ai-sdk/google');
+      const client = createGoogleGenerativeAI({ apiKey });
+      return client(modelId);
+    },
+  },
+  {
+    id: 'mistral',
+    envVar: 'MISTRAL_API_KEY',
+    create: async ({ apiKey, modelId }) => {
+      const { createMistral } = await import('@ai-sdk/mistral');
+      const client = createMistral({ apiKey });
+      return client(modelId);
+    },
+  },
+  {
+    id: 'ollama',
+    create: async ({ baseUrl, modelId }) => {
+      const client = createOpenAI({
+        baseURL: baseUrl ?? 'http://localhost:11434/v1',
+        apiKey: 'ollama',
+      });
+      return client.chat(modelId);
+    },
+  },
+  {
+    id: 'opencode-zen',
+    envVar: 'OPENCODE_API_KEY',
+    create: async ({ apiKey, baseUrl, modelId }) => {
+      const client = createOpenAI({
+        apiKey,
+        baseURL: baseUrl ?? OPENCODE_BASE_URL,
+        fetch: filterPingsFetch,
+      });
+      return client.chat(modelId);
+    },
+  },
+  {
+    id: 'custom',
+    envVar: 'CUSTOM_API_KEY',
+    create: async ({ apiKey, baseUrl, modelId }) => {
+      const client = createOpenAI({
+        apiKey,
+        baseURL: baseUrl,
+      });
+      return client.chat(modelId);
+    },
+  },
+  {
+    id: 'openrouter',
+    envVar: 'OPENROUTER_API_KEY',
+    create: async ({ apiKey, modelId }) => {
+      const client = createOpenAI({
+        baseURL: 'https://openrouter.ai/api/v1',
+        apiKey,
+        headers: { 'HTTP-Referer': 'https://personal-cli', 'X-Title': 'personal-cli' },
+      });
+      return client.chat(modelId);
+    },
+  },
+  {
+    id: 'groq',
+    envVar: 'GROQ_API_KEY',
+    create: async ({ apiKey, modelId }) => {
+      const { createGroq } = await import('@ai-sdk/groq');
+      const client = createGroq({ apiKey });
+      return client(modelId);
+    },
+  },
+  {
+    id: 'xai',
+    envVar: 'XAI_API_KEY',
+    create: async ({ apiKey, modelId }) => {
+      const { createXai } = await import('@ai-sdk/xai');
+      const client = createXai({ apiKey });
+      return client(modelId);
+    },
+  },
+  {
+    id: 'deepseek',
+    envVar: 'DEEPSEEK_API_KEY',
+    create: async ({ apiKey, modelId }) => {
+      const client = createOpenAI({
+        baseURL: 'https://api.deepseek.com/v1',
+        apiKey,
+      });
+      return client.chat(modelId);
+    },
+  },
+  {
+    id: 'perplexity',
+    envVar: 'PERPLEXITY_API_KEY',
+    create: async ({ apiKey, modelId }) => {
+      const client = createOpenAI({
+        baseURL: 'https://api.perplexity.ai',
+        apiKey,
+      });
+      return client.chat(modelId);
+    },
+  },
+  {
+    id: 'cerebras',
+    envVar: 'CEREBRAS_API_KEY',
+    create: async ({ apiKey, modelId }) => {
+      const client = createOpenAI({
+        baseURL: 'https://api.cerebras.ai/v1',
+        apiKey,
+      });
+      return client.chat(modelId);
+    },
+  },
+  {
+    id: 'together',
+    envVar: 'TOGETHER_API_KEY',
+    create: async ({ apiKey, modelId }) => {
+      const client = createOpenAI({
+        baseURL: 'https://api.together.xyz/v1',
+        apiKey,
+      });
+      return client.chat(modelId);
+    },
+  },
+  {
+    id: 'github-copilot',
+    create: async ({ modelId }) => {
+      const copilotToken = await getCopilotToken();
+      const client = createOpenAI({
+        apiKey: copilotToken,
+        baseURL: 'https://api.githubcopilot.com',
+        headers: {
+          'Editor-Version': 'personal-cli/1.0.0',
+          'Editor-Plugin-Version': 'personal-cli/1.0.0',
+          'Copilot-Integration-Id': 'copilot-chat',
+        },
+      });
+      return client.chat(modelId);
+    },
+  },
+  {
+    id: 'google-vertex',
+    create: async ({ modelId }) => {
+      const { createVertex } = await import('@ai-sdk/google-vertex');
+      const { GoogleAuth } = await import('google-auth-library');
+
+      const project = process.env.GOOGLE_CLOUD_PROJECT
+        ?? process.env.GCP_PROJECT
+        ?? process.env.GCLOUD_PROJECT;
+
+      const location = process.env.GOOGLE_CLOUD_LOCATION
+        ?? process.env.VERTEX_LOCATION
+        ?? 'us-central1';
+
+      const auth = new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
+
+      const client = createVertex({
+        project,
+        location,
+        fetch: async (input, init) => {
+          const token = await auth.getAccessToken();
+          const headers = new Headers(init?.headers);
+          headers.set('Authorization', `Bearer ${token}`);
+          return fetch(input, { ...init, headers });
+        },
+      });
+      return client(modelId);
+    },
+  },
+  {
+    id: 'opencode',
+    envVar: 'OPENCODE_API_KEY',
+    create: async ({ apiKey, modelId }) => {
+      const client = createOpenAI({
+        baseURL: 'https://api.opencode.ai/v1',
+        // If no key, use 'public' to access free models
+        apiKey: apiKey ?? 'public',
+        fetch: filterPingsFetch,
+      });
+      return client.chat(modelId);
+    },
+  },
+  {
+    id: 'amazon-bedrock',
+    create: async ({ modelId }) => {
+      const { createAmazonBedrock } = await import('@ai-sdk/amazon-bedrock');
+      const { fromNodeProviderChain } = await import('@aws-sdk/credential-providers');
+      const region = process.env.AWS_REGION ?? 'us-east-1';
+      const client = createAmazonBedrock({
+        region,
+        credentialProvider: fromNodeProviderChain(),
+      });
+      return client(modelId);
+    },
+  },
+  {
+    id: 'azure',
+    envVar: 'AZURE_API_KEY',
+    create: async ({ apiKey, modelId }) => {
+      const { createAzure } = await import('@ai-sdk/azure');
+      const client = createAzure({
+        apiKey,
+        resourceName: process.env.AZURE_RESOURCE_NAME,
+      });
+      return client.responses(modelId);
+    },
+  },
+];
 
 export class ProviderManager {
   private options: ProviderManagerOptions;
@@ -61,142 +300,15 @@ export class ProviderManager {
   async getModel(): Promise<LanguageModel> {
     const { provider, modelId, baseUrl } = this.options;
 
-    switch (provider) {
-      case 'anthropic': {
-        const client = createAnthropic({
-          apiKey: this.resolveKey('anthropic', 'ANTHROPIC_API_KEY'),
-          ...(baseUrl ? { baseURL: baseUrl } : {}),
-        });
-        return client(modelId);
-      }
-
-      case 'openai': {
-        const client = createOpenAI({
-          apiKey: this.resolveKey('openai', 'OPENAI_API_KEY'),
-          ...(baseUrl ? { baseURL: baseUrl } : {}),
-        });
-        return client(modelId);
-      }
-
-      case 'google': {
-        const { createGoogleGenerativeAI } = await import('@ai-sdk/google');
-        const client = createGoogleGenerativeAI({
-          apiKey: this.resolveKey('google', 'GOOGLE_API_KEY'),
-        });
-        return client(modelId);
-      }
-
-      case 'mistral': {
-        const { createMistral } = await import('@ai-sdk/mistral');
-        const client = createMistral({
-          apiKey: this.resolveKey('mistral', 'MISTRAL_API_KEY'),
-        });
-        return client(modelId);
-      }
-
-      case 'ollama': {
-        // Ollama runs locally on port 11434 with an OpenAI-compatible API
-        const client = createOpenAI({
-          baseURL: baseUrl ?? 'http://localhost:11434/v1',
-          apiKey: 'ollama',  // required by SDK but ignored by Ollama
-        });
-        return client.chat(modelId);
-      }
-
-      case 'opencode-zen': {
-        // OpenCode uses the Chat Completions API, not OpenAI's Responses API.
-        // Use .chat() to route through /chat/completions instead of /responses.
-        // filterPingsFetch strips {"type":"ping"} heartbeat events the SDK can't parse.
-        const client = createOpenAI({
-          apiKey: this.resolveKey('opencode-zen', 'OPENCODE_API_KEY'),
-          baseURL: baseUrl ?? OPENCODE_BASE_URL,
-          fetch: filterPingsFetch,
-        });
-        return client.chat(modelId);
-      }
-
-      case 'custom': {
-        const client = createOpenAI({
-          apiKey: this.resolveKey('custom', 'CUSTOM_API_KEY'),
-          baseURL: baseUrl,
-        });
-        return client.chat(modelId);
-      }
-
-      case 'openrouter': {
-        const client = createOpenAI({
-          baseURL: 'https://openrouter.ai/api/v1',
-          apiKey: this.resolveKey('openrouter', 'OPENROUTER_API_KEY'),
-          headers: { 'HTTP-Referer': 'https://personal-cli', 'X-Title': 'personal-cli' },
-        });
-        return client.chat(modelId);
-      }
-
-      case 'groq': {
-        const { createGroq } = await import('@ai-sdk/groq');
-        const client = createGroq({ apiKey: this.resolveKey('groq', 'GROQ_API_KEY') });
-        return client(modelId);
-      }
-
-      case 'xai': {
-        const { createXai } = await import('@ai-sdk/xai');
-        const client = createXai({ apiKey: this.resolveKey('xai', 'XAI_API_KEY') });
-        return client(modelId);
-      }
-
-      case 'deepseek': {
-        const client = createOpenAI({
-          baseURL: 'https://api.deepseek.com/v1',
-          apiKey: this.resolveKey('deepseek', 'DEEPSEEK_API_KEY'),
-        });
-        return client.chat(modelId);
-      }
-
-      case 'perplexity': {
-        const client = createOpenAI({
-          baseURL: 'https://api.perplexity.ai',
-          apiKey: this.resolveKey('perplexity', 'PERPLEXITY_API_KEY'),
-        });
-        return client.chat(modelId);
-      }
-
-      case 'cerebras': {
-        const client = createOpenAI({
-          baseURL: 'https://api.cerebras.ai/v1',
-          apiKey: this.resolveKey('cerebras', 'CEREBRAS_API_KEY'),
-        });
-        return client.chat(modelId);
-      }
-
-      case 'together': {
-        const client = createOpenAI({
-          baseURL: 'https://api.together.xyz/v1',
-          apiKey: this.resolveKey('together', 'TOGETHER_API_KEY'),
-        });
-        return client.chat(modelId);
-      }
-
-      case 'github-copilot': {
-        // Copilot uses a short-lived token that must be fetched/refreshed dynamically.
-        // We fetch it now (cached in memory); createOpenAI will use this token value.
-        const copilotToken = await getCopilotToken();
-        const client = createOpenAI({
-          apiKey: copilotToken,
-          baseURL: 'https://api.githubcopilot.com',
-          headers: {
-            'Editor-Version': 'personal-cli/1.0.0',
-            'Editor-Plugin-Version': 'personal-cli/1.0.0',
-            'Copilot-Integration-Id': 'copilot-chat',
-          },
-        });
-        return client.chat(modelId);
-      }
-
-      default:
-        throw new Error(
-          `Provider "${provider}" is not yet supported. Supported: anthropic, openai, google, mistral, ollama, opencode-zen, openrouter, groq, xai, deepseek, perplexity, cerebras, together, github-copilot, custom.`,
-        );
+    const def = PROVIDER_REGISTRY.find(p => p.id === provider);
+    if (!def) {
+      throw new Error(
+        `Provider "${provider}" is not yet supported. Supported: ${PROVIDER_REGISTRY.map(p => p.id).join(', ')}.`,
+      );
     }
+
+    const apiKey = this.resolveKey(provider, def.envVar ?? '');
+    return def.create({ apiKey, baseUrl, modelId });
   }
 
   getActiveModel(): ActiveModel {

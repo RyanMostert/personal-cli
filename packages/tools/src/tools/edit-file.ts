@@ -8,7 +8,7 @@ export function createEditFile(permissionFn?: PermissionCallback) {
   return tool({
     description:
       'Apply a surgical edit to a file by replacing an exact string with a new string. The oldText must match exactly (including whitespace/indentation).',
-    parameters: z.object({
+    inputSchema: z.object({
       path: z.string().describe('File path to edit'),
       oldText: z.string().describe('Exact text to find and replace'),
       newText: z.string().describe('Text to replace it with'),

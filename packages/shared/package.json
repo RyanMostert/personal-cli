@@ -10,8 +10,8 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts",
-    "dev": "tsup src/index.ts --format esm --dts --watch",
+    "build": "tsup src/index.ts --format esm --dts --platform node",
+    "dev": "tsup src/index.ts --format esm --dts --watch --platform node",
     "clean": "rm -rf dist"
   },
   "dependencies": {

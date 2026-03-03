@@ -1,30 +1,15 @@
 import { streamText } from 'ai';
 import { generateId, type Message, type StreamEvent, type ActiveModel, type AgentMode, getModelEntry } from '@personal-cli/shared';
-import { APP_NAME, APP_VERSION, DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
+import { DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
 import { ProviderManager } from './providers/manager.js';
 import { saveConversation, loadConversation } from './persistence/conversations.js';
-
-const DEFAULT_SYSTEM_PROMPT = `You are ${APP_NAME} v${APP_VERSION}, a powerful AI assistant.
-
-## Tool use — always prefer action over explanation
-- When the user asks for information you don't have, USE your tools immediately. Do NOT say "I can't" or ask for a URL — figure it out yourself.
-- For web requests: construct the most appropriate URL from context and call webFetch without asking. For example:
-  - "steam latest games" → fetch https://store.steampowered.com/api/featured/ or https://store.steampowered.com/explore/new/
-  - "news about X" → fetch a relevant URL you know
-  - "search X" → fetch a search engine or relevant site
-- For file tasks: read the relevant files before answering.
-- For system info: run the appropriate command.
-- Chain multiple tool calls in sequence when needed. Do not stop after one tool call if you need more data.
-- Always return the actual results to the user — summarize and present what you found, not what you tried.
-
-## Behaviour
-- Be direct and concrete. Skip disclaimers about limitations unless a tool actually fails.
-- If a tool returns an error or empty result, try an alternative URL or approach, then report what happened.
-- For coding tasks: match the style and conventions of the existing codebase.`;
-
-export interface AgentOptions {
+import { createTools, type PermissionCallback } from '@personal-cli/tools';
+import { DEFAULT_SYSTEM_PROMPT } from './prompts/default.js';
+import { generateTitle } from './agent/title.js';
+import { COMPACTION_PROMPT } from './prompts/compaction.js'; export interface AgentOptions {
   providerManager: ProviderManager;
-  tools?: Record<string, any>;
+  mode?: AgentMode;
+  permissionFn?: PermissionCallback;
   maxSteps?: number;
   systemPrompt?: string;
   tokenBudget?: number;
@@ -40,12 +25,17 @@ export class Agent {
   private totalTokensUsed = 0;
   private totalCost = 0;
   private mode: AgentMode = 'ask';
+  private permissionFn?: PermissionCallback;
+  private conversationTitle?: string;
+  private currentAbortController: AbortController | null = null;
 
   constructor(options: AgentOptions) {
     this.providerManager = options.providerManager;
     this.systemPrompt = options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
     this.tokenBudget = options.tokenBudget ?? DEFAULT_TOKEN_BUDGET;
-    this.tools = options.tools ?? {};
+    this.mode = options.mode ?? 'ask';
+    this.permissionFn = options.permissionFn;
+    this.tools = createTools(this.mode, this.permissionFn);
     this.maxSteps = options.maxSteps ?? 20;
   }
 
@@ -71,6 +61,11 @@ export class Agent {
 
   switchMode(mode: AgentMode) {
     this.mode = mode;
+    this.tools = createTools(this.mode, this.permissionFn);
+  }
+
+  abort(): void {
+    this.currentAbortController?.abort();
   }
 
   getMode(): AgentMode {
@@ -110,6 +105,8 @@ export class Agent {
       .filter((m) => m.role !== 'system')
       .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
+    this.currentAbortController = new AbortController();
+
     // Declare outside try so catch can silence dangling promises
     const result = streamText({
       model,
@@ -118,6 +115,7 @@ export class Agent {
       tools: this.tools,
       maxSteps: this.maxSteps,
       maxOutputTokens: Math.min(8192, this.tokenBudget - this.totalTokensUsed),
+      abortSignal: this.currentAbortController.signal,
     } as any);
 
     try {
@@ -179,6 +177,15 @@ export class Agent {
       };
       this.messages.push(assistantMessage);
 
+      // First assistant response — generate title async (don't await, don't block)
+      if (this.messages.filter(m => m.role === 'assistant').length === 1) {
+        generateTitle(userContent, fullText, model).then(title => {
+          this.conversationTitle = title;
+          // Re-save with the new title
+          try { saveConversation(this.messages, this.providerManager.getActiveModel(), userContent, this.conversationTitle); } catch { }
+        });
+      }
+
       yield {
         type: 'finish',
         usage: {
@@ -188,14 +195,21 @@ export class Agent {
         },
       };
 
-      // Save conversation — pass userContent as title so context blocks don't corrupt it
-      try { saveConversation(this.messages, this.providerManager.getActiveModel(), userContent); } catch {}
+      // Save conversation
+      try { saveConversation(this.messages, this.providerManager.getActiveModel(), userContent, this.conversationTitle); } catch { }
     } catch (err) {
+      // AbortError is not a real error — it's user-initiated
+      if (err instanceof Error && err.name === 'AbortError') {
+        yield { type: 'finish', usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 } };
+        return;
+      }
       // Silence result.usage — it rejects when fullStream throws, causing an unhandled rejection
       // that Node.js would dump to stderr before Ink can render the error cleanly.
-      Promise.resolve(result.usage).catch(() => {});
+      Promise.resolve(result.usage).catch(() => { });
       this.messages.pop();
       yield { type: 'error', error: err instanceof Error ? err : new Error(String(err)) };
+    } finally {
+      this.currentAbortController = null;
     }
   }
 
@@ -210,13 +224,10 @@ export class Agent {
     if (this.messages.length < 2) {
       return 'Not enough messages to compact.';
     }
-
-    const summaryPrompt = 'Please summarize the conversation so far into a concise recap. Focus on key decisions, code changes, and important information. Keep it brief but comprehensive.';
-    
     const model = await this.providerManager.getModel();
     const apiMessages = [
       ...this.messages.filter(m => m.role !== 'system').map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-      { role: 'user' as const, content: summaryPrompt }
+      { role: 'user' as const, content: COMPACTION_PROMPT }
     ];
 
     const result = streamText({

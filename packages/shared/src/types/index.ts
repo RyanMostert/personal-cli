@@ -15,7 +15,11 @@ export type ProviderName =
   | 'perplexity'
   | 'cerebras'
   | 'together'
-  | 'github-copilot';
+  | 'github-copilot'
+  | 'google-vertex'
+  | 'opencode'
+  | 'amazon-bedrock'
+  | 'azure';
 
 export interface ModelConfig {
   id: string;

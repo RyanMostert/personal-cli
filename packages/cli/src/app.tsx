@@ -57,7 +57,7 @@ export function App() {
   const {
     messages, isStreaming, streamingText, tokensUsed, cost, toolCalls,
     pendingPermission, error, activeModel, attachedFiles, mode,
-    sendMessage, addSystemMessage, clearMessages, switchModel, switchMode,
+    sendMessage, abort, addSystemMessage, clearMessages, switchModel, switchMode,
     isPickingModel, openModelPicker, closeModelPicker,
     attachFile, clearAttachments, loadHistory,
   } = useAgent();
@@ -118,13 +118,18 @@ export function App() {
 
   // All overlays disable the InputBox so ink-text-input never sees Tab/Enter/arrows
   const anyOverlay =
-    isStreaming || isPickingModel || isPickingProvider ||
+    isPickingModel || isPickingProvider ||
     !!pendingProviderAdd || showHistory ||
     showCommandAutocomplete || showFileAutocomplete;
 
   // ── Global key handler ───────────────────────────────────────────────────
   useInput((input, key) => {
     if ((key.ctrl && input === 'c') || (key.ctrl && input === 'd')) { setIsGameOver(true); return; }
+
+    if (key.escape && isStreaming) {
+      abort();
+      return;
+    }
 
     if (key.escape && sidePanel) {
       setSidePanel(null);
@@ -147,7 +152,7 @@ export function App() {
         setFileAutoSelectedIdx(0);
         return;
       }
-      if (key.upArrow)   { setFileAutoSelectedIdx(i => Math.max(0, i - 1)); return; }
+      if (key.upArrow) { setFileAutoSelectedIdx(i => Math.max(0, i - 1)); return; }
       if (key.downArrow) { setFileAutoSelectedIdx(i => Math.min(fileAutoFiles.length - 1, i + 1)); return; }
       if (key.return || key.tab) {
         const sel = fileAutoFiles[fileAutoSelectedIdx];
@@ -223,7 +228,7 @@ export function App() {
         else { setHistoryIndex(-1); setInputValue(savedDraft); }
         return;
       }
-      if (key.pageUp)   setScrollOffset(o => Math.min(o + 5, Math.max(0, messages.length - MAX_VISIBLE_MESSAGES)));
+      if (key.pageUp) setScrollOffset(o => Math.min(o + 5, Math.max(0, messages.length - MAX_VISIBLE_MESSAGES)));
       if (key.pageDown) setScrollOffset(o => Math.max(0, o - 5));
     }
   });
@@ -324,7 +329,7 @@ export function App() {
   // ── Visible message window ───────────────────────────────────────────────
   const totalMessages = messages.length;
   const windowStart = Math.max(0, totalMessages - MAX_VISIBLE_MESSAGES - scrollOffset);
-  const windowEnd   = Math.max(0, totalMessages - scrollOffset);
+  const windowEnd = Math.max(0, totalMessages - scrollOffset);
   const visibleMessages = messages.slice(windowStart, windowEnd);
   const hiddenAbove = windowStart;
   const hiddenBelow = totalMessages - windowEnd;
@@ -334,11 +339,11 @@ export function App() {
 
   if (isGameOver) {
     return (
-      <GameOverScreen 
-        tokensUsed={tokensUsed} 
-        cost={cost} 
-        messageCount={messages.length} 
-        onComplete={() => exit()} 
+      <GameOverScreen
+        tokensUsed={tokensUsed}
+        cost={cost}
+        messageCount={messages.length}
+        onComplete={() => exit()}
       />
     );
   }
@@ -357,72 +362,72 @@ export function App() {
 
       <Box flexDirection="row">
         <Box flexDirection="column" flexGrow={1} width={sidePanel ? "50%" : "100%"}>
-            {showFullscreenOverlay ? (
-                /* Pickers swap in place of messages — no new lines, no terminal jump */
-                <Box flexDirection="column" paddingX={1}>
-                {isPickingModel && (
-                    <ModelPicker
-                    onSelect={(provider, modelId) => {
-                        switchModel(provider, modelId);
-                        closeModelPicker();
-                        addSystemMessage(`Switched to ${provider}/${modelId}`);
-                    }}
-                    onClose={closeModelPicker}
-                    />
-                )}
-                {isPickingProvider && (
-                    <ProviderManager
-                    configuredProviders={Object.keys(readAuth())}
-                    onAdd={(id) => { open('provider-wizard', { providerId: id }); }}
-                    onRemove={(id) => { removeProviderKey(id); addSystemMessage(`Removed key for ${id}.`); }}
-                    onClose={() => close()}
-                    />
-                )}
-                {pendingProviderAdd && (
-                    <ProviderWizard
-                    providerName={pendingProviderAdd}
-                    onSave={(key) => {
-                        // 'oauth' is a sentinel for OAuth flows where the key is already persisted
-                        if (key !== 'oauth') {
-                            setProviderKey(pendingProviderAdd, key);
-                        }
-                        addSystemMessage(`Configured ${pendingProviderAdd}.`);
-                        close();
-                    }}
-                    onClose={() => close()}
-                    />
-                )}
-                {showHistory && (
-                    <HistoryPicker
-                    onSelect={(id) => { loadHistory(id); close(); addSystemMessage('Conversation loaded.'); }}
-                    onClose={() => close()}
-                    />
-                )}
+          {showFullscreenOverlay ? (
+            /* Pickers swap in place of messages — no new lines, no terminal jump */
+            <Box flexDirection="column" paddingX={1}>
+              {isPickingModel && (
+                <ModelPicker
+                  onSelect={(provider, modelId) => {
+                    switchModel(provider, modelId);
+                    closeModelPicker();
+                    addSystemMessage(`Switched to ${provider}/${modelId}`);
+                  }}
+                  onClose={closeModelPicker}
+                />
+              )}
+              {isPickingProvider && (
+                <ProviderManager
+                  configuredProviders={Object.keys(readAuth())}
+                  onAdd={(id) => { open('provider-wizard', { providerId: id }); }}
+                  onRemove={(id) => { removeProviderKey(id); addSystemMessage(`Removed key for ${id}.`); }}
+                  onClose={() => close()}
+                />
+              )}
+              {pendingProviderAdd && (
+                <ProviderWizard
+                  providerName={pendingProviderAdd}
+                  onSave={(key) => {
+                    // 'oauth' is a sentinel for OAuth flows where the key is already persisted
+                    if (key !== 'oauth') {
+                      setProviderKey(pendingProviderAdd, key);
+                    }
+                    addSystemMessage(`Configured ${pendingProviderAdd}.`);
+                    close();
+                  }}
+                  onClose={() => close()}
+                />
+              )}
+              {showHistory && (
+                <HistoryPicker
+                  onSelect={(id) => { loadHistory(id); close(); addSystemMessage('Conversation loaded.'); }}
+                  onClose={() => close()}
+                />
+              )}
+            </Box>
+          ) : (
+            /* Normal chat view */
+            <Box flexDirection="column" paddingX={1}>
+              {hiddenAbove > 0 && (
+                <Text color="#484F58">↑ {hiddenAbove} message{hiddenAbove !== 1 ? 's' : ''} above — PgUp</Text>
+              )}
+              {visibleMessages.length === 0 && !isStreaming && <WelcomeScreen />}
+              {visibleMessages.map(message => <MessageView key={message.id} message={message} />)}
+              {hiddenBelow > 0 && (
+                <Text color="#484F58">↓ {hiddenBelow} message{hiddenBelow !== 1 ? 's' : ''} below — PgDn</Text>
+              )}
+              {toolCalls.map(tc => <ToolCallView key={tc.toolCallId} tool={tc} />)}
+              {isStreaming && <StreamingMessage text={streamingText} />}
+              {pendingPermission && <PermissionPrompt permission={pendingPermission} />}
+              {error && (
+                <Box marginBottom={1} flexDirection="column">
+                  <Text color="#F85149">Error: {error}</Text>
+                  {/rate limit|429|FreeUsageLimit/i.test(error) && (
+                    <Text color="#8C959F">Tip: /model to browse free models</Text>
+                  )}
                 </Box>
-            ) : (
-                /* Normal chat view */
-                <Box flexDirection="column" paddingX={1}>
-                {hiddenAbove > 0 && (
-                    <Text color="#484F58">↑ {hiddenAbove} message{hiddenAbove !== 1 ? 's' : ''} above — PgUp</Text>
-                )}
-                {visibleMessages.length === 0 && !isStreaming && <WelcomeScreen />}
-                {visibleMessages.map(message => <MessageView key={message.id} message={message} />)}
-                {hiddenBelow > 0 && (
-                    <Text color="#484F58">↓ {hiddenBelow} message{hiddenBelow !== 1 ? 's' : ''} below — PgDn</Text>
-                )}
-                {toolCalls.map(tc => <ToolCallView key={tc.toolCallId} tool={tc} />)}
-                {isStreaming && <StreamingMessage text={streamingText} />}
-                {pendingPermission && <PermissionPrompt permission={pendingPermission} />}
-                {error && (
-                    <Box marginBottom={1} flexDirection="column">
-                    <Text color="#F85149">Error: {error}</Text>
-                    {/rate limit|429|FreeUsageLimit/i.test(error) && (
-                        <Text color="#8C959F">Tip: /model to browse free models</Text>
-                    )}
-                    </Box>
-                )}
-                </Box>
-            )}
+              )}
+            </Box>
+          )}
         </Box>
 
         {sidePanel && (
@@ -453,6 +458,7 @@ export function App() {
         onChange={setInputValue}
         onSubmit={handleSubmit}
         isDisabled={anyOverlay}
+        isStreaming={isStreaming}
       />
     </Box>
   );

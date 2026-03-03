@@ -21,7 +21,7 @@ function htmlToText(html: string): string {
 export function createWebFetch(permissionFn?: PermissionCallback) {
   return tool({
     description: 'Fetch content from a URL and return the extracted text.',
-    parameters: z.object({
+    inputSchema: z.object({
       url: z.string().url().describe('URL to fetch'),
     }),
     execute: async ({ url }) => {

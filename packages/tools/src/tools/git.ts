@@ -17,7 +17,7 @@ async function git(args: string, cwd?: string): Promise<string> {
 
 export const gitStatus = tool({
   description: 'Show the working tree status (modified, staged, untracked files).',
-  parameters: z.object({
+  inputSchema: z.object({
     cwd: z.string().optional().describe('Repository path'),
   }),
   execute: async ({ cwd }) => {
@@ -32,7 +32,7 @@ export const gitStatus = tool({
 
 export const gitDiff = tool({
   description: 'Show file diffs.',
-  parameters: z.object({
+  inputSchema: z.object({
     staged: z.boolean().default(false).describe('Show staged changes only'),
     file: z.string().optional().describe('Specific file to diff'),
     cwd: z.string().optional(),
@@ -56,7 +56,7 @@ export const gitDiff = tool({
 
 export const gitLog = tool({
   description: 'Show recent git commit history.',
-  parameters: z.object({
+  inputSchema: z.object({
     limit: z.number().int().min(1).max(50).default(10).describe('Number of commits to show'),
     cwd: z.string().optional(),
   }),
@@ -76,7 +76,7 @@ export const gitLog = tool({
 export function createGitCommit(permissionFn?: PermissionCallback) {
   return tool({
     description: 'Create a git commit with the given message.',
-    parameters: z.object({
+    inputSchema: z.object({
       message: z.string().describe('Commit message'),
       cwd: z.string().optional(),
     }),
