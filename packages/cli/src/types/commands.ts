@@ -15,5 +15,6 @@ export interface CommandContext {
   clearAttachments: () => void;
   openFileInPanel: (path: string) => void;
   exportConversation: (path?: string) => string;
+  compact: () => Promise<string>;
   exit: () => void;
 }

@@ -79,10 +79,10 @@
 
 **Tasks**:
 
-- [ ] Add `compact(): Promise<void>` to `CommandContext` type
-- [ ] Expose `compact` callback in `useAgent.ts` (calls `agent.compact()`, then syncs messages)
-- [ ] Fix `/compact` handler in `registry.ts` to call `ctx.compact()` instead of stub message
-- [ ] Show compaction result as system message in chat
+- [x] Add `compact(): Promise<void>` to `CommandContext` type
+- [x] Expose `compact` callback in `useAgent.ts` (calls `agent.compact()`, then syncs messages)
+- [x] Fix `/compact` handler in `registry.ts` to call `ctx.compact()` instead of stub message
+- [x] Show compaction result as system message in chat
 
 ---
 
