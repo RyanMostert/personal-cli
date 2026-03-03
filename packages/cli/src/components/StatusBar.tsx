@@ -72,10 +72,10 @@ export function StatusBar({
   else if (usagePct > 0.6) hpColor = '#FFB86C'; // Warning Orange
 
   const modeColors: Record<string, string> = {
-    'ASK': '#8C959F',
-    'AUTO': '#FF00AA',
-    'BUILD': '#00E5FF',
-    'PLAN': '#AA00FF',
+    'ASK': '#D29922',   // yellow — cautious, read-only
+    'AUTO': '#FF00AA',  // pink   — unrestricted
+    'BUILD': '#3FB950', // green  — active, with guardrails
+    'PLAN': '#F85149',  // red    — ask before every write
   };
   const modeColor = modeColors[mode.toUpperCase()] ?? '#8C959F';
 
@@ -106,8 +106,11 @@ export function StatusBar({
               <Text color="white" bold>{provider}/{modelId}</Text>
               <Text color="#484F58"> │ </Text>
               <Text color={modeColor} bold> {mode.toUpperCase()}_MODE </Text>
-              {(mode.toLowerCase() === 'ask' || mode.toLowerCase() === 'plan') && (
-                <Text color="#FFB86C"> [READ ONLY]</Text>
+              {mode.toLowerCase() === 'ask' && (
+                <Text color="#D29922"> [READ ONLY]</Text>
+              )}
+              {mode.toLowerCase() === 'plan' && (
+                <Text color="#F85149"> [CONFIRM WRITES]</Text>
               )}
             </Box>
             <Box marginTop={1}>

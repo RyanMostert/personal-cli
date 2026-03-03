@@ -20,7 +20,7 @@ import { useOverlay } from './context/OverlayContext.js';
 import { dispatch } from './commands/registry.js';
 import type { CommandContext } from './types/commands.js';
 import { matchKeybinding } from './keybindings/registry.js';
-import { DEFAULT_TOKEN_BUDGET, type ProviderName } from '@personal-cli/shared';
+import { DEFAULT_TOKEN_BUDGET, type ProviderName, type AgentMode } from '@personal-cli/shared';
 import {
   setProviderKey, removeProviderKey, readAuth,
   appendHistory, loadHistory as loadPromptHistory,
@@ -216,6 +216,13 @@ export function App() {
       if (key.ctrl && input === 'u') { setInputValue(''); return; }
       if (key.ctrl && input === 'w') { setInputValue(v => v.replace(/\S+\s*$/, '')); return; }
       if (key.ctrl && input === 'm') { openModelPicker(); return; }
+      if (key.tab) {
+        const cycle: AgentMode[] = ['ask', 'build', 'plan'];
+        const next = cycle[(cycle.indexOf(mode as AgentMode) + 1) % cycle.length];
+        switchMode(next);
+        addSystemMessage(`Mode: ${next}`);
+        return;
+      }
       if (key.upArrow && inputHistory.length > 0 && !inputValue.includes('\n')) {
         if (historyIndex === -1) setSavedDraft(inputValue);
         const next = historyIndex + 1;

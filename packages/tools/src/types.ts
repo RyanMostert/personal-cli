@@ -27,11 +27,11 @@ export const MODE_RULES: Record<string, PermissionRule[]> = {
     { tool: 'gitCommit', action: 'deny' },
   ],
   plan: [
-    // Same as ask — read-only
-    { tool: 'writeFile', action: 'deny' },
-    { tool: 'editFile', action: 'deny' },
-    { tool: 'runCommand', action: 'deny' },
-    { tool: 'gitCommit', action: 'deny' },
+    // Ask before every write/execute — user approves each step
+    { tool: 'writeFile', action: 'ask' },
+    { tool: 'editFile', action: 'ask' },
+    { tool: 'runCommand', action: 'ask' },
+    { tool: 'gitCommit', action: 'ask' },
   ],
   auto: [
     // Everything allowed without asking (user opted in)
