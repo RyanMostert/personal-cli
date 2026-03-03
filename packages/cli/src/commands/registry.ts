@@ -114,6 +114,29 @@ const commands: Command[] = [
     },
   },
   {
+    cmd: '/undo',
+    description: 'Undo the last file change made by the AI',
+    handler: (_, ctx) => {
+      ctx.addSystemMessage(ctx.undo());
+    },
+  },
+  {
+    cmd: '/redo',
+    description: 'Redo the last undone file change',
+    handler: (_, ctx) => {
+      ctx.addSystemMessage(ctx.redo());
+    },
+  },
+  {
+    cmd: '/init',
+    description: 'Analyze this project and write AGENTS.md to persist context across sessions',
+    handler: async (_, ctx) => {
+      ctx.addSystemMessage('Analyzing project and generating AGENTS.md…');
+      const result = await ctx.initProject();
+      ctx.addSystemMessage(result);
+    },
+  },
+  {
     cmd: '/help',
     description: 'Show available commands',
     handler: (_, ctx) => {

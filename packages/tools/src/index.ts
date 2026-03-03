@@ -10,19 +10,31 @@ import { createRunCommand } from './tools/run-command.js';
 import { createWebFetch } from './tools/web-fetch.js';
 import { gitStatus, gitDiff, gitLog, createGitCommit } from './tools/git.js';
 import { think } from './tools/think.js';
+import { todoWrite, todoRead } from './tools/todo.js';
+import { webSearch } from './tools/web-search.js';
+import { createPatch } from './tools/patch.js';
+import { createQuestionTool } from './tools/question.js';
 import { minimatch } from 'minimatch';
 import {
   type PermissionCallback,
   type PermissionRule,
+  type WriteCallback,
+  type QuestionCallback,
   DEFAULT_PERMISSION_RULES,
   MODE_RULES,
 } from './types.js';
 
 export * from './types.js';
 
+export interface CreateToolsOptions {
+  onWrite?: WriteCallback;
+  questionFn?: QuestionCallback;
+}
+
 export function createTools(
   mode: 'ask' | 'plan' | 'auto' | 'build' = 'ask',
   permissionFn?: PermissionCallback,
+  options?: CreateToolsOptions,
 ) {
   // Build effective rules: defaults + mode overrides
   const rules = [...DEFAULT_PERMISSION_RULES, ...(MODE_RULES[mode] ?? [])];
@@ -30,10 +42,12 @@ export function createTools(
   // Wrap permissionFn with rule pre-check
   const resolvedPermission = makePermissionResolver(rules, permissionFn);
 
+  const { onWrite, questionFn } = options ?? {};
+
   return {
     readFile,
-    writeFile: createWriteFile(resolvedPermission),
-    editFile: createEditFile(resolvedPermission),
+    writeFile: createWriteFile(resolvedPermission, onWrite),
+    editFile: createEditFile(resolvedPermission, onWrite),
     listDir,
     searchFiles,
     globFiles,
@@ -41,11 +55,16 @@ export function createTools(
     diagnostics,
     runCommand: createRunCommand(resolvedPermission),
     webFetch: createWebFetch(resolvedPermission),
+    webSearch,
     gitStatus,
     gitDiff,
     gitLog,
     gitCommit: createGitCommit(resolvedPermission),
     think,
+    todoWrite,
+    todoRead,
+    patch: createPatch(resolvedPermission, onWrite),
+    question: createQuestionTool(questionFn),
   };
 }
 

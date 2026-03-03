@@ -3,13 +3,19 @@ import { generateId, type Message, type StreamEvent, type ActiveModel, type Agen
 import { DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
 import { ProviderManager } from './providers/manager.js';
 import { saveConversation, loadConversation, renameConversation as persistRename } from './persistence/conversations.js';
-import { createTools, type PermissionCallback } from '@personal-cli/tools';
+import { createTools, type PermissionCallback, type QuestionCallback } from '@personal-cli/tools';
 import { DEFAULT_SYSTEM_PROMPT } from './prompts/default.js';
 import { generateTitle } from './agent/title.js';
-import { COMPACTION_PROMPT } from './prompts/compaction.js'; export interface AgentOptions {
+import { COMPACTION_PROMPT } from './prompts/compaction.js';
+import { UndoStack } from './persistence/undo-stack.js';
+import { existsSync, readFileSync, writeFileSync, readdirSync } from 'fs';
+import { join } from 'path';
+
+export interface AgentOptions {
   providerManager: ProviderManager;
   mode?: AgentMode;
   permissionFn?: PermissionCallback;
+  questionFn?: QuestionCallback;
   maxSteps?: number;
   systemPrompt?: string;
   tokenBudget?: number;
@@ -30,15 +36,38 @@ export class Agent {
   private conversationTitle?: string;
   private conversationId?: string;
   private currentAbortController: AbortController | null = null;
+  private undoStack = new UndoStack();
+  private questionFn?: QuestionCallback;
 
   constructor(options: AgentOptions) {
     this.providerManager = options.providerManager;
-    this.systemPrompt = options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
     this.tokenBudget = options.tokenBudget ?? DEFAULT_TOKEN_BUDGET;
     this.mode = options.mode ?? 'ask';
     this.permissionFn = options.permissionFn;
-    this.tools = createTools(this.mode, this.permissionFn);
+    this.questionFn = options.questionFn;
     this.maxSteps = options.maxSteps ?? 20;
+
+    // Inject AGENTS.md project context if present in the working directory
+    let base = options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
+    const agentsMdPath = join(process.cwd(), 'AGENTS.md');
+    if (existsSync(agentsMdPath)) {
+      try {
+        const agentsMd = readFileSync(agentsMdPath, 'utf-8').trim();
+        base = `# Project Context\n\n${agentsMd}\n\n---\n\n${base}`;
+      } catch { }
+    }
+    this.systemPrompt = base;
+
+    this.tools = this.buildTools();
+  }
+
+  private buildTools() {
+    return createTools(this.mode, this.permissionFn, {
+      onWrite: (path, before, after) => {
+        if (before !== null) this.undoStack.push({ path, before, after });
+      },
+      questionFn: this.questionFn,
+    });
   }
 
   getMessages(): Message[] {
@@ -63,7 +92,7 @@ export class Agent {
 
   switchMode(mode: AgentMode) {
     this.mode = mode;
-    this.tools = createTools(this.mode, this.permissionFn);
+    this.tools = this.buildTools();
   }
 
   abort(): void {
@@ -79,6 +108,64 @@ export class Agent {
     this.coreMessages = [];
     this.conversationId = undefined;
     this.conversationTitle = undefined;
+    this.undoStack.clear();
+  }
+
+  undo(): string {
+    const result = this.undoStack.undo();
+    if (!result) return 'Nothing to undo.';
+    return `Undid change to ${result.path}`;
+  }
+
+  redo(): string {
+    const result = this.undoStack.redo();
+    if (!result) return 'Nothing to redo.';
+    return `Redid change to ${result.path}`;
+  }
+
+  async initProject(): Promise<string> {
+    const cwd = process.cwd();
+    const outputPath = join(cwd, 'AGENTS.md');
+
+    // Gather lightweight project context
+    let listing = '';
+    try {
+      listing = readdirSync(cwd).slice(0, 30).join(', ');
+    } catch { }
+
+    let pkgJson = '';
+    try {
+      const p = join(cwd, 'package.json');
+      if (existsSync(p)) pkgJson = readFileSync(p, 'utf-8').slice(0, 1000);
+    } catch { }
+
+    const prompt = `Analyze the following project and write a concise AGENTS.md file. This file will be prepended to the AI assistant's system prompt on every session, so make it useful: include what the project is, its tech stack, key directories/files, important conventions, and anything an AI coding assistant should know before touching the code.
+
+Project files: ${listing}
+
+${pkgJson ? `package.json (truncated):\n${pkgJson}` : ''}
+
+Write AGENTS.md content only — no markdown code fences, no preamble. Start directly with a heading.`;
+
+    const model = await this.providerManager.getModel();
+    const result = streamText({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      maxOutputTokens: 1024,
+    } as any);
+
+    let content = '';
+    for await (const part of result.fullStream) {
+      if (part.type === 'text-delta') content += part.text;
+    }
+
+    writeFileSync(outputPath, content.trim(), 'utf-8');
+
+    // Load into current session immediately
+    const agentsMd = content.trim();
+    this.systemPrompt = `# Project Context\n\n${agentsMd}\n\n---\n\n${DEFAULT_SYSTEM_PROMPT}`;
+
+    return `AGENTS.md created at ${outputPath} and loaded into system prompt.`;
   }
 
   renameConversation(newTitle: string): boolean {

@@ -2,9 +2,9 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
-import type { PermissionCallback } from '../types.js';
+import type { PermissionCallback, WriteCallback } from '../types.js';
 
-export function createEditFile(permissionFn?: PermissionCallback) {
+export function createEditFile(permissionFn?: PermissionCallback, onWrite?: WriteCallback) {
   return tool({
     description:
       'Apply a surgical edit to a file by replacing an exact string with a new string. The oldText must match exactly (including whitespace/indentation).',
@@ -24,19 +24,21 @@ export function createEditFile(permissionFn?: PermissionCallback) {
       if (!existsSync(abs)) return { error: `File not found: ${path}` };
 
       try {
-        let content = readFileSync(abs, 'utf-8');
-        if (!content.includes(oldText)) {
+        const originalContent = readFileSync(abs, 'utf-8');
+        if (!originalContent.includes(oldText)) {
           return { error: `Text not found in ${path}:\n${oldText.slice(0, 200)}` };
         }
 
-        const before = content.split(oldText).length - 1;
+        const before = originalContent.split(oldText).length - 1;
+        let content: string;
         if (replaceAll) {
-          content = content.split(oldText).join(newText);
+          content = originalContent.split(oldText).join(newText);
         } else {
-          content = content.replace(oldText, newText);
+          content = originalContent.replace(oldText, newText);
         }
 
         writeFileSync(abs, content, 'utf-8');
+        if (onWrite) onWrite(abs, originalContent, content);
         return {
           output: `Replaced ${replaceAll ? before : 1} occurrence(s) in ${path}`,
         };
