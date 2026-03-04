@@ -113,7 +113,23 @@ export function exportConversation(
   ...messages.map(m => {
     const time = new Date(m.timestamp).toLocaleTimeString();
     const role = m.role.charAt(0).toUpperCase() + m.role.slice(1);
-    return `**${role}** · ${time}\n\n${m.content}\n`;
+    
+    let text = `**${role}** · ${time}\n\n`;
+    
+    if (m.toolCalls?.length) {
+      text += `*Tool Calls:*\n`;
+      for (const tc of m.toolCalls) {
+        text += `- **${tc.toolName}**: ${JSON.stringify(tc.args)}\n`;
+        if (tc.result) {
+          const res = typeof tc.result === 'string' ? tc.result : JSON.stringify(tc.result);
+          text += `  > ${res.slice(0, 200)}${res.length > 200 ? '...' : ''}\n`;
+        }
+      }
+      text += '\n';
+    }
+    
+    text += `${m.content}\n`;
+    return text;
   }),
   ].join('\n');
 

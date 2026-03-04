@@ -1,32 +1,30 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { TOOL_OUTPUT_MAX_CHARS } from '@personal-cli/shared';
 import type { PermissionCallback } from '../types.js';
 
-function htmlToText(html: string): string {
-  return html
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    // Convert block-level elements to newlines before stripping all tags
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(?:p|div|h[1-6]|li|tr|section|article|header|footer|nav|main|aside|blockquote|pre)>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#\d+;/g, '')
-    .replace(/[ \t]{2,}/g, ' ')   // collapse horizontal whitespace only — not newlines
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+/**
+ * Strips HTML tags, scripts, and styles to return clean text.
+ */
+function cleanHtml(html: string): string {
+  // Remove scripts and styles
+  let text = html.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '');
+  // Remove all other tags
+  text = text.replace(/<[^>]*>/g, ' ');
+  // Decode common entities
+  text = text.replace(/&nbsp;/g, ' ')
+             .replace(/&amp;/g, '&')
+             .replace(/&lt;/g, '<')
+             .replace(/&gt;/g, '>')
+             .replace(/&quot;/g, '"');
+  // Collapse whitespace
+  return text.replace(/\s+/g, ' ').trim();
 }
 
 export function createWebFetch(permissionFn?: PermissionCallback) {
   return tool({
-    description: 'Fetch content from a URL and return the extracted text. After fetching, you MUST always summarize and present the key information to the user in your response — never leave an empty reply after calling this tool.',
+    description: 'Fetch content from a URL. Returns a cleaned, text-only version of the page for AI consumption.',
     inputSchema: z.object({
-      url: z.string().url().describe('URL to fetch'),
+      url: z.string().describe('The URL to fetch'),
     }),
     execute: async ({ url }) => {
       if (permissionFn) {
@@ -35,30 +33,48 @@ export function createWebFetch(permissionFn?: PermissionCallback) {
       }
 
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+
         const res = await fetch(url, {
-          headers: { 'User-Agent': 'personal-cli/0.1.0' },
-          signal: AbortSignal.timeout(15_000),
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; PersonalCLI/1.0; +https://github.com/google-gemini/gemini-cli)',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          },
+          signal: controller.signal,
         });
+        
+        clearTimeout(timeout);
 
-        if (!res.ok) return { error: `HTTP ${res.status}: ${res.statusText}` };
-
-        const contentType = res.headers.get('content-type') ?? '';
-        const raw = await res.text();
-        let text = contentType.includes('html') ? htmlToText(raw) : raw;
-
-        // If stripping left almost nothing, the page is likely JS-rendered
-        if (contentType.includes('html') && text.length < 200) {
-          text = `[This page appears to be JavaScript-rendered and returned little or no static text content. Raw length: ${raw.length} bytes. URL: ${url}]`;
+        if (!res.ok) {
+          return { error: `HTTP_ERROR ${res.status}: ${res.statusText}` };
         }
 
-        let output = text;
-        if (output.length > TOOL_OUTPUT_MAX_CHARS) {
-          output = output.slice(0, TOOL_OUTPUT_MAX_CHARS) + '\n... (truncated)';
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const data = await res.json();
+          return { output: JSON.stringify(data, null, 2) };
         }
 
-        return { output, url, contentType, _hint: 'Summarize the above content for the user.' };
+        const html = await res.text();
+        const cleaned = cleanHtml(html);
+        
+        // Truncate to reasonable length for context
+        const limit = 15000;
+        const finalOutput = cleaned.length > limit 
+          ? cleaned.slice(0, limit) + "\n\n[CONTENT_TRUNCATED_DUE_TO_SIZE]"
+          : cleaned;
+
+        return { 
+          output: finalOutput,
+          metadata: {
+            url,
+            status: res.status,
+            length: cleaned.length
+          }
+        };
       } catch (err) {
-        return { error: String(err) };
+        return { error: `NETWORK_FAILURE: ${String(err)}` };
       }
     },
   });

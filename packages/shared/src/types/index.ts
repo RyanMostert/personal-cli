@@ -57,6 +57,8 @@ export interface Message {
   id: string;
   role: MessageRole;
   content: string;
+  thought?: string;
+  toolCalls?: ToolCallInfo[];
   timestamp: number;
 }
 
@@ -98,6 +100,7 @@ export interface AgentConfig {
 
 export type StreamEventType =
   | 'text-delta'
+  | 'thought-delta'
   | 'tool-call-start'
   | 'tool-call-result'
   | 'finish'

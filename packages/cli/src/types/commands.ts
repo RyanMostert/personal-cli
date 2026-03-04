@@ -11,6 +11,7 @@ export interface CommandContext {
   openModelPicker: () => void;
   openProviderManager: () => void;
   openHistory: () => void;
+  openMCPManager: () => void;
   attachFile: (path: string) => Promise<boolean>;
   clearAttachments: () => void;
   openFileInPanel: (path: string) => void;

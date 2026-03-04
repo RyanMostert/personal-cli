@@ -1,180 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
+import { PROVIDER_REGISTRY, type ProviderEntry } from '@personal-cli/shared';
 
-interface ProviderInfo {
-  label: string;
-  color: string;
-  description: string;
-  keyLabel: string;
-  keyUrl?: string;
-  envVar?: string;
-  noKeyNeeded?: boolean;
-  oauthFlow?: boolean;
-  extraNote?: string;
-}
-
-const PROVIDER_INFO: Record<string, ProviderInfo> = {
-  'opencode-zen': {
-    label: 'OpenCode Zen',
-    color: '#00E5FF',
-    description: 'Free AI gateway — Kimi, MiniMax, Trinity and more at zero cost',
-    keyLabel: 'ACCESS_KEY',
-    keyUrl: 'opencode.ai/zen',
-    envVar: 'OPENCODE_API_KEY',
-  },
-  'anthropic': {
-    label: 'Anthropic',
-    color: '#FF00AA',
-    description: 'Claude Opus, Sonnet, Haiku — industry-leading reasoning and coding',
-    keyLabel: 'X-API-KEY',
-    keyUrl: 'console.anthropic.com/settings/keys',
-    envVar: 'ANTHROPIC_API_KEY',
-  },
-  'openai': {
-    label: 'OpenAI',
-    color: '#3FB950',
-    description: 'GPT-4o, o3, o4-mini — flagship models from OpenAI',
-    keyLabel: 'BEARER_TOKEN',
-    keyUrl: 'platform.openai.com/api-keys',
-    envVar: 'OPENAI_API_KEY',
-  },
-  'google': {
-    label: 'Google AI Studio',
-    color: '#AA00FF',
-    description: 'Gemini 2.5 Pro/Flash — up to 1M token context window',
-    keyLabel: 'API_KEY',
-    keyUrl: 'aistudio.google.com/app/apikey',
-    envVar: 'GOOGLE_API_KEY',
-  },
-  'mistral': {
-    label: 'Mistral AI',
-    color: '#BD93F9',
-    description: 'Mistral Large, Codestral, Devstral — European open models',
-    keyLabel: 'MISTRAL_KEY',
-    keyUrl: 'console.mistral.ai/api-keys',
-    envVar: 'MISTRAL_API_KEY',
-  },
-  'openrouter': {
-    label: 'OpenRouter',
-    color: '#00E5FF',
-    description: 'Access 200+ models via one key — includes free-tier models',
-    keyLabel: 'OR_API_KEY',
-    keyUrl: 'openrouter.ai/keys',
-    envVar: 'OPENROUTER_API_KEY',
-    extraNote: 'Tip: filter with #free in /model to see zero-cost models',
-  },
-  'groq': {
-    label: 'Groq',
-    color: '#50FA7B',
-    description: 'Ultra-fast LPU inference — Llama, QwQ at blazing speed',
-    keyLabel: 'GROQ_API_KEY',
-    keyUrl: 'console.groq.com/keys',
-    envVar: 'GROQ_API_KEY',
-  },
-  'xai': {
-    label: 'xAI',
-    color: '#FF5555',
-    description: "Grok 3, Grok 3 Mini — xAI's reasoning-capable models",
-    keyLabel: 'XAI_KEY',
-    keyUrl: 'console.x.ai',
-    envVar: 'XAI_API_KEY',
-  },
-  'deepseek': {
-    label: 'DeepSeek',
-    color: '#8BE9FD',
-    description: 'DeepSeek-V3 and R1 reasoning — exceptional value, low cost',
-    keyLabel: 'DS_API_KEY',
-    keyUrl: 'platform.deepseek.com/api_keys',
-    envVar: 'DEEPSEEK_API_KEY',
-  },
-  'perplexity': {
-    label: 'Perplexity',
-    color: '#FFB86C',
-    description: 'Sonar models with live web search built in',
-    keyLabel: 'PPLX_KEY',
-    keyUrl: 'perplexity.ai/settings/api',
-    envVar: 'PERPLEXITY_API_KEY',
-  },
-  'cerebras': {
-    label: 'Cerebras',
-    color: '#FF00AA',
-    description: 'Hardware-accelerated inference — fastest token generation available',
-    keyLabel: 'CB_API_KEY',
-    keyUrl: 'cloud.cerebras.ai/platform/api_keys',
-    envVar: 'CEREBRAS_API_KEY',
-  },
-  'together': {
-    label: 'Together AI',
-    color: '#6272A4',
-    description: 'Multi-model inference — Llama, Qwen, DeepSeek via one API',
-    keyLabel: 'TOG_KEY',
-    keyUrl: 'api.together.xyz/settings/api-keys',
-    envVar: 'TOGETHER_API_KEY',
-  },
-  'github-copilot': {
-    label: 'GitHub Copilot',
-    color: '#3FB950',
-    description: 'AI pair programmer — access GPT-4o, Claude, Gemini via your Copilot subscription',
-    keyLabel: '',
-    oauthFlow: true,
-    extraNote: 'Requires GitHub Copilot Pro or Enterprise subscription',
-  },
-  'ollama': {
-    label: 'Ollama',
-    color: '#3FB950',
-    description: 'Run open models locally — completely private, no API key needed',
-    keyLabel: '',
-    noKeyNeeded: true,
-    extraNote: 'Install: ollama.com  |  Pull a model: ollama pull llama3.3',
-  },
-  'google-vertex': {
-    label: 'Google Vertex AI',
-    color: '#AA00FF',
-    description: 'Gemini on GCP — uses Application Default Credentials (gcloud auth)',
-    keyLabel: '',
-    noKeyNeeded: true,
-    extraNote: 'Run: gcloud auth application-default login  |  Set GOOGLE_CLOUD_PROJECT env var',
-  },
-  'opencode': {
-    label: 'opencode',
-    color: '#00E5FF',
-    description: 'opencode.ai gateway — free models available without a key',
-    keyLabel: 'API_KEY',
-    keyUrl: 'opencode.ai',
-    envVar: 'OPENCODE_API_KEY',
-    extraNote: 'Leave blank to access free models with public access',
-  },
-  'amazon-bedrock': {
-    label: 'Amazon Bedrock',
-    color: '#FF9900',
-    description: 'AWS-hosted models — uses AWS credential chain (no API key needed)',
-    keyLabel: '',
-    noKeyNeeded: true,
-    extraNote: 'Set AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY + AWS_REGION, or use IAM roles',
-  },
-  'azure': {
-    label: 'Azure OpenAI',
-    color: '#0078D4',
-    description: 'OpenAI models deployed on Azure — enterprise billing',
-    keyLabel: 'AZURE_API_KEY',
-    keyUrl: 'portal.azure.com',
-    envVar: 'AZURE_API_KEY',
-    extraNote: 'Also set AZURE_RESOURCE_NAME env var to your Azure resource name',
-  },
-  'custom': {
-    label: 'Custom Provider',
-    color: '#8C959F',
-    description: 'Any OpenAI-compatible API endpoint',
-    keyLabel: 'CUSTOM_KEY',
-    envVar: 'CUSTOM_API_KEY',
-    extraNote: 'Switch with: /model custom/http://localhost:8080/v1|model-name',
-  },
-};
-
-const FALLBACK_INFO: ProviderInfo = {
+const FALLBACK_INFO: ProviderEntry = {
+  id: 'custom' as any,
   label: 'Provider',
   color: '#8C959F',
   description: 'Enter your API key below',
+  tags: [],
   keyLabel: 'API Key',
 };
 
@@ -189,7 +22,8 @@ export function ProviderWizard({ providerName, onSave, onClose }: Props) {
   const [oauthPhase, setOauthPhase] = useState<'init' | 'waiting' | 'done' | 'error'>('init');
   const [deviceInfo, setDeviceInfo] = useState<{ userCode: string; verificationUri: string } | null>(null);
   const [oauthError, setOauthError] = useState<string | null>(null);
-  const info = PROVIDER_INFO[providerName] ?? FALLBACK_INFO;
+  
+  const info = PROVIDER_REGISTRY.find(p => p.id === providerName) ?? FALLBACK_INFO;
 
   // Handle OAuth device flow for providers that use it
   useEffect(() => {

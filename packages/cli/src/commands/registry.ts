@@ -145,6 +145,14 @@ const commands: Command[] = [
     },
   },
   {
+    cmd: '/mcp',
+    description: 'Manage MCP servers and external tools',
+    handler: (args, ctx) => {
+      if (!args) { ctx.openMCPManager(); return; }
+      // Subcommands handled in app.tsx
+    },
+  },
+  {
     cmd: '/theme',
     description: 'Switch UI theme',
     handler: (args, ctx) => {

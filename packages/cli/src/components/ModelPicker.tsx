@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { MODEL_REGISTRY, type ProviderName, type ModelEntry, type ModelTag } from '@personal-cli/shared';
 import fuzzysort from 'fuzzysort';
-import { getRecentModels, addRecentModel } from '@personal-cli/core';
+import { getRecentModels, addRecentModel, getCachedModels, convertToModelEntry, getAllCacheStats, type CacheStats } from '@personal-cli/core';
 
 interface Props {
   onSelect: (provider: ProviderName, modelId: string) => void;
@@ -38,6 +38,30 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
   const [rowFocus, setRowFocus] = useState(0);
   const [collapsedProviders, setCollapsedProviders] = useState<Set<string>>(defaultCollapsedSet);
   const [costSavingMode, setCostSavingMode] = useState(false);
+  const [cachedModels, setCachedModels] = useState<ModelEntry[]>([]);
+  const [cacheStats, setCacheStats] = useState<CacheStats[]>([]);
+
+  // Load cached models on mount
+  useEffect(() => {
+    const loadCached = async () => {
+      const providers: ProviderName[] = ['openrouter', 'github-copilot', 'opencode', 'opencode-zen'];
+      const allCached: ModelEntry[] = [];
+      
+      for (const provider of providers) {
+        const cached = await getCachedModels(provider);
+        if (cached) {
+          allCached.push(...cached.map(convertToModelEntry));
+        }
+      }
+      
+      setCachedModels(allCached);
+      
+      const stats = await getAllCacheStats();
+      setCacheStats(stats);
+    };
+    
+    loadCached();
+  }, []);
 
   // Calculate average cost for comparison
   const getAvgCost = (m: ModelEntry): number => {
@@ -74,9 +98,27 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
       .filter((m): m is ModelEntry => m !== undefined);
   }, []);
 
+  // Merge static and cached models
+  const allModels = useMemo(() => {
+    // Create a map to deduplicate (cached takes precedence over static)
+    const modelMap = new Map<string, ModelEntry>();
+    
+    // Add static models first
+    for (const m of MODEL_REGISTRY) {
+      modelMap.set(`${m.provider}/${m.id}`, m);
+    }
+    
+    // Override with cached models
+    for (const m of cachedModels) {
+      modelMap.set(`${m.provider}/${m.id}`, m);
+    }
+    
+    return Array.from(modelMap.values());
+  }, [cachedModels]);
+
   // Filter models
   const filtered = useMemo(() => {
-    let models = MODEL_REGISTRY;
+    let models = allModels;
     if (tags.size > 0)
       models = models.filter(m => Array.from(tags).some(tag => m.tags?.includes(tag)));
     if (freeOnly)
@@ -96,7 +138,7 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
       }).map(r => r.obj);
     }
     return models;
-  }, [searchQuery, tags, freeOnly, costSavingMode]);
+  }, [allModels, searchQuery, tags, freeOnly, costSavingMode]);
 
   // When filter is active, expand all so results are fully visible
   const effectiveCollapsed = filter ? new Set<string>() : collapsedProviders;
@@ -258,6 +300,9 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
 
           if (row.kind === 'header') {
             const isRecent = row.provider === '__recent__';
+            const stat = cacheStats.find(s => s.provider === row.provider);
+            const hasCache = stat && stat.modelCount > 0;
+            const isStale = stat?.isStale;
             return (
               <Box key={`h-${row.provider}-${i}`} marginTop={i === 0 ? 0 : 1} backgroundColor={focused ? '#161b22' : undefined}>
                 <Text color={focused ? '#FF00AA' : '#484F58'} bold>
@@ -274,6 +319,12 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
                       ? `${row.modelCount} models  [Enter/Space to expand]`
                       : `[Enter/Space to collapse]`
                     }
+                  </Text>
+                )}
+                {hasCache && (
+                  <Text color={isStale ? '#FFB86C' : '#50FA7B'}>
+                    {' '}
+                    {isStale ? '⚠ cached' : '🔄 cached'}
                   </Text>
                 )}
               </Box>
@@ -317,7 +368,7 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
       </Box>
 
       <Box marginTop={1} justifyContent="space-between" paddingX={1}>
-        <Text color="#484F58"> ESC abort · type to filter · #free #fast · $ toggle cheap mode </Text>
+        <Text color="#484F58"> ESC abort · type to filter · #free #fast · $ cheap mode · Ctrl+R refresh </Text>
         <Text color="#00E5FF" bold> Enter select/toggle </Text>
       </Box>
     </Box>

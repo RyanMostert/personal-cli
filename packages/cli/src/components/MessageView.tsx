@@ -2,6 +2,8 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import type { Message } from '@personal-cli/shared';
 import { MarkdownRenderer } from './MarkdownRenderer.js';
+import { ToolCallView } from './ToolCallView.js';
+import { ThoughtView } from './ThoughtView.js';
 import { useTheme } from '../context/ThemeContext.js';
 
 interface Props {
@@ -40,12 +42,18 @@ export function MessageView({ message }: Props) {
         <Text color={theme.dim}>❯ </Text>
         <Text color={theme.primary} dimColor>[link_stable]</Text>
       </Box>
+
+      {message.thought && <ThoughtView text={message.thought} />}
+
       <Box paddingLeft={2} flexDirection="column">
+        {message.toolCalls?.map(tc => (
+          <ToolCallView key={tc.toolCallId} tool={tc} />
+        ))}
         {message.content ? (
           <MarkdownRenderer text={message.content} />
-        ) : (
+        ) : !message.toolCalls?.length ? (
           <Text color={theme.dim} italic>(no content received)</Text>
-        )}
+        ) : null}
       </Box>
     </Box>
   );

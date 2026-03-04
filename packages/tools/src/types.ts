@@ -20,12 +20,12 @@ export const DEFAULT_PERMISSION_RULES: PermissionRule[] = [
 // Mode-specific rule sets — these are MERGED on top of defaults
 export const MODE_RULES: Record<string, PermissionRule[]> = {
   ask: [
-    // Read-only: deny all write/execute tools
-    { tool: 'writeFile', action: 'deny' },
-    { tool: 'editFile', action: 'deny' },
+    // Propose edits: ask before write/execute tools (Gemini CLI style)
+    { tool: 'writeFile', action: 'ask' },
+    { tool: 'editFile', action: 'ask' },
+    { tool: 'patch', action: 'ask' },
     { tool: 'runCommand', action: 'deny' },
     { tool: 'gitCommit', action: 'deny' },
-    { tool: 'patch', action: 'deny' },
   ],
   plan: [
     // Ask before every write/execute — user approves each step

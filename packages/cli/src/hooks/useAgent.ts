@@ -29,8 +29,9 @@ export function useAgent() {
   const agentRef = useRef<Agent | null>(null);
   const attachedFilesRef = useRef<AttachedFile[]>([]);
 
-  // Split streamingText into isolated state to prevent re-renders of the main state tree
+  // Split streamingText and streamingThought into isolated state to prevent re-renders of the main state tree
   const [streamingText, setStreamingText] = useState('');
+  const [streamingThought, setStreamingThought] = useState('');
 
   const [state, setState] = useState<AgentState>({
     messages: [],
@@ -114,6 +115,7 @@ export function useAgent() {
     attachedFilesRef.current = [];
 
     setStreamingText('');
+    setStreamingThought('');
     setState((prev) => ({
       ...prev,
       isStreaming: true,
@@ -133,9 +135,11 @@ export function useAgent() {
 
       // Buffer streaming text and flush at most every 80ms to reduce Ink repaints
       let textBuf = '';
+      let thoughtBuf = '';
       let flushTimer: ReturnType<typeof setTimeout> | null = null;
       const flush = () => {
         if (textBuf) { setStreamingText(prev => prev + textBuf); textBuf = ''; }
+        if (thoughtBuf) { setStreamingThought(prev => prev + thoughtBuf); thoughtBuf = ''; }
         flushTimer = null;
       };
 
@@ -144,6 +148,12 @@ export function useAgent() {
           case 'text-delta':
             if (event.delta) {
               textBuf += event.delta;
+              if (!flushTimer) flushTimer = setTimeout(flush, 80);
+            }
+            break;
+          case 'thought-delta':
+            if (event.delta) {
+              thoughtBuf += event.delta;
               if (!flushTimer) flushTimer = setTimeout(flush, 80);
             }
             break;
@@ -181,6 +191,7 @@ export function useAgent() {
       // Flush any remaining buffered text before clearing streaming state
       if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
       if (textBuf) { setStreamingText(prev => prev + textBuf); textBuf = ''; }
+      if (thoughtBuf) { setStreamingThought(prev => prev + thoughtBuf); thoughtBuf = ''; }
 
       // Stream completed (normal finish or after abort) — always runs
       setState((prev) => ({
@@ -192,6 +203,7 @@ export function useAgent() {
         toolCalls: [],
       }));
       setStreamingText('');
+      setStreamingThought('');
 
     } catch (err) {
       if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
@@ -212,6 +224,7 @@ export function useAgent() {
   return {
     ...state,
     streamingText,
+    streamingThought,
     activeModel,
     sendMessage,
     abort,

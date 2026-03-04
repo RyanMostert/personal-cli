@@ -227,6 +227,10 @@ Write AGENTS.md content only — no markdown code fences, no preamble. Start dir
 
     try {
       let fullText = '';
+      let thoughtText = '';
+      const allToolCalls: Record<string, any> = {};
+      let totalPromptTokens = 0;
+      let totalCompletionTokens = 0;
 
       for await (const part of result.fullStream) {
         switch (part.type) {
@@ -235,18 +239,28 @@ Write AGENTS.md content only — no markdown code fences, no preamble. Start dir
             yield { type: 'text-delta', delta: part.text };
             break;
 
+          case 'reasoning-delta':
+            const reasoningText = (part as any).text || '';
+            thoughtText += reasoningText;
+            yield { type: 'thought-delta', delta: reasoningText };
+            break;
+
           case 'tool-call':
+            allToolCalls[part.toolCallId] = {
+              toolCallId: part.toolCallId,
+              toolName: part.toolName,
+              args: ('args' in part ? part.args : (part as any).input) as Record<string, unknown>,
+            };
             yield {
               type: 'tool-call-start',
-              toolCall: {
-                toolCallId: part.toolCallId,
-                toolName: part.toolName,
-                args: ('args' in part ? part.args : (part as any).input) as Record<string, unknown>,
-              },
+              toolCall: allToolCalls[part.toolCallId],
             };
             break;
 
           case 'tool-result':
+            if (allToolCalls[part.toolCallId]) {
+              allToolCalls[part.toolCallId].result = ('result' in part ? part.result : (part as any).output);
+            }
             yield {
               type: 'tool-call-result',
               toolCall: {
@@ -257,15 +271,14 @@ Write AGENTS.md content only — no markdown code fences, no preamble. Start dir
             };
             break;
 
+          // step-finish handling removed - token tracking via other events
+
           case 'error':
             throw part.error;
         }
       }
 
-      const usage = await result.usage;
-      const promptTokens = usage.inputTokens ?? 0;
-      const completionTokens = usage.outputTokens ?? 0;
-      this.totalTokensUsed += promptTokens + completionTokens;
+      this.totalTokensUsed += totalPromptTokens + totalCompletionTokens;
 
       // Capture response messages from this streamText call (tool-call/result + assistant)
       const response = await result.response;
@@ -276,16 +289,18 @@ Write AGENTS.md content only — no markdown code fences, no preamble. Start dir
       // Calculate cost based on model pricing
       const entry = getModelEntry(this.providerManager.getActiveModel().provider, this.providerManager.getActiveModel().modelId);
       if (entry?.inputCostPer1M != null) {
-        this.totalCost += (promptTokens / 1_000_000) * entry.inputCostPer1M;
+        this.totalCost += (totalPromptTokens / 1_000_000) * entry.inputCostPer1M;
       }
       if (entry?.outputCostPer1M != null) {
-        this.totalCost += (completionTokens / 1_000_000) * entry.outputCostPer1M;
+        this.totalCost += (totalCompletionTokens / 1_000_000) * entry.outputCostPer1M;
       }
 
       const assistantMessage: Message = {
         id: generateId(),
         role: 'assistant',
         content: fullText,
+        thought: thoughtText || undefined,
+        toolCalls: Object.values(allToolCalls),
         timestamp: Date.now(),
       };
       this.messages.push(assistantMessage);
@@ -304,9 +319,9 @@ Write AGENTS.md content only — no markdown code fences, no preamble. Start dir
       yield {
         type: 'finish',
         usage: {
-          promptTokens,
-          completionTokens,
-          totalTokens: promptTokens + completionTokens,
+          promptTokens: totalPromptTokens,
+          completionTokens: totalCompletionTokens,
+          totalTokens: totalPromptTokens + totalCompletionTokens,
         },
       };
 
