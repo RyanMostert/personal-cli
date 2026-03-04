@@ -62,7 +62,7 @@ export function KeyHintOverlay({ onClose }: Props) {
           const actualIdx = scrollOffset + i;
           const isSelected = actualIdx === selectedIndex;
 
-          if (item.type === 'header') {
+          if ('label' in item) {
             return (
               <Box key={item.label} marginTop={1} marginBottom={0}>
                 <Text color="#00E5FF" bold>── {item.label} ──</Text>
@@ -70,7 +70,7 @@ export function KeyHintOverlay({ onClose }: Props) {
             );
           }
 
-          const bind = item as any as Keybinding;
+          const bind = item as Keybinding;
           return (
             <Box key={bind.id} paddingLeft={2} backgroundColor={isSelected ? '#161B22' : undefined}>
               <Text color={isSelected ? '#FF00AA' : '#484F58'}>{isSelected ? '❯ ' : '  '}</Text>

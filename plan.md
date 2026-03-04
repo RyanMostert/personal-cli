@@ -26,7 +26,7 @@
 | Agent modes (ask/auto/build)                                                               | `packages/core/src/agent.ts`                                                                      |
 | Conversation export to Markdown                                                            | `packages/core/src/index.ts`                                                                      |
 | `/compact` method exists on Agent                                                          | `packages/core/src/agent.ts` (`compact()` method)                                                 |
-| Tools: read/write/edit/list/search/glob/git/run/webfetch/semantic-search/think/diagnostics | `packages/tools/src/tools/`                                                                       |
+| Tools: read/write/edit/list/search/glob/git/run/webfetch/web-search/patch/todo/question/diagnostics | `packages/tools/src/tools/`                                                                       |
 | Frecency-based file suggestions                                                            | `packages/core/src/persistence/frecency.ts`                                                       |
 | Settings file (`~/.personal-cli/settings.json`)                                            | `packages/core/src/config/loader.ts`                                                              |
 

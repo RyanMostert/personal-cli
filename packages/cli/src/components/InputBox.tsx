@@ -9,13 +9,19 @@ interface Props {
   onSubmit: (value: string) => void;
   isDisabled?: boolean;
   isStreaming?: boolean;
+  attachedFiles?: { path: string }[];
 }
 
-export function InputBox({ value, onChange, onSubmit, isDisabled = false, isStreaming = false }: Props) {
+export function InputBox({ value, onChange, onSubmit, isDisabled = false, isStreaming = false, attachedFiles = [] }: Props) {
   const theme = useTheme();
   const lines = value.split('\n');
   const lineCount = lines.length;
   const isMultiLine = lineCount > 1;
+
+  const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+  const imageCount = attachedFiles.filter(f => 
+    imageExtensions.some(ext => f.path.toLowerCase().endsWith(ext))
+  ).length;
 
   return (
     <Box
@@ -43,11 +49,15 @@ export function InputBox({ value, onChange, onSubmit, isDisabled = false, isStre
             focus={!isDisabled && !isStreaming}
           />
         </Box>
-        {isMultiLine && (
-          <Box paddingLeft={1} flexShrink={0}>
-            <Text color="#484F58">[{lineCount} lines]</Text>
-          </Box>
-        )}
+        
+        <Box paddingLeft={1} flexShrink={0}>
+          {isMultiLine && (
+            <Text color="#484F58"> [pasted lines {lineCount}] </Text>
+          )}
+          {imageCount > 0 && (
+            <Text color={theme.primary}> [image {imageCount}] </Text>
+          )}
+        </Box>
       </Box>
     </Box>
   );

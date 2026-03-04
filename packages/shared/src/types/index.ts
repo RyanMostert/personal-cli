@@ -103,6 +103,8 @@ export type StreamEventType =
   | 'thought-delta'
   | 'tool-call-start'
   | 'tool-call-result'
+  | 'step-start'
+  | 'step-finish'
   | 'finish'
   | 'error'
   | 'system';
@@ -113,12 +115,16 @@ export interface ToolCallInfo {
   args?: Record<string, unknown>;
   result?: unknown;
   error?: string;
+  oldText?: string;
+  newText?: string;
+  path?: string;
 }
 
 export interface StreamEvent {
   type: StreamEventType;
   delta?: string;
   message?: string;
+  step?: number;
   toolCall?: ToolCallInfo;
   error?: Error | { message: string; name?: string; stack?: string };
   usage?: {

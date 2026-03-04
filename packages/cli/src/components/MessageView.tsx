@@ -14,12 +14,35 @@ export function MessageView({ message }: Props) {
   const theme = useTheme();
 
   if (message.role === 'user') {
+    const lines = message.content.split('\n');
+    const isLarge = lines.length > 5;
+    
+    // Parse for image attachments in context blocks if any
+    const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+    const fileMatches = message.content.matchAll(/<file path="([^"]+)">/g);
+    let imageCount = 0;
+    for (const match of fileMatches) {
+      const path = match[1].toLowerCase();
+      if (imageExtensions.some(ext => path.endsWith(ext))) {
+        imageCount++;
+      }
+    }
+
     return (
       <Box flexDirection="column" marginBottom={1} paddingLeft={1}>
         <Box>
           <Text color={theme.userLabel} bold>P1 </Text>
           <Text color={theme.dim}>❯ </Text>
-          <Text color={theme.text} bold>{message.content}</Text>
+          {isLarge ? (
+            <Box>
+              <Text color={theme.primary} italic>[pasted lines {lines.length}]</Text>
+              {imageCount > 0 && (
+                <Text color={theme.primary} italic> [image {imageCount}]</Text>
+              )}
+            </Box>
+          ) : (
+            <Text color={theme.text} bold>{message.content}</Text>
+          )}
         </Box>
       </Box>
     );
