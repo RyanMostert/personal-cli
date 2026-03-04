@@ -4,13 +4,6 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import type { PermissionCallback, WriteCallback } from '../types.js';
 
-/**
- * Normalizes a string for fuzzy comparison by collapsing whitespace and trimming.
- */
-function normalize(s: string): string {
-  return s.split('\n').map(l => l.trim()).filter(Boolean).join('\n');
-}
-
 export function createEditFile(permissionFn?: PermissionCallback, onWrite?: WriteCallback) {
   return tool({
     description:
@@ -33,11 +26,15 @@ export function createEditFile(permissionFn?: PermissionCallback, onWrite?: Writ
       try {
         const originalContent = readFileSync(abs, 'utf-8');
         
-        // 1. Try exact match
-        if (originalContent.includes(oldText)) {
+        // 1. Try exact match (including line endings normalization)
+        const normalizedOriginal = originalContent.replace(/\r\n/g, '\n');
+        const normalizedOld = oldText.replace(/\r\n/g, '\n');
+        const normalizedNew = newText.replace(/\r\n/g, '\n');
+
+        if (normalizedOriginal.includes(normalizedOld)) {
           const content = allowMultiple 
-            ? originalContent.split(oldText).join(newText)
-            : originalContent.replace(oldText, newText);
+            ? normalizedOriginal.split(normalizedOld).join(normalizedNew)
+            : normalizedOriginal.replace(normalizedOld, normalizedNew);
           
           writeFileSync(abs, content, 'utf-8');
           if (onWrite) onWrite(abs, originalContent, content);
@@ -45,10 +42,10 @@ export function createEditFile(permissionFn?: PermissionCallback, onWrite?: Writ
         }
 
         // 2. Try line-by-line trimmed match (handles indentation differences)
-        const origLines = originalContent.split('\n');
-        const oldLines = oldText.split('\n').map(l => l.trim()).filter(Boolean);
+        const origLines = normalizedOriginal.split('\n');
+        const oldLines = normalizedOld.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         
-        if (oldLines.length === 0) return { error: "oldText is empty" };
+        if (oldLines.length === 0) return { error: "oldText is empty after trimming" };
 
         let foundIdx = -1;
         for (let i = 0; i <= origLines.length - oldLines.length; i++) {
@@ -66,9 +63,15 @@ export function createEditFile(permissionFn?: PermissionCallback, onWrite?: Writ
         }
 
         if (foundIdx !== -1) {
-          const newLines = newText.split('\n');
+          const newLines = normalizedNew.split('\n');
           const resultLines = [...origLines];
-          resultLines.splice(foundIdx, oldLines.length, ...newLines);
+          // We need to find how many original lines we are replacing.
+          // Since we matched trimmed lines, we should replace the block from foundIdx
+          // but we need to be careful about which lines in origLines actually matched oldLines.
+          // For simplicity, we'll replace the block starting at foundIdx with length equal to the 
+          // number of lines we found in oldText.
+          
+          resultLines.splice(foundIdx, normalizedOld.split('\n').length, ...newLines);
           const content = resultLines.join('\n');
           
           writeFileSync(abs, content, 'utf-8');

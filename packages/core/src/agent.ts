@@ -47,14 +47,23 @@ export class Agent {
     this.questionFn = options.questionFn;
     this.maxSteps = options.maxSteps ?? 20;
 
-    // Inject AGENTS.md project context if present in the working directory
+    // Inject project context from various hint files if present
     let base = options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
-    const agentsMdPath = join(process.cwd(), 'AGENTS.md');
-    if (existsSync(agentsMdPath)) {
-      try {
-        const agentsMd = readFileSync(agentsMdPath, 'utf-8').trim();
-        base = `# Project Context\n\n${agentsMd}\n\n---\n\n${base}`;
-      } catch { }
+    const projectHints: string[] = [];
+    const hintFiles = ['.pcli-hints', 'AGENTS.md', 'CONTEXT.md', 'INSTRUCTIONS.md', '.goosehints', '.cursorrules'];
+    
+    for (const file of hintFiles) {
+      const p = join(process.cwd(), file);
+      if (existsSync(p)) {
+        try {
+          const content = readFileSync(p, 'utf-8').trim();
+          projectHints.push(`### Source: ${file}\n${content}`);
+        } catch { }
+      }
+    }
+
+    if (projectHints.length > 0) {
+      base = `# Project Context & Guidelines\n\n${projectHints.join('\n\n')}\n\n---\n\n${base}`;
     }
     this.systemPrompt = base;
 
@@ -103,6 +112,13 @@ export class Agent {
     return this.mode;
   }
 
+  getTools(): Array<{ name: string; description?: string }> {
+    return Object.entries(this.tools).map(([name, tool]) => ({
+      name,
+      description: (tool as any).description,
+    }));
+  }
+
   clearHistory() {
     this.messages = [];
     this.coreMessages = [];
@@ -139,13 +155,7 @@ export class Agent {
       if (existsSync(p)) pkgJson = readFileSync(p, 'utf-8').slice(0, 1000);
     } catch { }
 
-    const prompt = `Analyze the following project and write a concise AGENTS.md file. This file will be prepended to the AI assistant's system prompt on every session, so make it useful: include what the project is, its tech stack, key directories/files, important conventions, and anything an AI coding assistant should know before touching the code.
-
-Project files: ${listing}
-
-${pkgJson ? `package.json (truncated):\n${pkgJson}` : ''}
-
-Write AGENTS.md content only — no markdown code fences, no preamble. Start directly with a heading.`;
+    const prompt = `Analyze the following project and write a concise AGENTS.md file. This file will be prepended to the AI assistant's system prompt on every session, so make it useful: include what the project is, its tech stack, key directories/files, important conventions, and anything an AI coding assistant should know before touching the code.\n\nProject files: ${listing}\n\n${pkgJson ? `package.json (truncated):\n${pkgJson}` : ''}\n\nWrite AGENTS.md content only — no markdown code fences, no preamble. Start directly with a heading.`;
 
     const model = await this.providerManager.getModel();
     const result = streamText({
@@ -207,14 +217,11 @@ Write AGENTS.md content only — no markdown code fences, no preamble. Start dir
     // Add user message to coreMessages
     this.coreMessages.push({ role: 'user', content: fullContent });
 
-    
-
     const model = await this.providerManager.getModel();
     const apiMessages = this.coreMessages;
 
     this.currentAbortController = new AbortController();
 
-    // Declare outside try so catch can silence dangling promises
     const result = streamText({
       model,
       system: this.systemPrompt,
@@ -226,67 +233,152 @@ Write AGENTS.md content only — no markdown code fences, no preamble. Start dir
     } as any);
 
     try {
-      let fullText = '';
+      let rawText = '';
       let thoughtText = '';
       const allToolCalls: Record<string, any> = {};
       let totalPromptTokens = 0;
       let totalCompletionTokens = 0;
 
-      for await (const part of result.fullStream) {
-        switch (part.type) {
-          case 'text-delta':
-            fullText += part.text;
-            yield { type: 'text-delta', delta: part.text };
-            break;
+      // Thought parser state machine
+      let buffer = '';
+      let inThought = false;
 
-          case 'reasoning-delta':
-            const reasoningText = (part as any).text || '';
-            thoughtText += reasoningText;
-            yield { type: 'thought-delta', delta: reasoningText };
-            break;
+      // Stream timeout to prevent stalling
+      const streamTimeout = setTimeout(() => {
+        this.currentAbortController?.abort();
+      }, 5 * 60 * 1000);
 
-          case 'tool-call':
-            allToolCalls[part.toolCallId] = {
-              toolCallId: part.toolCallId,
-              toolName: part.toolName,
-              args: ('args' in part ? part.args : (part as any).input) as Record<string, unknown>,
-            };
-            yield {
-              type: 'tool-call-start',
-              toolCall: allToolCalls[part.toolCallId],
-            };
-            break;
-
-          case 'tool-result':
-            if (allToolCalls[part.toolCallId]) {
-              allToolCalls[part.toolCallId].result = ('result' in part ? part.result : (part as any).output);
+      try {
+        for await (const part of result.fullStream) {
+          switch (part.type) {
+            case 'text-delta': {
+              const text = part.text;
+              buffer += text;
+              
+              while (buffer.length > 0) {
+                if (inThought) {
+                  const closeIdx = buffer.indexOf('</thought>');
+                  if (closeIdx !== -1) {
+                    const thought = buffer.slice(0, closeIdx);
+                    if (thought) {
+                      thoughtText += thought;
+                      yield { type: 'thought-delta', delta: thought };
+                    }
+                    buffer = buffer.slice(closeIdx + 10);
+                    inThought = false;
+                  } else {
+                    // Check if the buffer ends with a partial closing tag
+                    const partialIdx = buffer.lastIndexOf('</');
+                    if (partialIdx !== -1 && '</thought>'.startsWith(buffer.slice(partialIdx))) {
+                      const thought = buffer.slice(0, partialIdx);
+                      if (thought) {
+                        thoughtText += thought;
+                        yield { type: 'thought-delta', delta: thought };
+                      }
+                      buffer = buffer.slice(partialIdx);
+                      break; // Wait for more data
+                    } else {
+                      thoughtText += buffer;
+                      yield { type: 'thought-delta', delta: buffer };
+                      buffer = '';
+                    }
+                  }
+                } else {
+                  const openIdx = buffer.indexOf('<thought>');
+                  if (openIdx !== -1) {
+                    const beforeText = buffer.slice(0, openIdx);
+                    if (beforeText) {
+                      rawText += beforeText;
+                      yield { type: 'text-delta', delta: beforeText };
+                    }
+                    buffer = buffer.slice(openIdx + 9);
+                    inThought = true;
+                  } else {
+                    // Check if the buffer ends with a partial opening tag
+                    const partialIdx = buffer.lastIndexOf('<');
+                    if (partialIdx !== -1 && '<thought>'.startsWith(buffer.slice(partialIdx))) {
+                      const beforeText = buffer.slice(0, partialIdx);
+                      if (beforeText) {
+                        rawText += beforeText;
+                        yield { type: 'text-delta', delta: beforeText };
+                      }
+                      buffer = buffer.slice(partialIdx);
+                      break; // Wait for more data
+                    } else {
+                      rawText += buffer;
+                      yield { type: 'text-delta', delta: buffer };
+                      buffer = '';
+                    }
+                  }
+                }
+              }
+              break;
             }
-            yield {
-              type: 'tool-call-result',
-              toolCall: {
+
+            case 'reasoning-delta': {
+              const rText = (part as any).reasoning || (part as any).text || '';
+              thoughtText += rText;
+              yield { type: 'thought-delta', delta: rText };
+              break;
+            }
+
+            case 'tool-call': {
+              const toolName = part.toolName;
+              const args = ('args' in part ? part.args : (part as any).input) as Record<string, unknown>;
+
+              allToolCalls[part.toolCallId] = {
                 toolCallId: part.toolCallId,
-                toolName: part.toolName,
-                result: ('result' in part ? part.result : (part as any).output),
-              },
-            };
-            break;
+                toolName: toolName,
+                args: args,
+              };
+              yield {
+                type: 'tool-call-start',
+                toolCall: allToolCalls[part.toolCallId],
+              };
+              break;
+            }
 
-          // step-finish handling removed - token tracking via other events
+            case 'tool-result': {
+              if (allToolCalls[part.toolCallId]) {
+                allToolCalls[part.toolCallId].result = ('result' in part ? part.result : (part as any).output);
+              }
+              yield {
+                type: 'tool-call-result',
+                toolCall: {
+                  toolCallId: part.toolCallId,
+                  toolName: part.toolName,
+                  result: ('result' in part ? part.result : (part as any).output),
+                },
+              };
+              break;
+            }
 
-          case 'error':
-            throw part.error;
+            case 'error':
+              throw part.error;
+
+            default: {
+              if ((part as any).type === 'step-finish') {
+                const p = part as any;
+                if (p.usage) {
+                  totalPromptTokens += p.usage.promptTokens ?? 0;
+                  totalCompletionTokens += p.usage.completionTokens ?? 0;
+                }
+              }
+              break;
+            }
+          }
         }
+      } finally {
+        clearTimeout(streamTimeout);
       }
 
       this.totalTokensUsed += totalPromptTokens + totalCompletionTokens;
 
-      // Capture response messages from this streamText call (tool-call/result + assistant)
       const response = await result.response;
       for (const msg of response.messages) {
         this.coreMessages.push(msg);
       }
 
-      // Calculate cost based on model pricing
       const entry = getModelEntry(this.providerManager.getActiveModel().provider, this.providerManager.getActiveModel().modelId);
       if (entry?.inputCostPer1M != null) {
         this.totalCost += (totalPromptTokens / 1_000_000) * entry.inputCostPer1M;
@@ -295,19 +387,21 @@ Write AGENTS.md content only — no markdown code fences, no preamble. Start dir
         this.totalCost += (totalCompletionTokens / 1_000_000) * entry.outputCostPer1M;
       }
 
+      // Final cleanup of rawText to ensure tags are stripped for history
+      const finalContent = rawText.replace(/<thought>[\s\S]*?<\/thought>/g, '').trim();
+
       const assistantMessage: Message = {
         id: generateId(),
         role: 'assistant',
-        content: fullText,
+        content: finalContent,
         thought: thoughtText || undefined,
         toolCalls: Object.values(allToolCalls),
         timestamp: Date.now(),
       };
       this.messages.push(assistantMessage);
 
-      // First assistant response — generate title async (don't await, don't block)
       if (this.messages.filter(m => m.role === 'assistant').length === 1) {
-        generateTitle(userContent, fullText, model).then(title => {
+        generateTitle(userContent, finalContent, model).then(title => {
           this.conversationTitle = title;
           try {
             const id = saveConversation(this.messages, this.providerManager.getActiveModel(), userContent, this.conversationTitle, this.conversationId);
@@ -325,22 +419,18 @@ Write AGENTS.md content only — no markdown code fences, no preamble. Start dir
         },
       };
 
-      // Save conversation (reuse same file via conversationId)
       try {
         const id = saveConversation(this.messages, this.providerManager.getActiveModel(), userContent, this.conversationTitle, this.conversationId);
         if (!this.conversationId) this.conversationId = id;
       } catch { }
     } catch (err) {
-      // AbortError is not a real error — it's user-initiated
       if (err instanceof Error && err.name === 'AbortError') {
         yield { type: 'finish', usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 } };
         return;
       }
-      // Silence result.usage — it rejects when fullStream throws, causing an unhandled rejection
-      // that Node.js would dump to stderr before Ink can render the error cleanly.
       Promise.resolve(result.usage).catch(() => { });
       this.messages.pop();
-      this.coreMessages.pop(); // also remove the user message added at the start
+      this.coreMessages.pop();
       yield { type: 'error', error: err instanceof Error ? err : new Error(String(err)) };
     } finally {
       this.currentAbortController = null;
@@ -351,7 +441,6 @@ Write AGENTS.md content only — no markdown code fences, no preamble. Start dir
     const saved = loadConversation(id);
     if (!saved) return false;
     this.messages = saved.messages;
-    // Rebuild coreMessages from plain text messages (tool-call/result lost)
     this.coreMessages = this.messages
       .filter(m => m.role !== 'system')
       .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
@@ -382,7 +471,6 @@ Write AGENTS.md content only — no markdown code fences, no preamble. Start dir
       }
     }
 
-    // Replace all messages with a single summary message
     this.messages = [{
       id: generateId(),
       role: 'assistant',

@@ -62,7 +62,7 @@ export function GameOverScreen({ tokensUsed, cost, messageCount, onComplete }: P
         </Box>
       </Box>
       <Box marginTop={2} flexDirection="column" alignItems="center">
-        <Text color="#484F58" blink> SAVING PROGRESS... DO NOT POWER OFF </Text>
+        <Text color="#484F58"> SAVING PROGRESS... DO NOT POWER OFF </Text>
         <Text color="#484F58"> [ SPACE/ENTER TO EXIT NOW ] </Text>
       </Box>
     </Box>

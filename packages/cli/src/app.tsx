@@ -47,13 +47,15 @@ export function App() {
   const [savedDraft, setSavedDraft] = useState('');
   const [isGameOver, setIsGameOver] = useState(false);
   const [sidePanel, setSidePanel] = useState<{
-    type: 'file' | 'diff';
-    path: string;
+    type: 'file' | 'diff' | 'thoughts' | 'patches';
+    path?: string;
     content?: string;
     oldText?: string;
     newText?: string;
+    thought?: string;
   } | null>(null);
   const [isSidePanelFocused, setIsSidePanelFocused] = useState(false);
+  const [patchHistory, setPatchHistory] = useState<Array<{ path: string; oldText: string; newText: string; timestamp: number }>>([]);
   
   // MCP State
   const [mcpManager] = useState(() => new MCPClientManager());
@@ -70,7 +72,7 @@ export function App() {
     sendMessage, abort, addSystemMessage, clearMessages, switchModel, switchMode,
     isPickingModel, openModelPicker, closeModelPicker,
     attachFile, clearAttachments, loadHistory, compact, renameConversation,
-    undo, redo, initProject,
+    undo, redo, initProject, getTools,
   } = useAgent();
   const { exit } = useApp();
 
@@ -92,10 +94,17 @@ export function App() {
   const mcpWizardServer = overlay.type === 'mcp-wizard' ? (overlay.props?.serverName as string) : null;
 
   useEffect(() => { setInputHistory(loadPromptHistory()); }, []);
+  
   useEffect(() => { 
     if (sidePanel) setIsSidePanelFocused(true); 
     else setIsSidePanelFocused(false);
-  }, [sidePanel?.path]);
+  }, [sidePanel?.path, sidePanel?.type]);
+
+  useEffect(() => {
+    if (isStreaming && sidePanel?.type === 'thoughts') {
+      setSidePanel(prev => prev ? { ...prev, thought: streamingThought } : null);
+    }
+  }, [streamingThought, isStreaming, sidePanel?.type]);
 
   const openFileInPanel = useCallback(async (fp: string) => {
     try {
@@ -137,10 +146,21 @@ export function App() {
     if (lastEdit && lastEdit.args) {
       const args = lastEdit.args as any;
       setSidePanel({ type: 'diff', path: args.path, oldText: args.oldText, newText: args.newText });
+      
+      // Add to session patch history if not already there (simple de-dupe by id)
+      setPatchHistory(prev => {
+        if (prev.some(p => p.timestamp === (lastEdit as any).timestamp)) return prev;
+        return [...prev, { 
+          path: args.path, 
+          oldText: args.oldText, 
+          newText: args.newText, 
+          timestamp: Date.now() 
+        }];
+      });
     }
   }, [toolCalls]);
 
-  const anyOverlay = isPickingModel || isPickingProvider || !!pendingProviderAdd || showHistory || showCommandAutocomplete || showFileAutocomplete || showFileExplorer || showKeyHelp || showKeybindManager;
+  const anyOverlay = isPickingModel || isPickingProvider || !!pendingProviderAdd || showHistory || showCommandAutocomplete || showFileAutocomplete || showFileExplorer || showKeyHelp || showKeybindManager || isManagingMCP || !!mcpWizardMode;
 
   useInput((input, key) => {
     if ((key.ctrl && input === 'c') || (key.ctrl && input === 'd')) { setIsGameOver(true); return; }
@@ -157,6 +177,29 @@ export function App() {
       if (key.ctrl && (input === 'k' || input === '\u000b')) { open('keybind-manager'); return; }
       if (key.ctrl && (input === 'p' || input === '\u0010')) { open('provider-manager'); return; }
       if (key.ctrl && (input === 'h' || input === '\u0008')) { open('history'); return; }
+      
+      // Ctrl+R for Reasoning/Thoughts
+      if (key.ctrl && (input === 'r' || input === '\u0012')) {
+        if (sidePanel?.type === 'thoughts') {
+          setSidePanel(null);
+        } else {
+          const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant');
+          const thoughtContent = isStreaming ? streamingThought : (lastAssistantMsg?.thought || 'No active reasoning captured.');
+          setSidePanel({ 
+            type: 'thoughts', 
+            thought: thoughtContent 
+          });
+        }
+        return;
+      }
+
+      // Ctrl+Shift+P (P) for Patch History
+      if (key.ctrl && input === 'P') {
+        if (sidePanel?.type === 'patches') setSidePanel(null);
+        else setSidePanel({ type: 'patches' });
+        return;
+      }
+
       // Ctrl+/ often sends \u001f or ?
       if (key.ctrl && (input === '/' || input === '\u001f')) { open('key-help'); return; }
     }
@@ -221,7 +264,6 @@ export function App() {
       if (key.ctrl && (input === 'u' || input === '\u0015')) { setInputValue(''); return; }
       if (key.ctrl && (input === 'w' || input === '\u0017')) { setInputValue(v => v.replace(/\S+\s*$/, '')); return; }
       if (key.ctrl && (input === 'm' || input === '\u000d')) { 
-        // Note: Ctrl+M is often ENTER in many terminals, be careful
         openModelPicker(); return; 
       }
       if (key.ctrl && (input === 'o' || input === '\u000f')) { open('file-explorer'); return; }
@@ -254,7 +296,13 @@ export function App() {
     if (trimmed === '/exit' || trimmed === '/quit') { setIsGameOver(true); return; }
     if (trimmed === '/clear') { clearMessages(); setInputValue(''); return; }
     if (trimmed === '/help') {
-      addSystemMessage('Commands: /model /model refresh [provider] /mode /provider /add /history /open /compact /copy /export /rename /theme /cost /clear /undo /redo /init /help /exit\nModes: cycle ask → plan → build with Tab, or use /mode <name>.\nType / and use ↑↓ to browse with autocomplete.');
+      addSystemMessage('Commands: /model /model refresh [provider] /mode /provider /tools /add /history /open /compact /copy /export /rename /theme /cost /clear /undo /redo /init /help /exit\nModes: cycle ask → plan → build with Tab, or use /mode <name>.\nType / and use ↑↓ to browse with autocomplete.');
+      setInputValue(''); return;
+    }
+    if (trimmed === '/tools') {
+      const tools = getTools();
+      const toolList = tools.map(t => `  ⚡ [${t.name.toUpperCase()}] — ${t.description || 'No description available'}`).join('\n');
+      addSystemMessage(`Active Neuro-Tools:\n${toolList}`);
       setInputValue(''); return;
     }
     if (trimmed === '/cost') {
@@ -617,7 +665,7 @@ export function App() {
               <Box flexDirection="column" paddingX={1}>
                 {messages.length === 0 && !isStreaming && <WelcomeScreen tick={tick} />}
                 {toolCalls.map(tc => <ToolCallView key={tc.toolCallId} tool={tc} />)}
-                {isStreaming && <StreamingMessage text={streamingText} />}
+                {isStreaming && <StreamingMessage text={streamingText} thought={streamingThought} />}
                 {pendingPermission && <PermissionPrompt permission={pendingPermission} />}
                 {pendingQuestion && <QuestionPrompt question={pendingQuestion} />}
                 {error && (
@@ -644,7 +692,12 @@ export function App() {
                 {...sidePanel} 
                 isFocused={isSidePanelFocused} 
                 onClose={() => setSidePanel(null)} 
-                onSave={(content) => handleSaveFile(sidePanel.path, content)}
+                patches={patchHistory}
+                onSave={(content) => {
+                  if (sidePanel.path) {
+                    handleSaveFile(sidePanel.path, content);
+                  }
+                }}
               />
             )}
           </Box>
@@ -677,6 +730,7 @@ export function App() {
           onSubmit={handleSubmit}
           isDisabled={anyOverlay || isSidePanelFocused}
           isStreaming={isStreaming}
+          attachedFiles={attachedFiles}
         />
       </Box>
     </>

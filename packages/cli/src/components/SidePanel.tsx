@@ -5,17 +5,19 @@ import { highlightCode } from '../highlight.js';
 const VISIBLE_LINES = 30;
 
 interface Props {
-  type: 'file' | 'diff';
-  path: string;
+  type: 'file' | 'diff' | 'thoughts' | 'patches';
+  path?: string;
   content?: string;
   oldText?: string;
   newText?: string;
+  thought?: string;
+  patches?: Array<{ path: string; oldText: string; newText: string; timestamp: number }>;
   isFocused: boolean;
   onClose: () => void;
   onSave?: (newContent: string) => void;
 }
 
-export function SidePanel({ type, path, content: initialContent, oldText, newText, isFocused, onClose, onSave }: Props) {
+export function SidePanel({ type, path, content: initialContent, oldText, newText, thought, patches, isFocused, onClose, onSave }: Props) {
   const [lines, setLines] = useState<string[]>([]);
   const [highlighted, setHighlighted] = useState<string[] | null>(null);
   
@@ -31,18 +33,22 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
   const [suggestionIdx, setSuggestionIdx] = useState(0);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Initialize lines
+  // Initialize lines based on type
   useEffect(() => {
-    const raw = initialContent ?? '';
+    let raw = '';
+    if (type === 'file') raw = initialContent ?? '';
+    else if (type === 'thoughts') raw = thought ?? '';
+    else if (type === 'diff') raw = `--- ${path}\n+++ ${path}\n- ${oldText}\n+ ${newText}`;
+    
     const l = raw.split('\n');
     setLines(l);
     setCursor({ line: 0, char: 0 });
     setScrollOffset(0);
-  }, [initialContent, path]);
+  }, [initialContent, thought, path, type, oldText, newText]);
 
   // Debounced highlighting
   useEffect(() => {
-    if (type !== 'file') return;
+    if (type !== 'file' || !path) return;
     const timeout = setTimeout(() => {
       const ext = path.split('.').pop() || 'txt';
       highlightCode(lines.join('\n'), ext).then(res => {
@@ -84,7 +90,7 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
     // View Mode Handling
     if (!isEditing && !isSearching) {
       if (key.escape) { onClose(); return; }
-      if (input === 'i') { setIsEditing(true); return; }
+      if (input === 'i' && type === 'file') { setIsEditing(true); return; }
       if (input === '/') { setIsSearching(true); return; }
       if (key.upArrow) setScrollOffset(s => Math.max(0, s - 1));
       if (key.downArrow) setScrollOffset(s => Math.min(lines.length - 1, s + 1));
@@ -103,8 +109,8 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
       return;
     }
 
-    // Edit Mode Handling
-    if (isEditing) {
+    // Edit Mode Handling (Only for type === 'file')
+    if (isEditing && type === 'file') {
       if (key.escape) { 
         setIsEditing(false); 
         setShowSuggestions(false);
@@ -204,36 +210,39 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
   });
 
   const visibleLines = (isEditing || highlighted === null ? lines : highlighted).slice(scrollOffset, scrollOffset + VISIBLE_LINES);
-  const fileName = path.split(/[\\/]/).pop() ?? path;
+  const headerTitle = type === 'file' ? '🔍 NEURAL_READER' : 
+                      type === 'thoughts' ? '🧠 NEURAL_MONOLOGUE' : 
+                      type === 'patches' ? '🔧 PATCH_HISTORY' : '🔧 DELTA_SURGE';
+  const headerColor = isEditing ? "#FF00AA" : (type === 'thoughts' ? "#AA00FF" : "#00E5FF");
 
   return (
     <Box
       flexDirection="column"
       width="50%"
       borderStyle="double"
-      borderColor={isFocused ? (isEditing ? "#FF00AA" : "#00E5FF") : "#484F58"}
+      borderColor={isFocused ? headerColor : "#484F58"}
       paddingX={1}
       marginLeft={1}
     >
       {/* Header */}
       <Box position="absolute" marginTop={-1} marginLeft={2} backgroundColor="black" paddingX={1}>
-        <Text color={isFocused ? (isEditing ? "#FF00AA" : "#00E5FF") : "#484F58"} bold> 
-          {isEditing ? '⚡ NEURAL_EDITOR' : '🔍 NEURAL_READER'} 
+        <Text color={isFocused ? headerColor : "#484F58"} bold> 
+          {isEditing ? '⚡ NEURAL_EDITOR' : headerTitle} 
         </Text>
       </Box>
 
       {/* Info */}
       <Box borderBottom borderStyle="single" borderColor="#484F58" marginBottom={0} paddingY={0} justifyContent="space-between">
         <Box>
-          <Text color="white" bold> {fileName.toUpperCase()} </Text>
+          <Text color="white" bold> {type === 'file' && path ? path.toUpperCase() : type.toUpperCase()} </Text>
           <Text color="#484F58"> [{lines.length}L] </Text>
         </Box>
         <Box>
-          <Text color={isEditing ? "#FF00AA" : "#00E5FF"} bold> {isEditing ? '[EDIT_MODE]' : '[VIEW_MODE]'} </Text>
+          <Text color={headerColor} bold> {isEditing ? '[EDIT_MODE]' : '[VIEW_MODE]'} </Text>
         </Box>
       </Box>
 
-      {/* Search/Filter Bar */}
+      {/* Search Bar */}
       {(isSearching || filter) && (
         <Box paddingX={1} marginBottom={0} borderStyle="round" borderColor={isSearching ? "#FF00AA" : "#484F58"}>
           <Text color="#FF00AA" bold>FIND: </Text>
@@ -244,27 +253,50 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
 
       {/* Content Area */}
       <Box flexDirection="column" flexGrow={1} marginTop={1}>
-        {visibleLines.map((line, i) => {
-          const lineIdx = scrollOffset + i;
-          const isCursorLine = isEditing && lineIdx === cursor.line;
-          const query = filter.toLowerCase();
-          const isMatch = query && line.toLowerCase().includes(query);
-          
-          return (
-            <Box key={lineIdx} backgroundColor={isMatch ? '#302000' : undefined}>
-              <Text color={isCursorLine ? "#FF00AA" : "#484F58"}>{String(lineIdx + 1).padStart(4)} </Text>
-              {isCursorLine ? (
-                <Box>
-                  <Text>{line.slice(0, cursor.char)}</Text>
-                  <Text backgroundColor="#FF00AA" color="black">{line[cursor.char] || ' '}</Text>
-                  <Text>{line.slice(cursor.char + 1)}</Text>
+        {type === 'patches' && patches ? (
+          <Box flexDirection="column">
+            {patches.length === 0 ? (
+              <Box paddingY={5} alignItems="center" justifyContent="center">
+                <Text color="#484F58" italic> NO_PATCHES_RECORDED </Text>
+              </Box>
+            ) : (
+              patches.map((p, idx) => (
+                <Box key={idx} flexDirection="column" marginBottom={1} borderStyle="single" borderColor="#484F58" paddingX={1}>
+                  <Text color="#00E5FF" bold> 📂 {p.path} </Text>
+                  <Text color="#484F58"> {new Date(p.timestamp).toLocaleTimeString()} </Text>
+                  <Box marginTop={1}>
+                    <Text color="#FF5555" dimColor>- {p.oldText.slice(0, 40)}...</Text>
+                  </Box>
+                  <Box>
+                    <Text color="#3FB950">+ {p.newText.slice(0, 40)}...</Text>
+                  </Box>
                 </Box>
-              ) : (
-                <Text wrap="truncate">{line || ' '}</Text>
-              )}
-            </Box>
-          );
-        })}
+              ))
+            )}
+          </Box>
+        ) : (
+          visibleLines.map((line, i) => {
+            const lineIdx = scrollOffset + i;
+            const isCursorLine = isEditing && lineIdx === cursor.line;
+            const query = filter.toLowerCase();
+            const isMatch = query && line.toLowerCase().includes(query);
+            
+            return (
+              <Box key={lineIdx} backgroundColor={isMatch ? '#302000' : undefined}>
+                <Text color={isCursorLine ? "#FF00AA" : (type === 'thoughts' ? "#8C959F" : "#484F58")}>{String(lineIdx + 1).padStart(4)} </Text>
+                {isCursorLine ? (
+                  <Box>
+                    <Text>{line.slice(0, cursor.char)}</Text>
+                    <Text backgroundColor="#FF00AA" color="black">{line[cursor.char] || ' '}</Text>
+                    <Text>{line.slice(cursor.char + 1)}</Text>
+                  </Box>
+                ) : (
+                  <Text color={type === 'thoughts' ? "#8C959F" : undefined} wrap="truncate">{line || ' '}</Text>
+                )}
+              </Box>
+            );
+          })
+        )}
       </Box>
 
       {/* Autocomplete Overlay */}
@@ -285,7 +317,7 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
             </Text>
           ))}
           <Box borderTop borderStyle="single" borderColor="#484F58" marginTop={0}>
-            <Text color="#484F58" size="tiny">TAB:COMPLETE</Text>
+            <Text color="#484F58">TAB:COMPLETE</Text>
           </Box>
         </Box>
       )}

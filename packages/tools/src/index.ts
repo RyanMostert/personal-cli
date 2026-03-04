@@ -9,7 +9,6 @@ import { diagnostics } from './tools/diagnostics.js';
 import { createRunCommand } from './tools/run-command.js';
 import { createWebFetch } from './tools/web-fetch.js';
 import { gitStatus, gitDiff, gitLog, createGitCommit } from './tools/git.js';
-import { think } from './tools/think.js';
 import { todoWrite, todoRead } from './tools/todo.js';
 import { webSearch } from './tools/web-search.js';
 import { createPatch } from './tools/patch.js';

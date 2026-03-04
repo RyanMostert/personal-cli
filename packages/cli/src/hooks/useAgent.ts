@@ -124,6 +124,16 @@ export function useAgent() {
       attachedFiles: [],
     }));
 
+    // Buffer streaming text and flush at most every 80ms to reduce Ink repaints
+    let textBuf = '';
+    let thoughtBuf = '';
+    let flushTimer: ReturnType<typeof setTimeout> | null = null;
+    const flush = () => {
+      if (textBuf) { setStreamingText(prev => prev + textBuf); textBuf = ''; }
+      if (thoughtBuf) { setStreamingThought(prev => prev + thoughtBuf); thoughtBuf = ''; }
+      flushTimer = null;
+    };
+
     try {
       const stream = agent.sendMessage(content, currentAttachedFiles);
       
@@ -132,16 +142,6 @@ export function useAgent() {
         ...prev,
         messages: [...agent.getMessages()],
       }));
-
-      // Buffer streaming text and flush at most every 80ms to reduce Ink repaints
-      let textBuf = '';
-      let thoughtBuf = '';
-      let flushTimer: ReturnType<typeof setTimeout> | null = null;
-      const flush = () => {
-        if (textBuf) { setStreamingText(prev => prev + textBuf); textBuf = ''; }
-        if (thoughtBuf) { setStreamingThought(prev => prev + thoughtBuf); thoughtBuf = ''; }
-        flushTimer = null;
-      };
 
       for await (const event of stream) {
         switch (event.type) {
@@ -157,16 +157,26 @@ export function useAgent() {
               if (!flushTimer) flushTimer = setTimeout(flush, 80);
             }
             break;
-          case 'tool-call-start':
+          case 'tool-call-start': {
+            const toolCall = event.toolCall!;
+            const isEditFile = toolCall.toolName === 'edit_file';
+            
             setState((prev) => ({
               ...prev,
               toolCalls: [...prev.toolCalls, {
-                toolCallId: event.toolCall!.toolCallId,
-                toolName: event.toolCall!.toolName,
-                args: event.toolCall!.args,
+                toolCallId: toolCall.toolCallId,
+                toolName: toolCall.toolName,
+                args: toolCall.args,
+                // Capture oldText/newText for edit_file to show diff
+                ...(isEditFile && {
+                  path: toolCall.args?.path as string,
+                  oldText: toolCall.args?.oldText as string,
+                  newText: toolCall.args?.newText as string,
+                }),
               }],
             }));
             break;
+          }
           case 'tool-call-result':
             setState((prev) => ({
               ...prev,
@@ -307,6 +317,9 @@ export function useAgent() {
     }, [getAgent]),
     initProject: useCallback(async () => {
       return getAgent().initProject();
+    }, [getAgent]),
+    getTools: useCallback(() => {
+      return getAgent().getTools();
     }, [getAgent]),
   };
 }

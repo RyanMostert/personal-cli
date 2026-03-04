@@ -6,20 +6,62 @@ const DDG_URL = 'https://api.duckduckgo.com/';
 
 export const webSearch = tool({
   description:
-    'Search the web for current information. Returns a list of results with titles, URLs, and snippets. Prefer this over webFetch when you need to discover URLs or find multiple sources. Uses Tavily if TAVILY_API_KEY is set, otherwise DuckDuckGo instant answers.',
+    'Search the web for current information. Returns a list of results with titles, URLs, and snippets. Uses Google Search, Tavily, or Jina Search based on configuration.',
   inputSchema: z.object({
     query: z.string().describe('Search query'),
-    maxResults: z.number().optional().default(5).describe('Max results to return (Tavily only)'),
+    maxResults: z.number().optional().default(5).describe('Max results to return'),
   }),
   execute: async ({ query, maxResults }) => {
-    const tavilyKey = process.env.TAVILY_API_KEY;
+    const userAgent = 'Mozilla/5.0 (compatible; PersonalCLI/1.0; +https://github.com/ramos/personal-cli)';
 
+    // 1. Try Google Search if configured
+    const googleKey = process.env.GOOGLE_SEARCH_API_KEY;
+    const googleCx = process.env.GOOGLE_CX;
+    if (googleKey && googleCx) {
+      return searchGoogle(query, maxResults ?? 5, googleKey, googleCx);
+    }
+
+    // 2. Try Tavily if configured
+    const tavilyKey = process.env.TAVILY_API_KEY;
     if (tavilyKey) {
       return searchTavily(query, maxResults ?? 5, tavilyKey);
     }
+    
+    // 3. Try Jina Search (Excellent no-key fallback)
+    try {
+      const jinaUrl = `https://s.jina.ai/${encodeURIComponent(query)}`;
+      const jinaRes = await fetch(jinaUrl, {
+        headers: { 'User-Agent': userAgent }
+      });
+      if (jinaRes.ok) {
+        const content = await jinaRes.text();
+        return { 
+          output: content.slice(0, 15000), 
+          metadata: { source: 'jina-search', query }
+        };
+      }
+    } catch (e) {
+      // Fallback to DDG
+    }
+
+    // 4. Ultimate Fallback
     return searchDuckDuckGo(query);
   },
 });
+
+async function searchGoogle(query: string, maxResults: number, apiKey: string, cx: string) {
+  try {
+    const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(query)}&num=${maxResults}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Google HTTP ${res.status}`);
+    const data = await res.json() as any;
+    
+    const results = (data.items ?? []).map((r: any) => `### ${r.title}\n${r.link}\n${r.snippet}`);
+    return { output: results.length > 0 ? results.join('\n\n') : `No results found for "${query}" on Google.` };
+  } catch (err) {
+    return { error: `Google search failed: ${err}` };
+  }
+}
 
 async function searchTavily(query: string, maxResults: number, apiKey: string) {
   try {
@@ -71,7 +113,6 @@ async function searchDuckDuckGo(query: string) {
         lines.push(`- ${t.Text}\n  ${t.FirstURL}`);
         count++;
       }
-      // Nested topic groups
       if (t.Topics) {
         for (const sub of t.Topics) {
           if (count >= 5) break;

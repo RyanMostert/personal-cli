@@ -1,4 +1,5 @@
 import { codeToANSI } from '@shikijs/cli';
+import type { BundledLanguage } from 'shiki';
 
 const SUPPORTED_LANGS = new Set([
   'typescript', 'ts', 'javascript', 'js', 'tsx', 'jsx',
@@ -11,7 +12,7 @@ const SUPPORTED_LANGS = new Set([
 const cache = new Map<string, string>();
 
 export async function highlightCode(code: string, lang: string): Promise<string> {
-  const normalizedLang = SUPPORTED_LANGS.has(lang) ? lang : 'text';
+  const normalizedLang = (SUPPORTED_LANGS.has(lang) ? lang : 'text') as BundledLanguage;
   const cacheKey = `${normalizedLang}:${code}`;
 
   if (cache.has(cacheKey)) return cache.get(cacheKey)!;
