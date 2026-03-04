@@ -19,42 +19,36 @@ export function InputBox({ value, onChange, onSubmit, isDisabled = false, isStre
 
   return (
     <Box
-      borderStyle="round"
-      borderColor={isStreaming ? theme.warning : (isDisabled ? theme.dim : theme.primary)}
+      borderStyle="single"
+      borderTop
+      borderBottom={false}
+      borderLeft={false}
+      borderRight={false}
+      borderColor={isStreaming ? theme.warning : (isDisabled ? theme.dim : '#484F58')}
       paddingX={1}
       paddingY={0}
-      marginBottom={0}
       flexShrink={0}
       flexDirection="column"
     >
       <Box>
         <Box marginRight={1} flexShrink={0}>
-          <Text color={isDisabled ? theme.dim : theme.primary} bold>⚡</Text>
+          <Text color={isDisabled ? theme.dim : theme.primary} bold>❯</Text>
         </Box>
-        <Box flexGrow={1} flexDirection="column">
+        <Box flexGrow={1}>
           <TextInput
             value={value}
             onChange={onChange}
             onSubmit={onSubmit}
-            placeholder={isStreaming ? 'Esc to stop...' : isDisabled ? 'Waiting...' : 'Type a command or question... (/help)'}
+            placeholder={isStreaming ? 'esc to stop...' : isDisabled ? 'waiting...' : 'type /help for commands'}
             focus={!isDisabled && !isStreaming}
           />
         </Box>
-        {!isDisabled && (
-          <Box paddingLeft={2} flexShrink={0}>
-            <Text color="#484F58">
-              {isMultiLine ? `[${lineCount} lines]` : 'Enter ↵'}
-            </Text>
+        {isMultiLine && (
+          <Box paddingLeft={1} flexShrink={0}>
+            <Text color="#484F58">[{lineCount} lines]</Text>
           </Box>
         )}
       </Box>
-      {!isDisabled && isMultiLine && (
-        <Box marginTop={0}>
-          <Text color="#6E7681" dimColor>
-            Shift+Enter for new line · Ctrl+U to clear · Ctrl+W to delete word
-          </Text>
-        </Box>
-      )}
     </Box>
   );
 }
