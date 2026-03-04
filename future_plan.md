@@ -332,7 +332,17 @@ Phase 4 — Polish:
 
 ---
 
-## Key Dependencies to Add (when ready)
+## CLI Agent Usage Monitoring
+
+Add monitoring to record agent usage per terminal/PTy session to help with cost tracking, debugging, and UX insights. Capture metrics such as session start/end times, agent type (thinker/builder/local), model used, tokens consumed (estimated), commands run, and user approval actions. Include privacy controls: opt-in telemetry, per-session anonymization, and an on-disk opt-out flag (e.g., ~/.personal-cli/telemetry-opt-out).
+
+Add configurable usage limits and enforcement so the commander can proactively prevent costly sessions. Allow per-provider and per-model caps (weekly/monthly) and percentage-thresholds (e.g., claude.weekly_threshold = 80%). The commander tracks consumption (locally cached and periodically refreshed from provider APIs) and evaluates thresholds before spawning a Builder (Claude) PTY: if usage is at or above the configured threshold the app can either soft-warn (notify and allow override) or hard-block (prevent starting a new Claude session), showing a clear notification explaining the reason and offering options to open budget settings, wait, or override with an explicit confirmation. Record block, override, and user-decision events in the session telemetry for auditing and support.
+
+Expose these controls and live metrics in Session Insights and AgentStatusBar (current usage %, remaining budget, threshold, and quick actions to pause/resume builders or adjust caps). Provide a policy mode (soft vs hard), admin overrides, and an option to auto-fallback to local or thinker-only paths when builder sessions are blocked.
+
+Consider exposing a "Session Insights" view in the Commander UI showing recent sessions, cost estimates, and ability to export a session trace for debugging or support.
+
+## Key Dependencies to Add (when ready)## Key Dependencies to Add (when ready)
 
 ```json
 {
