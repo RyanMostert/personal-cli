@@ -124,6 +124,12 @@ export function useAgent() {
 
     try {
       const stream = agent.sendMessage(content, currentAttachedFiles);
+      
+      // Update state immediately so the user message (and any context messages) are visible
+      setState((prev) => ({
+        ...prev,
+        messages: [...agent.getMessages()],
+      }));
 
       // Buffer streaming text and flush at most every 80ms to reduce Ink repaints
       let textBuf = '';
@@ -164,7 +170,7 @@ export function useAgent() {
           case 'system':
             if (event.message) {
               agent.addSystemMessage(event.message);
-              setState((prev) => ({ ...prev, messages: agent.getMessages() }));
+              setState((prev) => ({ ...prev, messages: [...agent.getMessages()] }));
             }
             break;
           case 'error':
@@ -180,7 +186,7 @@ export function useAgent() {
       setState((prev) => ({
         ...prev,
         isStreaming: false,
-        messages: agent.getMessages(),
+        messages: [...agent.getMessages()],
         tokensUsed: agent.getTokensUsed(),
         cost: agent.getCost(),
         toolCalls: [],
@@ -212,12 +218,12 @@ export function useAgent() {
     addSystemMessage: useCallback((msg: string) => {
       const agent = getAgent();
       agent.addSystemMessage(msg);
-      setState((prev) => ({ ...prev, messages: agent.getMessages() }));
+      setState((prev) => ({ ...prev, messages: [...agent.getMessages()] }));
     }, [getAgent]),
     clearMessages: useCallback(() => {
       const agent = getAgent();
       agent.clearHistory();
-      setState((prev) => ({ ...prev, messages: agent.getMessages(), tokensUsed: 0 }));
+      setState((prev) => ({ ...prev, messages: [...agent.getMessages()], tokensUsed: 0 }));
     }, [getAgent]),
     switchModel: useCallback((provider: ProviderName, modelId: string) => {
       const agent = getAgent();
@@ -261,7 +267,7 @@ export function useAgent() {
       if (success) {
         setState(prev => ({
           ...prev,
-          messages: agent.getMessages(),
+          messages: [...agent.getMessages()],
           tokensUsed: agent.getTokensUsed(),
         }));
       }
@@ -275,7 +281,7 @@ export function useAgent() {
       const result = await agent.compact();
       setState(prev => ({
         ...prev,
-        messages: agent.getMessages(),
+        messages: [...agent.getMessages()],
         tokensUsed: agent.getTokensUsed(),
       }));
       return result;

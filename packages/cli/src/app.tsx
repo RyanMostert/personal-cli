@@ -20,9 +20,6 @@ import { CostRecommendation, shouldShowRecommendation } from './components/CostR
 import { useAgent } from './hooks/useAgent.js';
 import { useOverlay } from './context/OverlayContext.js';
 import { useSetTheme } from './context/ThemeContext.js';
-import { dispatch } from './commands/registry.js';
-import type { CommandContext } from './types/commands.js';
-import { matchKeybinding } from './keybindings/registry.js';
 import { DEFAULT_TOKEN_BUDGET, type ProviderName, type AgentMode } from '@personal-cli/shared';
 import {
   setProviderKey, removeProviderKey, readAuth,
@@ -50,10 +47,7 @@ export function App() {
   } | null>(null);
   const [sidePanelScroll, setSidePanelScroll] = useState(0);
 
-  // Command autocomplete — controlled here to prevent Enter conflict with ink-text-input
   const [cmdSelectedIdx, setCmdSelectedIdx] = useState(0);
-
-  // File autocomplete — controlled here to prevent Tab/Enter conflict
   const [fileAutoFiles, setFileAutoFiles] = useState<string[]>([]);
   const [fileAutoSelectedIdx, setFileAutoSelectedIdx] = useState(0);
 
@@ -67,10 +61,6 @@ export function App() {
   } = useAgent();
   const { exit } = useApp();
 
-  // Single root-level animation tick — ONE re-render per interval for ALL animated
-  // children instead of each component having its own setInterval.
-  // Paused while streaming so animation timer doesn't add extra repaints on top of
-  // the high-frequency text-delta updates.
   const [tick, setTick] = useState(0);
   useEffect(() => {
     if (isStreaming) return;
@@ -78,7 +68,6 @@ export function App() {
     return () => clearInterval(timer);
   }, [isStreaming]);
 
-  // Derived overlay states for backward compatibility
   const isPickingProvider = overlay.type === 'provider-manager';
   const pendingProviderAdd = overlay.type === 'provider-wizard' ? (overlay.props?.providerId as string) : null;
   const showHistory = overlay.type === 'history';
@@ -86,7 +75,6 @@ export function App() {
   useEffect(() => { setInputHistory(loadPromptHistory()); }, []);
   useEffect(() => { setSidePanelScroll(0); }, [sidePanel?.path]);
 
-  // ── Open file in side panel ──────────────────────────────────────────────
   const openFileInPanel = useCallback(async (fp: string) => {
     try {
       const content = await fs.readFile(fp, 'utf-8');
@@ -97,7 +85,6 @@ export function App() {
     }
   }, [addSystemMessage]);
 
-  // ── Autocomplete visibility ──────────────────────────────────────────────
   const showCommandAutocomplete =
     inputValue.startsWith('/') && !inputValue.includes(' ') &&
     !isPickingModel && !isPickingProvider && !showHistory &&
@@ -110,58 +97,31 @@ export function App() {
   const fileTrigger = fileMatch?.[1] ?? '';
   const fileQuery = fileMatch?.[2] ?? '';
 
-  // Derived filtered command list — shared between display and key handler
   const cmdFiltered = showCommandAutocomplete ? filterCommands(inputValue) : [];
-
-  // Reset selection when filter changes
   useEffect(() => { setCmdSelectedIdx(0); }, [inputValue]);
 
-  // Capture edit_file tool calls to show diff in side panel
   useEffect(() => {
     const lastEdit = toolCalls.find(tc => tc.toolName === 'edit_file' && tc.result && !tc.error);
     if (lastEdit && lastEdit.args) {
       const args = lastEdit.args as any;
-      setSidePanel({
-        type: 'diff',
-        path: args.path,
-        oldText: args.oldText,
-        newText: args.newText
-      });
+      setSidePanel({ type: 'diff', path: args.path, oldText: args.oldText, newText: args.newText });
     }
   }, [toolCalls]);
 
-  // All overlays disable the InputBox so ink-text-input never sees Tab/Enter/arrows
-  const anyOverlay =
-    isPickingModel || isPickingProvider ||
-    !!pendingProviderAdd || showHistory ||
-    showCommandAutocomplete || showFileAutocomplete;
+  const anyOverlay = isPickingModel || isPickingProvider || !!pendingProviderAdd || showHistory || showCommandAutocomplete || showFileAutocomplete;
 
-  // ── Global key handler ───────────────────────────────────────────────────
   useInput((input, key) => {
     if ((key.ctrl && input === 'c') || (key.ctrl && input === 'd')) { setIsGameOver(true); return; }
+    if (key.escape && isStreaming) { abort(); return; }
+    if (key.escape && sidePanel) { setSidePanel(null); return; }
 
-    if (key.escape && isStreaming) {
-      abort();
-      return;
-    }
-
-    if (key.escape && sidePanel) {
-      setSidePanel(null);
-      return;
-    }
-
-    // ── Side panel scroll ────────────────────────────────────────────────
     if (sidePanel && !showFileAutocomplete && !showCommandAutocomplete) {
       if (key.upArrow) { setSidePanelScroll(s => Math.max(0, s - 1)); return; }
       if (key.downArrow) { setSidePanelScroll(s => s + 1); return; }
-      if (key.pageUp) { setSidePanelScroll(s => Math.max(0, s - 10)); return; }
-      if (key.pageDown) { setSidePanelScroll(s => s + 10); return; }
     }
 
-    // ── File autocomplete ────────────────────────────────────────────────
     if (showFileAutocomplete) {
       if (key.escape) {
-        // If it was @, clear it. If it was /command, just hide picker
         if (fileTrigger === '@') setInputValue(v => v.replace(/@[^\s]*$/, ''));
         setFileAutoSelectedIdx(0);
         return;
@@ -174,19 +134,11 @@ export function App() {
           recordAccess(sel);
           if (fileTrigger === '@') {
             setInputValue(v => v.replace(/@[^\s]*$/, ''));
-            attachFile(sel).then(ok =>
-              addSystemMessage(ok ? `Attached: ${sel}` : `Error: could not read ${sel}`)
-            );
+            attachFile(sel).then(ok => addSystemMessage(ok ? `Attached: ${sel}` : `Error: could not read ${sel}`));
           } else if (fileTrigger.trimEnd() === '/open') {
-            // Immediately open the file and clear input
-            setInputValue('');
-            openFileInPanel(sel);
+            setInputValue(''); openFileInPanel(sel);
           } else if (fileTrigger.trimEnd() === '/add') {
-            // Immediately attach the file and clear input
-            setInputValue('');
-            attachFile(sel).then(ok =>
-              addSystemMessage(ok ? `Attached: ${sel}` : `Error: could not read ${sel}`)
-            );
+            setInputValue(''); attachFile(sel).then(ok => addSystemMessage(ok ? `Attached: ${sel}` : `Error: could not read ${sel}`));
           } else {
             setInputValue(v => v.replace(/([^\s]*)$/, sel));
           }
@@ -194,38 +146,26 @@ export function App() {
         }
         return;
       }
-      if ((key.backspace || key.delete) && inputValue.length > 0) {
-        setInputValue(v => v.slice(0, -1)); setFileAutoSelectedIdx(0); return;
-      }
+      if ((key.backspace || key.delete) && inputValue.length > 0) { setInputValue(v => v.slice(0, -1)); setFileAutoSelectedIdx(0); return; }
       if (input && !key.ctrl && !key.meta) { setInputValue(v => v + input); setFileAutoSelectedIdx(0); return; }
       return;
     }
 
-    // ── Command autocomplete ─────────────────────────────────────────────
     if (showCommandAutocomplete) {
       if (key.escape) { setInputValue(''); return; }
-      if (key.upArrow) {
-        setCmdSelectedIdx(i => (i > 0 ? i - 1 : Math.max(0, cmdFiltered.length - 1)));
-        return;
-      }
-      if (key.downArrow) {
-        setCmdSelectedIdx(i => (i < cmdFiltered.length - 1 ? i + 1 : 0));
-        return;
-      }
+      if (key.upArrow) { setCmdSelectedIdx(i => (i > 0 ? i - 1 : Math.max(0, cmdFiltered.length - 1))); return; }
+      if (key.downArrow) { setCmdSelectedIdx(i => (i < cmdFiltered.length - 1 ? i + 1 : 0)); return; }
       if (key.return || key.tab) {
         const sel = cmdFiltered[cmdSelectedIdx];
         if (sel) setInputValue(sel.cmd + ' ');
         return;
       }
-      if ((key.backspace || key.delete) && inputValue.length > 0) {
-        setInputValue(v => v.slice(0, -1)); return;
-      }
+      if ((key.backspace || key.delete) && inputValue.length > 0) { setInputValue(v => v.slice(0, -1)); return; }
       if (input && !key.ctrl && !key.meta) { setInputValue(v => v + input); return; }
       return;
     }
 
-    // ── Normal mode ──────────────────────────────────────────────────────
-    if (!isPickingModel && !isPickingProvider && !showHistory && !pendingProviderAdd && !isStreaming) {
+    if (!anyOverlay && !isStreaming) {
       if (key.return && key.shift) { setInputValue(v => v + '\n'); return; }
       if (key.ctrl && input === 'u') { setInputValue(''); return; }
       if (key.ctrl && input === 'w') { setInputValue(v => v.replace(/\S+\s*$/, '')); return; }
@@ -249,11 +189,9 @@ export function App() {
         else { setHistoryIndex(-1); setInputValue(savedDraft); }
         return;
       }
-      // Terminal native scrollback handles message history — no pageUp/pageDown needed here
     }
   });
 
-  // ── Submit (only reached when no autocomplete is active) ─────────────────
   const handleSubmit = useCallback(async (value: string) => {
     const trimmed = value.trim();
     if (!trimmed || isStreaming || showCommandAutocomplete || showFileAutocomplete) return;
@@ -306,10 +244,8 @@ export function App() {
     }
     if (trimmed === '/history') { open('history'); setInputValue(''); return; }
     if (trimmed === '/compact') {
-      addSystemMessage('Compacting conversation…');
-      setInputValue('');
-      compact().then(result => addSystemMessage(result));
-      return;
+      addSystemMessage('Compacting conversation…'); setInputValue('');
+      compact().then(result => addSystemMessage(result)); return;
     }
     if (trimmed === '/copy') {
       const last = messages.filter(m => m.role === 'assistant').pop();
@@ -340,33 +276,23 @@ export function App() {
     }
     if (trimmed.startsWith('/theme ')) {
       const name = trimmed.slice(7).trim();
-      setThemeName(name);
-      addSystemMessage(`Theme: ${name}`);
-      setInputValue(''); return;
+      setThemeName(name); addSystemMessage(`Theme: ${name}`); setInputValue(''); return;
     }
-    if (trimmed === '/undo') {
-      addSystemMessage(undo()); setInputValue(''); return;
-    }
-    if (trimmed === '/redo') {
-      addSystemMessage(redo()); setInputValue(''); return;
-    }
+    if (trimmed === '/undo') { addSystemMessage(undo()); setInputValue(''); return; }
+    if (trimmed === '/redo') { addSystemMessage(redo()); setInputValue(''); return; }
     if (trimmed === '/init') {
-      addSystemMessage('Analyzing project and generating AGENTS.md…');
-      setInputValue('');
-      initProject().then(result => addSystemMessage(result));
-      return;
+      addSystemMessage('Analyzing project and generating AGENTS.md…'); setInputValue('');
+      initProject().then(result => addSystemMessage(result)); return;
     }
-    if (trimmed.startsWith('/')) {
-      addSystemMessage(`Unknown command: ${trimmed}. Type / for autocomplete.`);
-      setInputValue(''); return;
-    }
+    if (trimmed.startsWith('/')) { addSystemMessage(`Unknown command: ${trimmed}. Type / for autocomplete.`); setInputValue(''); return; }
 
-    setInputValue('');
-    setHistoryIndex(-1);
-    setSavedDraft('');
-    appendHistory(trimmed);
-    setInputHistory(loadPromptHistory());
-    sendMessage(trimmed);
+    setInputValue(''); setHistoryIndex(-1); setSavedDraft('');
+    appendHistory(trimmed); 
+    try {
+      await sendMessage(trimmed);
+    } catch (err) {
+      addSystemMessage(`CRITICAL_ERROR: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }, [
     isStreaming, showCommandAutocomplete, showFileAutocomplete,
     sendMessage, clearMessages, addSystemMessage, compact,
@@ -375,94 +301,57 @@ export function App() {
     undo, redo, initProject,
   ]);
 
-  // ── Message rendering ─────────────────────────────────────────────────────
-  // Completed messages go into Static — Ink prints them ONCE to the terminal
-  // scrollback buffer and never repaints them. Only the active area (streaming
-  // text, tool calls, input) is managed by Ink's live render area.
-  // This is the correct approach for scroll stability — see how Gemini CLI works.
-  const showFullscreenOverlay = isPickingModel || isPickingProvider || !!pendingProviderAdd || showHistory;
-
   if (isGameOver) {
     return (
-      <GameOverScreen
-        tokensUsed={tokensUsed}
-        cost={cost}
-        messageCount={messages.length}
-        onComplete={() => exit()}
-      />
+      <GameOverScreen tokensUsed={tokensUsed} cost={cost} messageCount={messages.length} onComplete={() => exit()} />
     );
   }
 
+  const showFullscreenOverlay = isPickingModel || isPickingProvider || !!pendingProviderAdd || showHistory;
+
   return (
     <>
-      {/* Static MUST be at root level — not inside any Box. Ink prints each item
-          once to the terminal scrollback buffer and never repaints it. Nesting
-          Static inside a Box causes Ink to include it in its managed height and
-          overwrite the content on every repaint ("disappearing" bug). */}
       <Static items={messages}>
         {(message) => <MessageView key={message.id} message={message} />}
       </Static>
 
       <Box flexDirection="column">
-        <StatusBar
-          provider={activeModel.provider}
-          modelId={activeModel.modelId}
-          tokensUsed={tokensUsed}
-          tokenBudget={DEFAULT_TOKEN_BUDGET}
-          isStreaming={isStreaming}
-          attachedFiles={attachedFiles}
-          mode={mode}
-          tick={tick}
-          cost={cost}
-        />
-
-        <Box flexDirection="row">
-          <Box flexDirection="column" flexGrow={1} width={sidePanel ? "50%" : "100%"}>
-            {showFullscreenOverlay ? (
-              <Box flexDirection="column" paddingX={1}>
-                {isPickingModel && (
-                  <ModelPicker
-                    tick={tick}
-                    onSelect={(provider, modelId) => {
-                      switchModel(provider, modelId);
-                      closeModelPicker();
-                      addSystemMessage(`Switched to ${provider}/${modelId}`);
-                    }}
-                    onClose={closeModelPicker}
-                  />
-                )}
-                {isPickingProvider && (
-                  <ProviderManager
-                    configuredProviders={Object.keys(readAuth())}
-                    onAdd={(id) => { open('provider-wizard', { providerId: id }); }}
-                    onRemove={(id) => { removeProviderKey(id); addSystemMessage(`Removed key for ${id}.`); }}
-                    onClose={() => close()}
-                  />
-                )}
-                {pendingProviderAdd && (
-                  <ProviderWizard
-                    providerName={pendingProviderAdd}
-                    onSave={(key) => {
-                      if (key !== 'oauth') {
-                        setProviderKey(pendingProviderAdd, key);
-                      }
-                      addSystemMessage(`Configured ${pendingProviderAdd}.`);
-                      close();
-                    }}
-                    onClose={() => close()}
-                  />
-                )}
-                {showHistory && (
-                  <HistoryPicker
-                    onSelect={(id) => { loadHistory(id); close(); addSystemMessage('Conversation loaded.'); }}
-                    onClose={() => close()}
-                  />
-                )}
-              </Box>
-            ) : (
+        {showFullscreenOverlay ? (
+          <Box flexDirection="column" paddingX={1}>
+            {isPickingModel && (
+              <ModelPicker
+                tick={tick}
+                onSelect={(provider, modelId) => { switchModel(provider, modelId); closeModelPicker(); addSystemMessage(`Switched to ${provider}/${modelId}`); }}
+                onClose={closeModelPicker}
+              />
+            )}
+            {isPickingProvider && (
+              <ProviderManager
+                configuredProviders={Object.keys(readAuth())}
+                onAdd={(id) => { open('provider-wizard', { providerId: id }); }}
+                onRemove={(id) => { removeProviderKey(id); addSystemMessage(`Removed key for ${id}.`); }}
+                onClose={() => close()}
+              />
+            )}
+            {pendingProviderAdd && (
+              <ProviderWizard
+                providerName={pendingProviderAdd}
+                onSave={(key) => { if (key !== 'oauth') { setProviderKey(pendingProviderAdd, key); } addSystemMessage(`Configured ${pendingProviderAdd}.`); close(); }}
+                onClose={() => close()}
+              />
+            )}
+            {showHistory && (
+              <HistoryPicker
+                onSelect={(id) => { loadHistory(id); close(); addSystemMessage('Conversation loaded.'); }}
+                onClose={() => close()}
+              />
+            )}
+          </Box>
+        ) : (
+          <Box flexDirection="row">
+            <Box flexDirection="column" flexGrow={1} width={sidePanel ? "50%" : "100%"}>
               <Box flexDirection="column" paddingX={1}>
                 {messages.length === 0 && !isStreaming && <WelcomeScreen tick={tick} />}
-                {/* Active area: only this small section repaints on streaming updates */}
                 {toolCalls.map(tc => <ToolCallView key={tc.toolCallId} tool={tc} />)}
                 {isStreaming && <StreamingMessage text={streamingText} />}
                 {pendingPermission && <PermissionPrompt permission={pendingPermission} />}
@@ -475,38 +364,36 @@ export function App() {
                     )}
                   </Box>
                 )}
-                {/* Show cost-saving recommendations when budget is being approached */}
-                {shouldShowRecommendation(cost, 5) && !showFullscreenOverlay && (
+                {shouldShowRecommendation(cost, 5) && (
                   <CostRecommendation
                     currentProvider={activeModel.provider}
                     currentModelId={activeModel.modelId}
                     currentCost={cost}
-                    onSelect={(provider, modelId) => {
-                      switchModel(provider, modelId);
-                      addSystemMessage(`Switched to ${provider}/${modelId} for cost savings`);
-                    }}
+                    onSelect={(provider, modelId) => { switchModel(provider, modelId); addSystemMessage(`Switched to ${provider}/${modelId} for cost savings`); }}
                   />
                 )}
               </Box>
+            </Box>
+
+            {sidePanel && (
+              <SidePanel {...sidePanel} scrollOffset={sidePanelScroll} onClose={() => setSidePanel(null)} />
             )}
           </Box>
+        )}
 
-          {sidePanel && (
-            <SidePanel
-              {...sidePanel}
-              scrollOffset={sidePanelScroll}
-              onClose={() => setSidePanel(null)}
-            />
-          )}
-        </Box>
-
-        {/* Autocomplete dropdowns sit between content and input — no layout jump
-            because InputBox is disabled (focus=false) while they're shown */}
-        <CommandAutocomplete
-          filtered={cmdFiltered}
-          selectedIndex={cmdSelectedIdx}
-          visible={showCommandAutocomplete}
+        <StatusBar
+          provider={activeModel.provider}
+          modelId={activeModel.modelId}
+          tokensUsed={tokensUsed}
+          tokenBudget={DEFAULT_TOKEN_BUDGET}
+          isStreaming={isStreaming}
+          attachedFiles={attachedFiles}
+          mode={mode}
+          tick={tick}
+          cost={cost}
         />
+
+        <CommandAutocomplete filtered={cmdFiltered} selectedIndex={cmdSelectedIdx} visible={showCommandAutocomplete} />
         <FileAutocomplete
           query={fileQuery}
           visible={showFileAutocomplete}
