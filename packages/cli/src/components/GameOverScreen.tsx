@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Box, Text } from 'ink';
+import { Box, Text, useInput } from 'ink';
 
 interface Props {
   tokensUsed: number;
@@ -25,6 +25,12 @@ const GAME_OVER_ASCII = [
 ];
 
 export function GameOverScreen({ tokensUsed, cost, messageCount, onComplete }: Props) {
+  useInput((input, key) => {
+    if (key.return || key.escape || input === ' ') {
+      onComplete();
+    }
+  });
+
   useEffect(() => {
     // Show game over for 3 seconds, then exit
     const timer = setTimeout(() => {
@@ -55,8 +61,9 @@ export function GameOverScreen({ tokensUsed, cost, messageCount, onComplete }: P
           <Text color="white">{messageCount}</Text>
         </Box>
       </Box>
-      <Box marginTop={2}>
-        <Text color="#484F58" blink> SAVING PROGRESS... DO NOT POWER OFF </Text>
+      <Box marginTop={2} flexDirection="column" alignItems="center">
+        <Text color="#484F58"> SAVING PROGRESS... DO NOT POWER OFF </Text>
+        <Text color="#484F58"> [ SPACE/ENTER TO EXIT NOW ] </Text>
       </Box>
     </Box>
   );

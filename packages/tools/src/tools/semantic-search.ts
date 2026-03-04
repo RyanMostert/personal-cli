@@ -67,7 +67,7 @@ async function extractOutline(filePath: string, content: string): Promise<string
 
 export const semanticSearch = tool({
   description: 'AST-aware semantic outline search (mgrep style). Efficiently extracts definitions, classes, functions, and interfaces from files without reading their full contents. Perfect for understanding large codebases using up to 4x fewer tokens.',
-  parameters: z.object({
+  inputSchema: z.object({
     patterns: z.array(z.string().describe('Exact file path or glob pattern to analyze (e.g., "src/**/*.ts")')),
   }),
   // @ts-expect-error Type inference fails on required zod arrays in Vercel AI SDK 6
@@ -80,7 +80,7 @@ export const semanticSearch = tool({
         return { error: 'No files matched the provided paths/patterns.' };
       }
 
-      const filesToProcess = resolvedFiles.slice(0, 30); // Cap at 30 files
+      const filesToProcess = resolvedFiles.slice(0, 30);
       let output = `Found ${resolvedFiles.length} files. Extracting semantic outlines for ${filesToProcess.length} files:\n\n`;
 
       for (const file of filesToProcess) {

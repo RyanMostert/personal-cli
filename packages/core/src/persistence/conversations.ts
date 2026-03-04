@@ -26,14 +26,32 @@ function ensureDir() {
   if (!existsSync(d)) mkdirSync(d, { recursive: true });
 }
 
-export function saveConversation(messages: Message[], model: ActiveModel, title?: string): string {
+export function saveConversation(
+  messages: Message[],
+  model: ActiveModel,
+  firstUserMessage: string,
+  title?: string,
+  existingId?: string,
+): string {
   ensureDir();
-  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const firstUserMsg = messages.find(m => m.role === 'user');
-  const title_ = (title ?? firstUserMsg?.content ?? 'Untitled').slice(0, 60);
-  const data: SavedConversation = { id, title: title_, date: Date.now(), model, messages };
+
+  const timestamp = Date.now();
+  const id = existingId ?? (title
+    ? `${slugify(title)}-${timestamp.toString().slice(-6)}`
+    : `${timestamp}-${Math.random().toString(36).slice(2, 8)}`);
+
+  const title_ = (title ?? firstUserMessage ?? 'Untitled').slice(0, 60);
+  const data: SavedConversation = { id, title: title_, date: timestamp, model, messages };
+
   writeFileSync(join(HISTORY_DIR(), `${id}.json`), JSON.stringify(data, null, 2));
   return id;
+}
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)+/g, '');
 }
 
 export function loadConversation(id: string): SavedConversation | null {
@@ -85,18 +103,34 @@ export function exportConversation(
 
   const content = [`# Conversation Export — ${date}`,
     '',
-    `**Model:** ${model.provider} / ${model.modelId}`,
-    `**Messages:** ${messages.length}`,
-    `**Tokens:** ${tokensUsed.toLocaleString()}`,
-    `**Cost:** $${cost.toFixed(4)}`,
+  `**Model:** ${model.provider} / ${model.modelId}`,
+  `**Messages:** ${messages.length}`,
+  `**Tokens:** ${tokensUsed.toLocaleString()}`,
+  `**Cost:** $${cost.toFixed(4)}`,
     '',
     '---',
     '',
-    ...messages.map(m => {
-      const time = new Date(m.timestamp).toLocaleTimeString();
-      const role = m.role.charAt(0).toUpperCase() + m.role.slice(1);
-      return `**${role}** · ${time}\n\n${m.content}\n`;
-    }),
+  ...messages.map(m => {
+    const time = new Date(m.timestamp).toLocaleTimeString();
+    const role = m.role.charAt(0).toUpperCase() + m.role.slice(1);
+    
+    let text = `**${role}** · ${time}\n\n`;
+    
+    if (m.toolCalls?.length) {
+      text += `*Tool Calls:*\n`;
+      for (const tc of m.toolCalls) {
+        text += `- **${tc.toolName}**: ${JSON.stringify(tc.args)}\n`;
+        if (tc.result) {
+          const res = typeof tc.result === 'string' ? tc.result : JSON.stringify(tc.result);
+          text += `  > ${res.slice(0, 200)}${res.length > 200 ? '...' : ''}\n`;
+        }
+      }
+      text += '\n';
+    }
+    
+    text += `${m.content}\n`;
+    return text;
+  }),
   ].join('\n');
 
   writeFileSync(filePath, content, 'utf-8');

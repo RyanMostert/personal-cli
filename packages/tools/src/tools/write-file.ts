@@ -1,13 +1,13 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { writeFileSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
-import type { PermissionCallback } from '../types.js';
+import type { PermissionCallback, WriteCallback } from '../types.js';
 
-export function createWriteFile(permissionFn?: PermissionCallback) {
+export function createWriteFile(permissionFn?: PermissionCallback, onWrite?: WriteCallback) {
   return tool({
     description: 'Write content to a file, creating it (and any parent directories) if needed.',
-    parameters: z.object({
+    inputSchema: z.object({
       path: z.string().describe('File path to write'),
       content: z.string().describe('Content to write'),
     }),
@@ -19,8 +19,10 @@ export function createWriteFile(permissionFn?: PermissionCallback) {
 
       try {
         const abs = resolve(process.cwd(), path);
+        const before = existsSync(abs) ? readFileSync(abs, 'utf-8') : null;
         mkdirSync(dirname(abs), { recursive: true });
         writeFileSync(abs, content, 'utf-8');
+        if (onWrite) onWrite(abs, before, content);
         return { output: `Written ${content.split('\n').length} lines to ${path}` };
       } catch (err) {
         return { error: String(err) };

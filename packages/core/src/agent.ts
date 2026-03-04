@@ -1,30 +1,21 @@
-import { streamText } from 'ai';
-import { generateId, type Message, type StreamEvent, type ActiveModel, type AgentMode, getModelEntry } from '@personal-cli/shared';
-import { APP_NAME, APP_VERSION, DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
+import { streamText, type ModelMessage } from 'ai';
+import { generateId, type Message, type StreamEvent, type ActiveModel, type AgentMode, type ProviderName, getModelEntry } from '@personal-cli/shared';
+import { DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
 import { ProviderManager } from './providers/manager.js';
-import { saveConversation, loadConversation } from './persistence/conversations.js';
-
-const DEFAULT_SYSTEM_PROMPT = `You are ${APP_NAME} v${APP_VERSION}, a powerful AI assistant.
-
-## Tool use — always prefer action over explanation
-- When the user asks for information you don't have, USE your tools immediately. Do NOT say "I can't" or ask for a URL — figure it out yourself.
-- For web requests: construct the most appropriate URL from context and call webFetch without asking. For example:
-  - "steam latest games" → fetch https://store.steampowered.com/api/featured/ or https://store.steampowered.com/explore/new/
-  - "news about X" → fetch a relevant URL you know
-  - "search X" → fetch a search engine or relevant site
-- For file tasks: read the relevant files before answering.
-- For system info: run the appropriate command.
-- Chain multiple tool calls in sequence when needed. Do not stop after one tool call if you need more data.
-- Always return the actual results to the user — summarize and present what you found, not what you tried.
-
-## Behaviour
-- Be direct and concrete. Skip disclaimers about limitations unless a tool actually fails.
-- If a tool returns an error or empty result, try an alternative URL or approach, then report what happened.
-- For coding tasks: match the style and conventions of the existing codebase.`;
+import { saveConversation, loadConversation, renameConversation as persistRename } from './persistence/conversations.js';
+import { createTools, type PermissionCallback, type QuestionCallback } from '@personal-cli/tools';
+import { DEFAULT_SYSTEM_PROMPT } from './prompts/default.js';
+import { generateTitle } from './agent/title.js';
+import { COMPACTION_PROMPT } from './prompts/compaction.js';
+import { UndoStack } from './persistence/undo-stack.js';
+import { existsSync, readFileSync, writeFileSync, readdirSync } from 'fs';
+import { join } from 'path';
 
 export interface AgentOptions {
   providerManager: ProviderManager;
-  tools?: Record<string, any>;
+  mode?: AgentMode;
+  permissionFn?: PermissionCallback;
+  questionFn?: QuestionCallback;
   maxSteps?: number;
   systemPrompt?: string;
   tokenBudget?: number;
@@ -32,6 +23,7 @@ export interface AgentOptions {
 
 export class Agent {
   private messages: Message[] = [];
+  private coreMessages: ModelMessage[] = [];
   private providerManager: ProviderManager;
   private systemPrompt: string;
   private tokenBudget: number;
@@ -40,13 +32,51 @@ export class Agent {
   private totalTokensUsed = 0;
   private totalCost = 0;
   private mode: AgentMode = 'ask';
+  private permissionFn?: PermissionCallback;
+  private conversationTitle?: string;
+  private conversationId?: string;
+  private currentAbortController: AbortController | null = null;
+  private undoStack = new UndoStack();
+  private questionFn?: QuestionCallback;
 
   constructor(options: AgentOptions) {
     this.providerManager = options.providerManager;
-    this.systemPrompt = options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
     this.tokenBudget = options.tokenBudget ?? DEFAULT_TOKEN_BUDGET;
-    this.tools = options.tools ?? {};
+    this.mode = options.mode ?? 'ask';
+    this.permissionFn = options.permissionFn;
+    this.questionFn = options.questionFn;
     this.maxSteps = options.maxSteps ?? 20;
+
+    // Inject project context from various hint files if present
+    let base = options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
+    const projectHints: string[] = [];
+    const hintFiles = ['.pcli-hints', 'AGENTS.md', 'CONTEXT.md', 'INSTRUCTIONS.md', '.goosehints', '.cursorrules'];
+    
+    for (const file of hintFiles) {
+      const p = join(process.cwd(), file);
+      if (existsSync(p)) {
+        try {
+          const content = readFileSync(p, 'utf-8').trim();
+          projectHints.push(`### Source: ${file}\n${content}`);
+        } catch { }
+      }
+    }
+
+    if (projectHints.length > 0) {
+      base = `# Project Context & Guidelines\n\n${projectHints.join('\n\n')}\n\n---\n\n${base}`;
+    }
+    this.systemPrompt = base;
+
+    this.tools = this.buildTools();
+  }
+
+  private buildTools() {
+    return createTools(this.mode, this.permissionFn, {
+      onWrite: (path, before, after) => {
+        if (before !== null) this.undoStack.push({ path, before, after });
+      },
+      questionFn: this.questionFn,
+    });
   }
 
   getMessages(): Message[] {
@@ -65,20 +95,93 @@ export class Agent {
     return this.totalCost;
   }
 
-  switchModel(provider: string, modelId: string) {
-    this.providerManager.switchModel(provider as any, modelId);
+  switchModel(provider: ProviderName, modelId: string) {
+    this.providerManager.switchModel(provider, modelId);
   }
 
   switchMode(mode: AgentMode) {
     this.mode = mode;
+    this.tools = this.buildTools();
+  }
+
+  abort(): void {
+    this.currentAbortController?.abort();
   }
 
   getMode(): AgentMode {
     return this.mode;
   }
 
+  getTools(): Array<{ name: string; description?: string }> {
+    return Object.entries(this.tools).map(([name, tool]) => ({
+      name,
+      description: (tool as any).description,
+    }));
+  }
+
   clearHistory() {
     this.messages = [];
+    this.coreMessages = [];
+    this.conversationId = undefined;
+    this.conversationTitle = undefined;
+    this.undoStack.clear();
+  }
+
+  undo(): string {
+    const result = this.undoStack.undo();
+    if (!result) return 'Nothing to undo.';
+    return `Undid change to ${result.path}`;
+  }
+
+  redo(): string {
+    const result = this.undoStack.redo();
+    if (!result) return 'Nothing to redo.';
+    return `Redid change to ${result.path}`;
+  }
+
+  async initProject(): Promise<string> {
+    const cwd = process.cwd();
+    const outputPath = join(cwd, 'AGENTS.md');
+
+    // Gather lightweight project context
+    let listing = '';
+    try {
+      listing = readdirSync(cwd).slice(0, 30).join(', ');
+    } catch { }
+
+    let pkgJson = '';
+    try {
+      const p = join(cwd, 'package.json');
+      if (existsSync(p)) pkgJson = readFileSync(p, 'utf-8').slice(0, 1000);
+    } catch { }
+
+    const prompt = `Analyze the following project and write a concise AGENTS.md file. This file will be prepended to the AI assistant's system prompt on every session, so make it useful: include what the project is, its tech stack, key directories/files, important conventions, and anything an AI coding assistant should know before touching the code.\n\nProject files: ${listing}\n\n${pkgJson ? `package.json (truncated):\n${pkgJson}` : ''}\n\nWrite AGENTS.md content only — no markdown code fences, no preamble. Start directly with a heading.`;
+
+    const model = await this.providerManager.getModel();
+    const result = streamText({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      maxOutputTokens: 1024,
+    } as any);
+
+    let content = '';
+    for await (const part of result.fullStream) {
+      if (part.type === 'text-delta') content += part.text;
+    }
+
+    writeFileSync(outputPath, content.trim(), 'utf-8');
+
+    // Load into current session immediately
+    const agentsMd = content.trim();
+    this.systemPrompt = `# Project Context\n\n${agentsMd}\n\n---\n\n${DEFAULT_SYSTEM_PROMPT}`;
+
+    return `AGENTS.md created at ${outputPath} and loaded into system prompt.`;
+  }
+
+  renameConversation(newTitle: string): boolean {
+    if (!this.conversationId) return false;
+    this.conversationTitle = newTitle;
+    return persistRename(this.conversationId, newTitle);
   }
 
   addSystemMessage(content: string) {
@@ -105,12 +208,20 @@ export class Agent {
     };
     this.messages.push(userMessage);
 
-    const model = await this.providerManager.getModel();
-    const apiMessages = this.messages
-      .filter((m) => m.role !== 'system')
-      .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+    // Auto-compact when token usage crosses 85% of budget
+    if (this.totalTokensUsed > this.tokenBudget * 0.85) {
+      await this.compact();
+      yield { type: 'system', message: 'Context auto-compacted to stay within token budget.' };
+    }
 
-    // Declare outside try so catch can silence dangling promises
+    // Add user message to coreMessages
+    this.coreMessages.push({ role: 'user', content: fullContent });
+
+    const model = await this.providerManager.getModel();
+    const apiMessages = this.coreMessages;
+
+    this.currentAbortController = new AbortController();
+
     const result = streamText({
       model,
       system: this.systemPrompt,
@@ -118,84 +229,211 @@ export class Agent {
       tools: this.tools,
       maxSteps: this.maxSteps,
       maxOutputTokens: Math.min(8192, this.tokenBudget - this.totalTokensUsed),
+      abortSignal: this.currentAbortController.signal,
     } as any);
 
     try {
-      let fullText = '';
+      let rawText = '';
+      let thoughtText = '';
+      const allToolCalls: Record<string, any> = {};
+      let totalPromptTokens = 0;
+      let totalCompletionTokens = 0;
 
-      for await (const part of result.fullStream) {
-        switch (part.type) {
-          case 'text-delta':
-            fullText += part.text;
-            yield { type: 'text-delta', delta: part.text };
-            break;
+      // Thought parser state machine
+      let buffer = '';
+      let inThought = false;
 
-          case 'tool-call':
-            yield {
-              type: 'tool-call-start',
-              toolCall: {
+      // Stream timeout to prevent stalling
+      const streamTimeout = setTimeout(() => {
+        this.currentAbortController?.abort();
+      }, 5 * 60 * 1000);
+
+      try {
+        for await (const part of result.fullStream) {
+          switch (part.type) {
+            case 'text-delta': {
+              const text = part.text;
+              buffer += text;
+              
+              while (buffer.length > 0) {
+                if (inThought) {
+                  const closeIdx = buffer.indexOf('</thought>');
+                  if (closeIdx !== -1) {
+                    const thought = buffer.slice(0, closeIdx);
+                    if (thought) {
+                      thoughtText += thought;
+                      yield { type: 'thought-delta', delta: thought };
+                    }
+                    buffer = buffer.slice(closeIdx + 10);
+                    inThought = false;
+                  } else {
+                    // Check if the buffer ends with a partial closing tag
+                    const partialIdx = buffer.lastIndexOf('</');
+                    if (partialIdx !== -1 && '</thought>'.startsWith(buffer.slice(partialIdx))) {
+                      const thought = buffer.slice(0, partialIdx);
+                      if (thought) {
+                        thoughtText += thought;
+                        yield { type: 'thought-delta', delta: thought };
+                      }
+                      buffer = buffer.slice(partialIdx);
+                      break; // Wait for more data
+                    } else {
+                      thoughtText += buffer;
+                      yield { type: 'thought-delta', delta: buffer };
+                      buffer = '';
+                    }
+                  }
+                } else {
+                  const openIdx = buffer.indexOf('<thought>');
+                  if (openIdx !== -1) {
+                    const beforeText = buffer.slice(0, openIdx);
+                    if (beforeText) {
+                      rawText += beforeText;
+                      yield { type: 'text-delta', delta: beforeText };
+                    }
+                    buffer = buffer.slice(openIdx + 9);
+                    inThought = true;
+                  } else {
+                    // Check if the buffer ends with a partial opening tag
+                    const partialIdx = buffer.lastIndexOf('<');
+                    if (partialIdx !== -1 && '<thought>'.startsWith(buffer.slice(partialIdx))) {
+                      const beforeText = buffer.slice(0, partialIdx);
+                      if (beforeText) {
+                        rawText += beforeText;
+                        yield { type: 'text-delta', delta: beforeText };
+                      }
+                      buffer = buffer.slice(partialIdx);
+                      break; // Wait for more data
+                    } else {
+                      rawText += buffer;
+                      yield { type: 'text-delta', delta: buffer };
+                      buffer = '';
+                    }
+                  }
+                }
+              }
+              break;
+            }
+
+            case 'reasoning-delta': {
+              const rText = (part as any).reasoning || (part as any).text || '';
+              thoughtText += rText;
+              yield { type: 'thought-delta', delta: rText };
+              break;
+            }
+
+            case 'tool-call': {
+              const toolName = part.toolName;
+              const args = ('args' in part ? part.args : (part as any).input) as Record<string, unknown>;
+
+              allToolCalls[part.toolCallId] = {
                 toolCallId: part.toolCallId,
-                toolName: part.toolName,
-                args: ('args' in part ? part.args : (part as any).input) as Record<string, unknown>,
-              },
-            };
-            break;
+                toolName: toolName,
+                args: args,
+              };
+              yield {
+                type: 'tool-call-start',
+                toolCall: allToolCalls[part.toolCallId],
+              };
+              break;
+            }
 
-          case 'tool-result':
-            yield {
-              type: 'tool-call-result',
-              toolCall: {
-                toolCallId: part.toolCallId,
-                toolName: part.toolName,
-                result: ('result' in part ? part.result : (part as any).output),
-              },
-            };
-            break;
+            case 'tool-result': {
+              if (allToolCalls[part.toolCallId]) {
+                allToolCalls[part.toolCallId].result = ('result' in part ? part.result : (part as any).output);
+              }
+              yield {
+                type: 'tool-call-result',
+                toolCall: {
+                  toolCallId: part.toolCallId,
+                  toolName: part.toolName,
+                  result: ('result' in part ? part.result : (part as any).output),
+                },
+              };
+              break;
+            }
 
-          case 'error':
-            throw part.error;
+            case 'error':
+              throw part.error;
+
+            default: {
+              if ((part as any).type === 'step-finish') {
+                const p = part as any;
+                if (p.usage) {
+                  totalPromptTokens += p.usage.promptTokens ?? 0;
+                  totalCompletionTokens += p.usage.completionTokens ?? 0;
+                }
+              }
+              break;
+            }
+          }
         }
+      } finally {
+        clearTimeout(streamTimeout);
       }
 
-      const usage = await result.usage;
-      const promptTokens = usage.inputTokens ?? 0;
-      const completionTokens = usage.outputTokens ?? 0;
-      this.totalTokensUsed += promptTokens + completionTokens;
+      this.totalTokensUsed += totalPromptTokens + totalCompletionTokens;
 
-      // Calculate cost based on model pricing
+      const response = await result.response;
+      for (const msg of response.messages) {
+        this.coreMessages.push(msg);
+      }
+
       const entry = getModelEntry(this.providerManager.getActiveModel().provider, this.providerManager.getActiveModel().modelId);
       if (entry?.inputCostPer1M != null) {
-        this.totalCost += (promptTokens / 1_000_000) * entry.inputCostPer1M;
+        this.totalCost += (totalPromptTokens / 1_000_000) * entry.inputCostPer1M;
       }
       if (entry?.outputCostPer1M != null) {
-        this.totalCost += (completionTokens / 1_000_000) * entry.outputCostPer1M;
+        this.totalCost += (totalCompletionTokens / 1_000_000) * entry.outputCostPer1M;
       }
+
+      // Final cleanup of rawText to ensure tags are stripped for history
+      const finalContent = rawText.replace(/<thought>[\s\S]*?<\/thought>/g, '').trim();
 
       const assistantMessage: Message = {
         id: generateId(),
         role: 'assistant',
-        content: fullText,
+        content: finalContent,
+        thought: thoughtText || undefined,
+        toolCalls: Object.values(allToolCalls),
         timestamp: Date.now(),
       };
       this.messages.push(assistantMessage);
 
+      if (this.messages.filter(m => m.role === 'assistant').length === 1) {
+        generateTitle(userContent, finalContent, model).then(title => {
+          this.conversationTitle = title;
+          try {
+            const id = saveConversation(this.messages, this.providerManager.getActiveModel(), userContent, this.conversationTitle, this.conversationId);
+            if (!this.conversationId) this.conversationId = id;
+          } catch { }
+        });
+      }
+
       yield {
         type: 'finish',
         usage: {
-          promptTokens,
-          completionTokens,
-          totalTokens: promptTokens + completionTokens,
+          promptTokens: totalPromptTokens,
+          completionTokens: totalCompletionTokens,
+          totalTokens: totalPromptTokens + totalCompletionTokens,
         },
       };
 
-      // Save conversation — pass userContent as title so context blocks don't corrupt it
-      try { saveConversation(this.messages, this.providerManager.getActiveModel(), userContent); } catch {}
+      try {
+        const id = saveConversation(this.messages, this.providerManager.getActiveModel(), userContent, this.conversationTitle, this.conversationId);
+        if (!this.conversationId) this.conversationId = id;
+      } catch { }
     } catch (err) {
-      // Silence result.usage — it rejects when fullStream throws, causing an unhandled rejection
-      // that Node.js would dump to stderr before Ink can render the error cleanly.
-      Promise.resolve(result.usage).catch(() => {});
+      if (err instanceof Error && err.name === 'AbortError') {
+        yield { type: 'finish', usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 } };
+        return;
+      }
+      Promise.resolve(result.usage).catch(() => { });
       this.messages.pop();
+      this.coreMessages.pop();
       yield { type: 'error', error: err instanceof Error ? err : new Error(String(err)) };
+    } finally {
+      this.currentAbortController = null;
     }
   }
 
@@ -203,6 +441,9 @@ export class Agent {
     const saved = loadConversation(id);
     if (!saved) return false;
     this.messages = saved.messages;
+    this.coreMessages = this.messages
+      .filter(m => m.role !== 'system')
+      .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
     return true;
   }
 
@@ -210,13 +451,10 @@ export class Agent {
     if (this.messages.length < 2) {
       return 'Not enough messages to compact.';
     }
-
-    const summaryPrompt = 'Please summarize the conversation so far into a concise recap. Focus on key decisions, code changes, and important information. Keep it brief but comprehensive.';
-    
     const model = await this.providerManager.getModel();
     const apiMessages = [
       ...this.messages.filter(m => m.role !== 'system').map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-      { role: 'user' as const, content: summaryPrompt }
+      { role: 'user' as const, content: COMPACTION_PROMPT }
     ];
 
     const result = streamText({
@@ -233,13 +471,13 @@ export class Agent {
       }
     }
 
-    // Replace all messages with a single summary message
     this.messages = [{
       id: generateId(),
       role: 'assistant',
       content: `**Conversation Summary:**\n\n${summary}`,
       timestamp: Date.now(),
     }];
+    this.coreMessages = [{ role: 'assistant', content: `**Conversation Summary:**\n\n${summary}` }];
 
     return 'Conversation compacted successfully.';
   }

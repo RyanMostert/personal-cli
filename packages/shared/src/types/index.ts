@@ -14,7 +14,12 @@ export type ProviderName =
   | 'deepseek'
   | 'perplexity'
   | 'cerebras'
-  | 'together';
+  | 'together'
+  | 'github-copilot'
+  | 'google-vertex'
+  | 'opencode'
+  | 'amazon-bedrock'
+  | 'azure';
 
 export interface ModelConfig {
   id: string;
@@ -52,6 +57,8 @@ export interface Message {
   id: string;
   role: MessageRole;
   content: string;
+  thought?: string;
+  toolCalls?: ToolCallInfo[];
   timestamp: number;
 }
 
@@ -93,10 +100,14 @@ export interface AgentConfig {
 
 export type StreamEventType =
   | 'text-delta'
+  | 'thought-delta'
   | 'tool-call-start'
   | 'tool-call-result'
+  | 'step-start'
+  | 'step-finish'
   | 'finish'
-  | 'error';
+  | 'error'
+  | 'system';
 
 export interface ToolCallInfo {
   toolCallId: string;
@@ -104,11 +115,16 @@ export interface ToolCallInfo {
   args?: Record<string, unknown>;
   result?: unknown;
   error?: string;
+  oldText?: string;
+  newText?: string;
+  path?: string;
 }
 
 export interface StreamEvent {
   type: StreamEventType;
   delta?: string;
+  message?: string;
+  step?: number;
   toolCall?: ToolCallInfo;
   error?: Error | { message: string; name?: string; stack?: string };
   usage?: {

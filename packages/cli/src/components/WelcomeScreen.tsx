@@ -1,78 +1,67 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Box, Text } from 'ink';
 import { listConversations } from '@personal-cli/core';
 import path from 'path';
 
 const ASCII_TITLE = [
-  " █████╗ ███████╗███╗   ██╗██╗██╗   ██╗███████╗",
-  "██╔══██╗██╔════╝████╗  ██║██║██║   ██║██╔════╝",
-  "███████║█████╗  ██╔██╗ ██║██║██║   ██║███████╗",
-  "██╔══██║██╔══╝  ██║╚██╗██║██║██║   ██║╚════██║",
-  "██║  ██║███████╗██║ ╚████║██║╚██████╔╝███████║",
-  "╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝╚═╝ ╚═════╝ ╚══════╝"
+  "   _   ___  ___   _   ___  ___ ",
+  "  /_\\ | _ \\/ __| /_\\ |   \\| __|",
+  " / _ \\|   / (__ / _ \\| |) | _| ",
+  "/_/ \\_\\_|_\\\\___/_/ \\_\\___/|___|"
 ];
+
+const TITLE_COLORS = ['#00E5FF', '#FF00AA', '#AA00FF'];
 
 function formatTimeAgo(date: number): string {
   const seconds = Math.floor((Date.now() - date) / 1000);
-  if (seconds < 60) return `${seconds}S_AGO`;
+  if (seconds < 60) return `${seconds}s`;
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}M_AGO`;
+  if (minutes < 60) return `${minutes}m`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}H_AGO`;
-  return `${Math.floor(hours / 24)}D_AGO`;
+  if (hours < 24) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
 }
 
-export function WelcomeScreen() {
-  const [flicker, setFlicker] = useState(true);
-  const [colorIdx, setColorIdx] = useState(0);
-  const colors = ['#00E5FF', '#FF00AA', '#AA00FF', '#3FB950', '#FFB86C'];
-
+export function WelcomeScreen({ tick = 0 }: { tick?: number }) {
   const stats = useMemo(() => {
     const convos = listConversations();
     const lastConvo = convos[0];
-    const project = path.basename(process.cwd()).toUpperCase();
-    
+    const project = path.basename(process.cwd()).toLowerCase();
     return [
-      { label: 'TOTAL_SESSIONS', value: convos.length.toString().padStart(7, '0') },
-      { label: 'PROJECT_NODE',   value: project.slice(0, 15) },
-      { label: 'LAST_ACTIVITY',  value: lastConvo ? formatTimeAgo(lastConvo.date) : 'NEVER' },
+      { label: 'SESSIONS', value: convos.length.toString() },
+      { label: 'PROJECT',  value: project },
+      { label: 'LAST',     value: lastConvo ? formatTimeAgo(lastConvo.date) : 'none' },
     ];
   }, []);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setFlicker((prev) => !prev);
-      setColorIdx((prev) => (prev + 1) % colors.length);
-    }, 600);
-    return () => clearInterval(timer);
-  }, [colors.length]);
+  const colorOffset = Math.floor(tick / 2) % TITLE_COLORS.length;
 
   return (
     <Box flexDirection="column" alignItems="center" paddingY={2}>
-      {ASCII_TITLE.map((line, i) => (
-        <Text key={i} bold color={colors[(colorIdx + i) % colors.length]}>
-          {line}
-        </Text>
-      ))}
-
-      <Box marginTop={2} flexDirection="column" alignItems="center" borderStyle="double" borderColor="#484F58" paddingX={4} paddingY={1}>
-        <Text color="#00E5FF" bold> --- SYSTEM STATS --- </Text>
-        {stats.map(s => (
-          <Box key={s.label} width={35} justifyContent="space-between">
-            <Text color="#FF00AA">{s.label.padEnd(16)}</Text>
-            <Text color="white">❯❯</Text>
-            <Text color="#3FB950">{s.value.padStart(12)}</Text>
-          </Box>
+      <Box flexDirection="column" alignItems="center" marginBottom={1}>
+        {ASCII_TITLE.map((line, i) => (
+          <Text key={i} bold color={TITLE_COLORS[(i + colorOffset) % TITLE_COLORS.length]}>
+            {line}
+          </Text>
         ))}
       </Box>
 
-      <Box marginTop={2} paddingX={4}>
-        <Text color={flicker ? '#FF00AA' : '#1A1A1A'} bold>
-          ► INSERT COIN TO CONTINUE ◄
-        </Text>
+      <Box marginTop={1} flexDirection="row" paddingX={2}>
+        {stats.map((s, i) => (
+          <React.Fragment key={s.label}>
+            {i > 0 && <Text color="#484F58">  │  </Text>}
+            <Text color="#484F58">{s.label}: </Text>
+            <Text color="#3FB950" bold>{s.value}</Text>
+          </React.Fragment>
+        ))}
       </Box>
+
+      <Box marginTop={2}>
+        <Text color="#FF00AA" bold>{tick % 2 === 0 ? '► INSERT COIN ◄' : '  INSERT COIN  '}</Text>
+      </Box>
+      
       <Box marginTop={1}>
-        <Text color="#484F58"> [ Type a command to start | /help for manual ] </Text>
+        <Text color="#484F58">type /help for manual</Text>
       </Box>
     </Box>
   );

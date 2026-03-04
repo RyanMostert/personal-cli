@@ -2,11 +2,12 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { MODEL_REGISTRY, type ProviderName, type ModelEntry, type ModelTag } from '@personal-cli/shared';
 import fuzzysort from 'fuzzysort';
-import { getRecentModels, addRecentModel } from '@personal-cli/core';
+import { getRecentModels, addRecentModel, getCachedModels, convertToModelEntry, getAllCacheStats, type CacheStats } from '@personal-cli/core';
 
 interface Props {
   onSelect: (provider: ProviderName, modelId: string) => void;
   onClose: () => void;
+  tick?: number;
 }
 
 const TAG_COLORS: Record<ModelTag, string> = {
@@ -32,16 +33,42 @@ function defaultCollapsedSet(): Set<string> {
   return new Set([...counts.entries()].filter(([, c]) => c > COLLAPSE_THRESHOLD).map(([p]) => p));
 }
 
-export function ModelPicker({ onSelect, onClose }: Props) {
+export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
   const [filter, setFilter] = useState('');
   const [rowFocus, setRowFocus] = useState(0);
-  const [flicker, setFlicker] = useState(true);
   const [collapsedProviders, setCollapsedProviders] = useState<Set<string>>(defaultCollapsedSet);
+  const [costSavingMode, setCostSavingMode] = useState(false);
+  const [cachedModels, setCachedModels] = useState<ModelEntry[]>([]);
+  const [cacheStats, setCacheStats] = useState<CacheStats[]>([]);
 
+  // Load cached models on mount
   useEffect(() => {
-    const timer = setInterval(() => setFlicker(f => !f), 500);
-    return () => clearInterval(timer);
+    const loadCached = async () => {
+      const providers: ProviderName[] = ['openrouter', 'github-copilot', 'opencode', 'opencode-zen'];
+      const allCached: ModelEntry[] = [];
+      
+      for (const provider of providers) {
+        const cached = await getCachedModels(provider);
+        if (cached) {
+          allCached.push(...cached.map(convertToModelEntry));
+        }
+      }
+      
+      setCachedModels(allCached);
+      
+      const stats = await getAllCacheStats();
+      setCacheStats(stats);
+    };
+    
+    loadCached();
   }, []);
+
+  // Calculate average cost for comparison
+  const getAvgCost = (m: ModelEntry): number => {
+    if (m.free) return 0;
+    if (m.inputCostPer1M == null || m.outputCostPer1M == null) return 10; // Unknown = expensive
+    return (m.inputCostPer1M + m.outputCostPer1M) / 2;
+  };
 
   // Parse filter for tags (e.g., "gpt #fast #free")
   const { searchQuery, tags, freeOnly } = useMemo(() => {
@@ -71,21 +98,47 @@ export function ModelPicker({ onSelect, onClose }: Props) {
       .filter((m): m is ModelEntry => m !== undefined);
   }, []);
 
+  // Merge static and cached models
+  const allModels = useMemo(() => {
+    // Create a map to deduplicate (cached takes precedence over static)
+    const modelMap = new Map<string, ModelEntry>();
+    
+    // Add static models first
+    for (const m of MODEL_REGISTRY) {
+      modelMap.set(`${m.provider}/${m.id}`, m);
+    }
+    
+    // Override with cached models
+    for (const m of cachedModels) {
+      modelMap.set(`${m.provider}/${m.id}`, m);
+    }
+    
+    return Array.from(modelMap.values());
+  }, [cachedModels]);
+
   // Filter models
   const filtered = useMemo(() => {
-    let models = MODEL_REGISTRY;
+    let models = allModels;
     if (tags.size > 0)
       models = models.filter(m => Array.from(tags).some(tag => m.tags?.includes(tag)));
     if (freeOnly)
       models = models.filter(m => m.free);
+    // Cost-saving mode: filter to cheaper models (avg cost <$2/1M tokens)
+    if (costSavingMode && !freeOnly) {
+      models = models.filter(m => {
+        if (m.free) return true;
+        const avg = getAvgCost(m);
+        return avg < 2;
+      });
+    }
     if (searchQuery) {
       models = fuzzysort.go(searchQuery, models, {
         keys: ['id', 'label', 'provider'],
-        all: true,
+        threshold: -10000,
       }).map(r => r.obj);
     }
     return models;
-  }, [searchQuery, tags, freeOnly]);
+  }, [allModels, searchQuery, tags, freeOnly, costSavingMode]);
 
   // When filter is active, expand all so results are fully visible
   const effectiveCollapsed = filter ? new Set<string>() : collapsedProviders;
@@ -119,11 +172,6 @@ export function ModelPicker({ onSelect, onClose }: Props) {
   }, [filtered, recentModels, filter, effectiveCollapsed]);
 
   useEffect(() => { setRowFocus(0); }, [filter]);
-
-  // Clamp focus when rows shrink (e.g., after collapse)
-  useEffect(() => {
-    setRowFocus(f => Math.min(f, Math.max(0, allRows.length - 1)));
-  }, [allRows.length]);
 
   const toggleCollapse = (provider: string) => {
     setCollapsedProviders(s => {
@@ -161,6 +209,7 @@ export function ModelPicker({ onSelect, onClose }: Props) {
     }
 
     if (key.backspace || key.delete) { setFilter(f => f.slice(0, -1)); return; }
+    if (input === '$') { setCostSavingMode(s => !s); return; }
     if (input && !key.ctrl && !key.meta) { setFilter(f => f + input); }
   });
 
@@ -181,6 +230,19 @@ export function ModelPicker({ onSelect, onClose }: Props) {
     if (m.inputCostPer1M == null) return '?';
     return `$${m.inputCostPer1M}/$${m.outputCostPer1M}`;
   };
+
+  const getCostColor = (m: ModelEntry): string => {
+    if (m.free) return '#3FB950'; // Green for free
+    const avg = getAvgCost(m);
+    if (avg > 5) return '#FF00AA'; // Magenta for expensive (>$5)
+    if (avg > 2) return '#FFB86C'; // Orange for moderate (>$2)
+    return '#8C959F'; // Gray for cheap
+  };
+
+  const isExpensive = (m: ModelEntry): boolean => {
+    return getAvgCost(m) > 5;
+  };
+
   const formatCtx = (n: number) =>
     n >= 1_000_000 ? `${n / 1_000_000}M` : `${n / 1_000}k`;
 
@@ -203,13 +265,14 @@ export function ModelPicker({ onSelect, onClose }: Props) {
         <Text color="#FF00AA" bold>❯ </Text>
         <Text color="#00E5FF" bold>FILTER: </Text>
         <Text color="white" bold>{filter}</Text>
-        <Text color="#00E5FF">{flicker ? '_' : ' '}</Text>
+        <Text color="#00E5FF">{tick % 2 === 0 ? '▌' : ' '}</Text>
       </Box>
 
-      {(tags.size > 0 || freeOnly) && (
+      {(tags.size > 0 || freeOnly || costSavingMode) && (
         <Box marginBottom={1} paddingX={1}>
           <Text color="#484F58">FILTERS: </Text>
           {freeOnly && <Text color="#3FB950" bold>✦free </Text>}
+          {costSavingMode && <Text color="#00E5FF" bold>✦$cheap </Text>}
           {Array.from(tags).map(tag => (
             <Text key={tag} color={TAG_COLORS[tag]} bold>◈{tag} </Text>
           ))}
@@ -237,6 +300,9 @@ export function ModelPicker({ onSelect, onClose }: Props) {
 
           if (row.kind === 'header') {
             const isRecent = row.provider === '__recent__';
+            const stat = cacheStats.find(s => s.provider === row.provider);
+            const hasCache = stat && stat.modelCount > 0;
+            const isStale = stat?.isStale;
             return (
               <Box key={`h-${row.provider}-${i}`} marginTop={i === 0 ? 0 : 1} backgroundColor={focused ? '#161b22' : undefined}>
                 <Text color={focused ? '#FF00AA' : '#484F58'} bold>
@@ -255,14 +321,21 @@ export function ModelPicker({ onSelect, onClose }: Props) {
                     }
                   </Text>
                 )}
+                {hasCache && (
+                  <Text color={isStale ? '#FFB86C' : '#50FA7B'}>
+                    {' '}
+                    {isStale ? '⚠ cached' : '🔄 cached'}
+                  </Text>
+                )}
               </Box>
             );
           }
 
           // Model row
           const m = row.model;
+          const expensive = isExpensive(m);
           return (
-            <Box key={`m-${m.provider}-${m.id}`} paddingLeft={2} backgroundColor={focused ? '#161b22' : undefined}>
+            <Box key={`m-${i}-${m.provider}-${m.id}`} paddingLeft={2} backgroundColor={focused ? '#161b22' : undefined}>
               <Text color={focused ? '#FF00AA' : '#484F58'}>{focused ? '❯❯ ' : '   '}</Text>
               <Text color={focused ? 'white' : '#8C959F'} bold={focused}>
                 {m.id.padEnd(40)}
@@ -271,8 +344,10 @@ export function ModelPicker({ onSelect, onClose }: Props) {
                 <Text color="#484F58">Ctx:</Text>
                 <Text color="#00E5FF" bold={focused}>{formatCtx(m.contextWindow).padStart(5)} </Text>
               </Box>
-              <Box marginLeft={1} width={16}>
-                <Text color={m.free ? '#3FB950' : '#484F58'}>{formatCost(m).padStart(13)}</Text>
+              <Box marginLeft={1} width={18}>
+                <Text color={getCostColor(m)} bold={expensive}>
+                  {expensive && !m.free ? '⚠ ' : '  '}{formatCost(m).padStart(13)}
+                </Text>
               </Box>
               <Box marginLeft={1}>
                 {m.tags?.map(tag => (
@@ -293,7 +368,7 @@ export function ModelPicker({ onSelect, onClose }: Props) {
       </Box>
 
       <Box marginTop={1} justifyContent="space-between" paddingX={1}>
-        <Text color="#484F58"> ESC abort · type to filter · #free #fast #reasoning </Text>
+        <Text color="#484F58"> ESC abort · type to filter · #free #fast · $ cheap mode · Ctrl+R refresh </Text>
         <Text color="#00E5FF" bold> Enter select/toggle </Text>
       </Box>
     </Box>
