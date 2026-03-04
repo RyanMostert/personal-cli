@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Box, Text } from 'ink';
-import { APP_NAME, APP_VERSION } from '@personal-cli/shared';
+import { APP_NAME } from '@personal-cli/shared';
 import { MarioHeader } from './MarioHeader.js';
 
 interface Props {
@@ -12,6 +12,9 @@ interface Props {
   attachedFiles?: { path: string; content: string }[];
   mode?: string;
   contextWindow?: number;
+  tick: number;
+  cost?: number;
+  costBudget?: number;
 }
 
 const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
@@ -53,43 +56,54 @@ export function StatusBar({
   isStreaming,
   attachedFiles = [],
   mode = 'ASK',
-  contextWindow = 128000
+  contextWindow = 128000,
+  tick,
+  cost = 0,
+  costBudget = 5, // Default $5 budget
 }: Props) {
-  const [spinnerIdx, setSpinnerIdx] = useState(0);
-  const [flicker, setFlicker] = useState(true);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSpinnerIdx((prev) => (prev + 1) % SPINNER_FRAMES.length);
-      setFlicker((prev) => !prev);
-    }, 80);
-    return () => clearInterval(timer);
-  }, []);
+  // Use root tick for spinner — no local setInterval needed
+  const spinnerIdx = tick % SPINNER_FRAMES.length;
 
   const usagePct = tokenBudget > 0 ? tokensUsed / tokenBudget : 0;
-  let hpColor = '#3FB950'; // Green
-  if (usagePct > 0.8) hpColor = '#FF00AA'; // Critical Pink
-  else if (usagePct > 0.6) hpColor = '#FFB86C'; // Warning Orange
+  let hpColor = '#3FB950';
+  if (usagePct > 0.8) hpColor = '#FF00AA';
+  else if (usagePct > 0.6) hpColor = '#FFB86C';
 
   const modeColors: Record<string, string> = {
-    'ASK': '#D29922',   // yellow — cautious, read-only
-    'AUTO': '#FF00AA',  // pink   — unrestricted
-    'BUILD': '#3FB950', // green  — active, with guardrails
-    'PLAN': '#F85149',  // red    — ask before every write
+    'ASK': '#D29922',
+    'AUTO': '#FF00AA',
+    'BUILD': '#3FB950',
+    'PLAN': '#F85149',
   };
   const modeColor = modeColors[mode.toUpperCase()] ?? '#8C959F';
 
   const contextUsed = Math.min(tokensUsed, contextWindow);
-
-  // Player Level based on tokens
   const level = Math.floor(tokensUsed / 5000) + 1;
+
+  // Cost calculations and warnings
+  const costPct = costBudget > 0 ? cost / costBudget : 0;
+  let costColor = '#3FB950'; // Green for low cost
+  let costAlert = false;
+  if (costPct > 0.9) {
+    costColor = '#FF00AA'; // Magenta for critical
+    costAlert = true;
+  } else if (costPct > 0.7) {
+    costColor = '#FFB86C'; // Orange for warning
+  } else if (costPct > 0.5) {
+    costColor = '#D29922'; // Yellow for caution
+  }
+
+  const formatCost = (c: number): string => {
+    if (c === 0) return '$0.00';
+    if (c < 0.01) return '<$0.01';
+    return `$${c.toFixed(2)}`;
+  };
 
   return (
     <Box flexDirection="column" marginBottom={1}>
-      <MarioHeader title={APP_NAME} />
+      <MarioHeader title={APP_NAME} tick={tick} />
 
       <Box flexDirection="row">
-        {/* Main Stats Panel */}
         <Box
           flexGrow={1}
           borderStyle="single"
@@ -100,7 +114,7 @@ export function StatusBar({
         >
           <Box flexDirection="column">
             <Box>
-              <Text color="#FF00AA" bold>{flicker ? '▶' : ' '}</Text>
+              <Text color="#FF00AA" bold>▶</Text>
               <Text color="#00E5FF" bold> PLAYER_1 [LVL {level}] </Text>
               <Text color="#AA00FF" bold>» </Text>
               <Text color="white" bold>{provider}/{modelId}</Text>
@@ -127,13 +141,21 @@ export function StatusBar({
               <Text color="#00E5FF" bold>MP </Text>
               <Text color="#00E5FF">[{renderBar(contextUsed, contextWindow, 15, false)}]</Text>
             </Box>
+            <Box marginTop={1}>
+              <Text color="#484F58" bold>COST </Text>
+              <Text color={costAlert && tick % 2 === 0 ? '#FF0000' : costColor} bold>
+                {formatCost(cost)} / {formatCost(costBudget)}
+              </Text>
+              {costAlert && (
+                <Text color="#FF00AA"> ⚠</Text>
+              )}
+            </Box>
             {isStreaming && (
               <Text color="#FF00AA" bold> {SPINNER_FRAMES[spinnerIdx]} COMPUTING... </Text>
             )}
           </Box>
         </Box>
 
-        {/* Inventory Sidebar */}
         {attachedFiles.length > 0 && (
           <Box
             flexDirection="column"

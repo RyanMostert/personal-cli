@@ -1,4 +1,16 @@
 #!/usr/bin/env node
+// Ensure we always run with a larger V8 heap — re-exec with --max-old-space-size if not already set.
+if (!process.env.__PCLI_HEAPED__) {
+  const { spawnSync } = await import('child_process');
+  process.env.__PCLI_HEAPED__ = '1';
+  const result = spawnSync(
+    process.execPath,
+    ['--max-old-space-size=8192', ...process.argv.slice(1)],
+    { stdio: 'inherit', env: process.env },
+  );
+  process.exit(result.status ?? 0);
+}
+
 // Suppress Vercel AI SDK compatibility warnings (e.g. specificationVersion)
 (globalThis as any).AI_SDK_LOG_WARNINGS = false;
 

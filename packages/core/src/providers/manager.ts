@@ -315,7 +315,7 @@ export class ProviderManager {
     const apiKey = this.resolveKey(provider, def.envVar ?? '');
     
     // Validate API key for providers that require it
-    const noKeyProviders = ['ollama', 'github-copilot', 'google-vertex', 'amazon-bedrock'];
+    const noKeyProviders = ['ollama', 'github-copilot', 'google-vertex', 'amazon-bedrock', 'opencode', 'opencode-zen'];
     if (!apiKey && !noKeyProviders.includes(provider)) {
       throw new Error(
         `No API key found for provider "${provider}". ` +

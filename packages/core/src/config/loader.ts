@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { parse as parseYaml } from 'yaml';
@@ -43,6 +43,8 @@ export function loadSettings(): UserSettings {
 
 export function saveSettings(settings: Partial<UserSettings>): void {
   const current = loadSettings();
+  // Ensure config directory exists before writing settings
+  mkdirSync(join(homedir(), CONFIG_DIR), { recursive: true });
   writeFileSync(settingsPath, JSON.stringify({ ...current, ...settings }, null, 2));
 }
 

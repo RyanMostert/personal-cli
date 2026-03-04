@@ -25,6 +25,7 @@ export const MODE_RULES: Record<string, PermissionRule[]> = {
     { tool: 'editFile', action: 'deny' },
     { tool: 'runCommand', action: 'deny' },
     { tool: 'gitCommit', action: 'deny' },
+    { tool: 'patch', action: 'deny' },
   ],
   plan: [
     // Ask before every write/execute — user approves each step
@@ -32,6 +33,7 @@ export const MODE_RULES: Record<string, PermissionRule[]> = {
     { tool: 'editFile', action: 'ask' },
     { tool: 'runCommand', action: 'ask' },
     { tool: 'gitCommit', action: 'ask' },
+    { tool: 'patch', action: 'ask' },
   ],
   auto: [
     // Everything allowed without asking (user opted in)

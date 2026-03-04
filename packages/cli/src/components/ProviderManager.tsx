@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Box, Text, useInput } from 'ink';
 
 interface ProviderEntry {
@@ -115,13 +115,7 @@ interface Props {
 export function ProviderManager({ configuredProviders, onAdd, onRemove, onClose }: Props) {
   const [filter, setFilter] = useState('');
   const [focusIndex, setFocusIndex] = useState(0);
-  const [flicker, setFlicker] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-
-  useEffect(() => {
-    const timer = setInterval(() => setFlicker(f => !f), 500);
-    return () => clearInterval(timer);
-  }, []);
 
   const filtered = useMemo(() => {
     const query = filter.toLowerCase();
@@ -205,7 +199,7 @@ export function ProviderManager({ configuredProviders, onAdd, onRemove, onClose 
         <Text color="#00E5FF" bold>❯ </Text>
         <Text color="#FF00AA" bold>SCAN_NETWORK: </Text>
         <Text color="white" bold>{filter}</Text>
-        <Text color="#FF00AA">{flicker ? '_' : ' '}</Text>
+        <Text color="#FF00AA">▌</Text>
       </Box>
 
       {allList.length === 0 && (
