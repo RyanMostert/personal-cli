@@ -5,6 +5,7 @@ import { parse as parseYaml } from 'yaml';
 import {
   ProvidersConfigSchema,
   AgentConfigSchema,
+  MCPConfigSchema,
   type AppConfig,
 } from '@personal-cli/shared';
 import {
@@ -68,8 +69,24 @@ export function loadConfig(): AppConfig {
   );
 
   const agent = AgentConfigSchema.parse({});
+  
+  // Load MCP config from JSON file if it exists
+  let mcp: Record<string, unknown> = {};
+  try {
+    const mcpPath = join(globalConfigDir, 'mcp.json');
+    if (existsSync(mcpPath)) {
+      const raw = readFileSync(mcpPath, 'utf-8');
+      mcp = JSON.parse(raw);
+    }
+  } catch {
+    // MCP config is optional
+  }
 
-  return { providers: providers ?? undefined, agent };
+  return { 
+    providers: providers ?? undefined, 
+    agent,
+    mcp: MCPConfigSchema.parse(mcp),
+  };
 }
 
 export function getDefaultModel(config: AppConfig): { provider: string; modelId: string } {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import { MinecraftSpinner } from './MinecraftSpinner.js';
+import { PatchView } from './PatchView.js';
 import type { ToolCallInfo } from '@personal-cli/shared';
 import { useTheme } from '../context/ThemeContext.js';
 
@@ -64,6 +65,9 @@ export function ToolCallView({ tool }: Props) {
   const isError = Boolean(tool.error) || resultSummary?.isError === true;
   const isRunFinished = tool.result !== undefined || Boolean(tool.error);
 
+  const isEditFile = tool.toolName === 'edit_file';
+  const editArgs = isEditFile ? (tool.args as any) : null;
+
   const borderColor = isError ? theme.error : isRunFinished ? theme.success : theme.warning;
 
   return (
@@ -109,12 +113,19 @@ export function ToolCallView({ tool }: Props) {
       </Box>
 
       {/* Result preview row */}
-      {isRunFinished && resultSummary !== null && resultSummary.text && (
+      {isRunFinished && resultSummary !== null && resultSummary.text && !isEditFile && (
         <Box paddingLeft={4}>
           <Text color={theme.dim}>└ </Text>
           <Text color={resultSummary.isError ? theme.error : theme.dim} wrap="wrap">
             {resultSummary.text}
           </Text>
+        </Box>
+      )}
+
+      {/* Special rendering for edits */}
+      {isEditFile && editArgs && (
+        <Box paddingLeft={4}>
+          <PatchView path={editArgs.path} oldText={editArgs.oldText} newText={editArgs.newText} />
         </Box>
       )}
     </Box>

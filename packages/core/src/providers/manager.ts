@@ -14,32 +14,48 @@ export interface ProviderManagerOptions {
 
 const OPENCODE_BASE_URL = 'https://opencode.ai/zen/v1';
 
-// opencode-zen sends {"type":"ping","cost":"0"} heartbeat events that the AI SDK
-// can't parse. This wrapper strips those lines from the SSE stream before the
-// SDK sees them.
+// opencode-zen and opencode send {"type":"ping","cost":"0"} heartbeat events 
+// that can confuse SSE parsers or be annoying. This wrapper strips those lines 
+// from the stream using a line-buffered approach to avoid breaking at chunk boundaries.
 const filterPingsFetch: typeof globalThis.fetch = async (url, init) => {
   const res = await globalThis.fetch(url as RequestInfo, init as RequestInit);
-  if (!res.body) return res;
+  if (!res.body || res.status !== 200) return res;
+  
   const contentType = res.headers.get('content-type') ?? '';
   if (!contentType.includes('text/event-stream')) return res;
 
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
+  let buffer = '';
+
   const transform = new TransformStream<Uint8Array, Uint8Array>({
     transform(chunk, ctrl) {
-      const text = decoder.decode(chunk, { stream: true });
-      const filtered = text
-        .split('\n')
-        .filter(line => {
-          if (!line.startsWith('data:')) return true;
-          const payload = line.slice(5).trim();
-          try { if ((JSON.parse(payload) as any)?.type === 'ping') return false; } catch { }
-          return true;
-        })
-        .join('\n');
-      ctrl.enqueue(encoder.encode(filtered));
+      buffer += decoder.decode(chunk, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        // Check if the line is a ping event
+        if (trimmed.startsWith('data:')) {
+          const payload = trimmed.slice(5).trim();
+          try {
+            const parsed = JSON.parse(payload);
+            if (parsed?.type === 'ping') continue;
+          } catch {
+            // Not JSON or partial JSON, keep it
+          }
+        }
+        ctrl.enqueue(encoder.encode(line + '\n'));
+      }
+    },
+    flush(ctrl) {
+      if (buffer) {
+        ctrl.enqueue(encoder.encode(buffer));
+      }
     },
   });
+
   return new Response(res.body.pipeThrough(transform), {
     status: res.status,
     statusText: res.statusText,
@@ -109,7 +125,7 @@ const PROVIDER_REGISTRY: ProviderDef[] = [
     envVar: 'OPENCODE_API_KEY',
     create: async ({ apiKey, baseUrl, modelId }) => {
       const client = createOpenAI({
-        apiKey,
+        apiKey: apiKey ?? 'sk-no-key-needed',
         baseURL: baseUrl ?? OPENCODE_BASE_URL,
         fetch: filterPingsFetch,
       });
@@ -121,7 +137,7 @@ const PROVIDER_REGISTRY: ProviderDef[] = [
     envVar: 'CUSTOM_API_KEY',
     create: async ({ apiKey, baseUrl, modelId }) => {
       const client = createOpenAI({
-        apiKey,
+        apiKey: apiKey ?? 'sk-no-key-needed',
         baseURL: baseUrl,
       });
       return client.chat(modelId);
@@ -133,8 +149,9 @@ const PROVIDER_REGISTRY: ProviderDef[] = [
     create: async ({ apiKey, modelId }) => {
       const client = createOpenAI({
         baseURL: 'https://openrouter.ai/api/v1',
-        apiKey,
+        apiKey: apiKey ?? 'sk-no-key-needed',
         headers: { 'HTTP-Referer': 'https://personal-cli', 'X-Title': 'personal-cli' },
+        fetch: filterPingsFetch,
       });
       return client.chat(modelId);
     },
@@ -163,7 +180,7 @@ const PROVIDER_REGISTRY: ProviderDef[] = [
     create: async ({ apiKey, modelId }) => {
       const client = createOpenAI({
         baseURL: 'https://api.deepseek.com/v1',
-        apiKey,
+        apiKey: apiKey ?? 'sk-no-key-needed',
       });
       return client.chat(modelId);
     },
@@ -174,7 +191,7 @@ const PROVIDER_REGISTRY: ProviderDef[] = [
     create: async ({ apiKey, modelId }) => {
       const client = createOpenAI({
         baseURL: 'https://api.perplexity.ai',
-        apiKey,
+        apiKey: apiKey ?? 'sk-no-key-needed',
       });
       return client.chat(modelId);
     },
@@ -185,7 +202,7 @@ const PROVIDER_REGISTRY: ProviderDef[] = [
     create: async ({ apiKey, modelId }) => {
       const client = createOpenAI({
         baseURL: 'https://api.cerebras.ai/v1',
-        apiKey,
+        apiKey: apiKey ?? 'sk-no-key-needed',
       });
       return client.chat(modelId);
     },
@@ -196,7 +213,7 @@ const PROVIDER_REGISTRY: ProviderDef[] = [
     create: async ({ apiKey, modelId }) => {
       const client = createOpenAI({
         baseURL: 'https://api.together.xyz/v1',
-        apiKey,
+        apiKey: apiKey ?? 'sk-no-key-needed',
       });
       return client.chat(modelId);
     },
@@ -254,8 +271,9 @@ const PROVIDER_REGISTRY: ProviderDef[] = [
     create: async ({ apiKey, modelId }) => {
       const client = createOpenAI({
         baseURL: 'https://api.opencode.ai/v1',
-        // If no key, use 'public' to access free models
-        apiKey: apiKey ?? 'public',
+        // If no key, some gateways prefer no Authorization header rather than a placeholder,
+        // but the SDK requires a string. 'sk-no-key-needed' is a common placeholder.
+        apiKey: apiKey ?? 'sk-no-key-needed',
         fetch: filterPingsFetch,
       });
       return client.chat(modelId);
@@ -315,11 +333,12 @@ export class ProviderManager {
     const apiKey = this.resolveKey(provider, def.envVar ?? '');
     
     // Validate API key for providers that require it
-    const noKeyProviders = ['ollama', 'github-copilot', 'google-vertex', 'amazon-bedrock', 'opencode', 'opencode-zen'];
+    const noKeyProviders = ['ollama', 'github-copilot', 'google-vertex', 'amazon-bedrock', 'opencode', 'opencode-zen', 'openrouter', 'mistral', 'together'];
     if (!apiKey && !noKeyProviders.includes(provider)) {
       throw new Error(
-        `No API key found for provider "${provider}". ` +
-        `Set ${def.envVar || 'CUSTOM_API_KEY'} environment variable or configure via provider manager.`,
+        `No API key found for provider "${provider}". \n` +
+        `❯ Set ${def.envVar || 'CUSTOM_API_KEY'} in your environment\n` +
+        `❯ Or run /provider to configure it now.`
       );
     }
 

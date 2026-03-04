@@ -13,9 +13,14 @@ import { ModelPicker } from './components/ModelPicker.js';
 import { ProviderManager } from './components/ProviderManager.js';
 import { ProviderWizard } from './components/ProviderWizard.js';
 import { HistoryPicker } from './components/HistoryPicker.js';
+import { MCPManager } from './components/MCPManager.js';
+import { MCPWizard } from './components/MCPWizard.js';
 import { CommandAutocomplete, filterCommands } from './components/CommandAutocomplete.js';
 import { FileAutocomplete } from './components/FileAutocomplete.js';
 import { SidePanel } from './components/SidePanel.js';
+import { FileExplorer } from './components/FileExplorer.js';
+import { KeyHintOverlay } from './components/KeyHintOverlay.js';
+import { KeybindingManager } from './components/KeybindingManager.js';
 import { CostRecommendation, shouldShowRecommendation } from './components/CostRecommendation.js';
 import { useAgent } from './hooks/useAgent.js';
 import { useOverlay } from './context/OverlayContext.js';
@@ -25,7 +30,10 @@ import {
   setProviderKey, removeProviderKey, readAuth,
   appendHistory, loadHistory as loadPromptHistory,
   exportConversation, recordAccess,
+  refreshProviderModels, refreshAllProviders, getAllCacheStats,
+  loadMCPConfig, saveMCPConfig, removeMCPConfig,
 } from '@personal-cli/core';
+import { MCPClientManager } from '@personal-cli/mcp-client';
 import { promises as fs } from 'fs';
 import clipboardy from 'clipboardy';
 
@@ -45,14 +53,19 @@ export function App() {
     oldText?: string;
     newText?: string;
   } | null>(null);
-  const [sidePanelScroll, setSidePanelScroll] = useState(0);
+  const [isSidePanelFocused, setIsSidePanelFocused] = useState(false);
+  
+  // MCP State
+  const [mcpManager] = useState(() => new MCPClientManager());
+  const [mcpServers, setMcpServers] = useState<import('@personal-cli/mcp-client').MCPServerInfo[]>([]);
+  const [mcpServerCount, setMcpServerCount] = useState(0);
 
   const [cmdSelectedIdx, setCmdSelectedIdx] = useState(0);
   const [fileAutoFiles, setFileAutoFiles] = useState<string[]>([]);
   const [fileAutoSelectedIdx, setFileAutoSelectedIdx] = useState(0);
 
   const {
-    messages, isStreaming, streamingText, tokensUsed, cost, toolCalls,
+    messages, isStreaming, streamingText, streamingThought, tokensUsed, cost, toolCalls,
     pendingPermission, pendingQuestion, error, activeModel, attachedFiles, mode,
     sendMessage, abort, addSystemMessage, clearMessages, switchModel, switchMode,
     isPickingModel, openModelPicker, closeModelPicker,
@@ -63,17 +76,26 @@ export function App() {
 
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    if (isStreaming) return;
+    if (isStreaming || isGameOver) return;
     const timer = setInterval(() => setTick(t => t + 1), 500);
     return () => clearInterval(timer);
-  }, [isStreaming]);
+  }, [isStreaming, isGameOver]);
 
   const isPickingProvider = overlay.type === 'provider-manager';
   const pendingProviderAdd = overlay.type === 'provider-wizard' ? (overlay.props?.providerId as string) : null;
   const showHistory = overlay.type === 'history';
+  const showFileExplorer = overlay.type === 'file-explorer';
+  const showKeyHelp = overlay.type === 'key-help';
+  const showKeybindManager = overlay.type === 'keybind-manager';
+  const isManagingMCP = overlay.type === 'mcp-manager';
+  const mcpWizardMode = overlay.type === 'mcp-wizard' ? (overlay.props?.mode as 'add' | 'edit') : null;
+  const mcpWizardServer = overlay.type === 'mcp-wizard' ? (overlay.props?.serverName as string) : null;
 
   useEffect(() => { setInputHistory(loadPromptHistory()); }, []);
-  useEffect(() => { setSidePanelScroll(0); }, [sidePanel?.path]);
+  useEffect(() => { 
+    if (sidePanel) setIsSidePanelFocused(true); 
+    else setIsSidePanelFocused(false);
+  }, [sidePanel?.path]);
 
   const openFileInPanel = useCallback(async (fp: string) => {
     try {
@@ -82,6 +104,16 @@ export function App() {
       setSidePanel({ type: 'file', path: fp, content });
     } catch {
       addSystemMessage(`Error: could not open ${fp}`);
+    }
+  }, [addSystemMessage]);
+
+  const handleSaveFile = useCallback(async (path: string, content: string) => {
+    try {
+      await fs.writeFile(path, content, 'utf-8');
+      addSystemMessage(`✓ Saved changes to ${path}`);
+      setSidePanel(prev => prev && prev.path === path ? { ...prev, content } : prev);
+    } catch (err) {
+      addSystemMessage(`✗ Failed to save ${path}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }, [addSystemMessage]);
 
@@ -108,16 +140,35 @@ export function App() {
     }
   }, [toolCalls]);
 
-  const anyOverlay = isPickingModel || isPickingProvider || !!pendingProviderAdd || showHistory || showCommandAutocomplete || showFileAutocomplete;
+  const anyOverlay = isPickingModel || isPickingProvider || !!pendingProviderAdd || showHistory || showCommandAutocomplete || showFileAutocomplete || showFileExplorer || showKeyHelp || showKeybindManager;
 
   useInput((input, key) => {
     if ((key.ctrl && input === 'c') || (key.ctrl && input === 'd')) { setIsGameOver(true); return; }
     if (key.escape && isStreaming) { abort(); return; }
-    if (key.escape && sidePanel) { setSidePanel(null); return; }
+    if (key.escape && sidePanel && isSidePanelFocused) { setSidePanel(null); return; }
 
-    if (sidePanel && !showFileAutocomplete && !showCommandAutocomplete) {
-      if (key.upArrow) { setSidePanelScroll(s => Math.max(0, s - 1)); return; }
-      if (key.downArrow) { setSidePanelScroll(s => s + 1); return; }
+    const isInputEmpty = inputValue.length === 0;
+
+    if (!anyOverlay && !isStreaming) {
+      // Single character hotkeys only work if input is empty
+      if (input === '?' && isInputEmpty) { open('key-help'); return; }
+      
+      // Ctrl hotkeys
+      if (key.ctrl && (input === 'k' || input === '\u000b')) { open('keybind-manager'); return; }
+      if (key.ctrl && (input === 'p' || input === '\u0010')) { open('provider-manager'); return; }
+      if (key.ctrl && (input === 'h' || input === '\u0008')) { open('history'); return; }
+      // Ctrl+/ often sends \u001f or ?
+      if (key.ctrl && (input === '/' || input === '\u001f')) { open('key-help'); return; }
+    }
+
+    if (sidePanel && key.ctrl && (input === 'l' || input === '\u000c') && !anyOverlay && !isStreaming) {
+      setIsSidePanelFocused(!isSidePanelFocused);
+      return;
+    }
+
+    if (isSidePanelFocused && sidePanel && !anyOverlay) {
+      // SidePanel handles its own input via its own useInput
+      return;
     }
 
     if (showFileAutocomplete) {
@@ -167,9 +218,13 @@ export function App() {
 
     if (!anyOverlay && !isStreaming) {
       if (key.return && key.shift) { setInputValue(v => v + '\n'); return; }
-      if (key.ctrl && input === 'u') { setInputValue(''); return; }
-      if (key.ctrl && input === 'w') { setInputValue(v => v.replace(/\S+\s*$/, '')); return; }
-      if (key.ctrl && input === 'm') { openModelPicker(); return; }
+      if (key.ctrl && (input === 'u' || input === '\u0015')) { setInputValue(''); return; }
+      if (key.ctrl && (input === 'w' || input === '\u0017')) { setInputValue(v => v.replace(/\S+\s*$/, '')); return; }
+      if (key.ctrl && (input === 'm' || input === '\u000d')) { 
+        // Note: Ctrl+M is often ENTER in many terminals, be careful
+        openModelPicker(); return; 
+      }
+      if (key.ctrl && (input === 'o' || input === '\u000f')) { open('file-explorer'); return; }
       if (key.tab) {
         const cycle: AgentMode[] = ['ask', 'build', 'plan'];
         const next = cycle[(cycle.indexOf(mode as AgentMode) + 1) % cycle.length];
@@ -199,7 +254,7 @@ export function App() {
     if (trimmed === '/exit' || trimmed === '/quit') { setIsGameOver(true); return; }
     if (trimmed === '/clear') { clearMessages(); setInputValue(''); return; }
     if (trimmed === '/help') {
-      addSystemMessage('Commands: /model /mode /provider /add /history /open /compact /copy /export /rename /theme /cost /clear /undo /redo /init /help /exit\nModes: cycle ask → plan → build with Tab, or use /mode <name>.\nType / and use ↑↓ to browse with autocomplete.');
+      addSystemMessage('Commands: /model /model refresh [provider] /mode /provider /add /history /open /compact /copy /export /rename /theme /cost /clear /undo /redo /init /help /exit\nModes: cycle ask → plan → build with Tab, or use /mode <name>.\nType / and use ↑↓ to browse with autocomplete.');
       setInputValue(''); return;
     }
     if (trimmed === '/cost') {
@@ -210,14 +265,150 @@ export function App() {
     if (trimmed === '/model') { openModelPicker(); setInputValue(''); return; }
     if (trimmed.startsWith('/model ')) {
       const rest = trimmed.slice(7).trim();
+      
+      // Handle refresh commands
+      if (rest === 'refresh') {
+        addSystemMessage('Refreshing models from all providers...');
+        setInputValue('');
+        refreshAllProviders().then(results => {
+          const successCount = results.filter(r => r.success).length;
+          const totalModels = results.filter(r => r.success).reduce((sum, r) => sum + r.modelCount, 0);
+          addSystemMessage(`✓ Refreshed ${successCount}/${results.length} providers (${totalModels} models)`);
+          results.filter(r => !r.success).forEach(r => {
+            addSystemMessage(`✗ ${r.provider}: ${r.error}`);
+          });
+        });
+        return;
+      }
+      
+      if (rest.startsWith('refresh ')) {
+        const provider = rest.slice(8).trim() as ProviderName;
+        addSystemMessage(`Refreshing models from ${provider}...`);
+        setInputValue('');
+        refreshProviderModels(provider).then(result => {
+          if (result.success) {
+            addSystemMessage(`✓ Fetched ${result.modelCount} models from ${provider}`);
+          } else {
+            addSystemMessage(`✗ Failed: ${result.error}`);
+          }
+        });
+        return;
+      }
+      
+      // Handle model switching
       const parts = rest.includes('/') ? rest.split('/') : rest.split(' ');
       if (parts.length >= 2) {
         switchModel(parts[0] as ProviderName, parts.slice(1).join('/'));
         addSystemMessage(`Switched to ${parts[0]}/${parts.slice(1).join('/')}`);
       } else {
-        addSystemMessage('Usage: /model <provider/modelId>  or  /model to browse');
+        addSystemMessage('Usage: /model <provider/modelId>  or  /model to browse  or  /model refresh [provider]');
       }
       setInputValue(''); return;
+    }
+    if (trimmed === '/mcp') { open('mcp-manager'); setInputValue(''); return; }
+    if (trimmed.startsWith('/mcp ')) {
+      const parts = trimmed.slice(5).trim().split(' ');
+      const subcommand = parts[0];
+      const serverName = parts[1];
+      
+      switch (subcommand) {
+        case 'list': {
+          const servers = mcpManager.getAllServerInfo();
+          const configs = loadMCPConfig();
+          const allNames = new Set([...servers.map(s => s.name), ...Object.keys(configs)]);
+          
+          if (allNames.size === 0) {
+            addSystemMessage('No MCP servers configured. Use /mcp add to add one.');
+          } else {
+            const lines = Array.from(allNames).map(name => {
+              const server = servers.find(s => s.name === name);
+              const config = configs[name];
+              if (server?.status === 'connected') {
+                return `  🟢 ${name} (${server.tools.length} tools)`;
+              } else if (config) {
+                return `  🔴 ${name} (${config.transport}) - disconnected`;
+              }
+              return `  ⚪ ${name} - unknown`;
+            });
+            addSystemMessage(`MCP Servers:\n${lines.join('\n')}`);
+          }
+          break;
+        }
+        case 'add':
+          open('mcp-wizard', { mode: 'add' });
+          break;
+        case 'edit':
+          if (serverName) {
+            open('mcp-wizard', { mode: 'edit', serverName });
+          } else {
+            addSystemMessage('Usage: /mcp edit <server-name>');
+          }
+          break;
+        case 'remove':
+          if (serverName) {
+            await mcpManager.disconnectServer(serverName);
+            removeMCPConfig(serverName);
+            addSystemMessage(`Removed MCP server: ${serverName}`);
+            // Refresh server list
+            setMcpServers(mcpManager.getAllServerInfo());
+            setMcpServerCount(mcpManager.getConnectedServers().length);
+          } else {
+            addSystemMessage('Usage: /mcp remove <server-name>');
+          }
+          break;
+        case 'connect':
+          if (serverName) {
+            const configs = loadMCPConfig();
+            const config = configs[serverName];
+            if (config) {
+              try {
+                await mcpManager.connectServer(serverName, config);
+                addSystemMessage(`Connected to MCP server: ${serverName}`);
+                setMcpServers(mcpManager.getAllServerInfo());
+                setMcpServerCount(mcpManager.getConnectedServers().length);
+              } catch (error) {
+                addSystemMessage(`Failed to connect: ${error instanceof Error ? error.message : String(error)}`);
+              }
+            } else {
+              addSystemMessage(`No configuration found for: ${serverName}`);
+            }
+          } else {
+            addSystemMessage('Usage: /mcp connect <server-name>');
+          }
+          break;
+        case 'disconnect':
+          if (serverName) {
+            await mcpManager.disconnectServer(serverName);
+            addSystemMessage(`Disconnected from MCP server: ${serverName}`);
+            setMcpServers(mcpManager.getAllServerInfo());
+            setMcpServerCount(mcpManager.getConnectedServers().length);
+          } else {
+            addSystemMessage('Usage: /mcp disconnect <server-name>');
+          }
+          break;
+        case 'reload': {
+          const configs = loadMCPConfig();
+          let connected = 0;
+          for (const [name, config] of Object.entries(configs)) {
+            if (config.enabled !== false) {
+              try {
+                await mcpManager.connectServer(name, config);
+                connected++;
+              } catch (error) {
+                addSystemMessage(`Failed to connect ${name}: ${error instanceof Error ? error.message : String(error)}`);
+              }
+            }
+          }
+          addSystemMessage(`Reloaded MCP servers: ${connected} connected`);
+          setMcpServers(mcpManager.getAllServerInfo());
+          setMcpServerCount(mcpManager.getConnectedServers().length);
+          break;
+        }
+        default:
+          addSystemMessage('Usage: /mcp [list|add|edit|remove|connect|disconnect|reload]');
+      }
+      setInputValue('');
+      return;
     }
     if (trimmed.startsWith('/mode ')) {
       const mode = trimmed.split(' ')[1] as 'ask' | 'auto' | 'build';
@@ -307,7 +498,7 @@ export function App() {
     );
   }
 
-  const showFullscreenOverlay = isPickingModel || isPickingProvider || !!pendingProviderAdd || showHistory;
+  const showFullscreenOverlay = isPickingModel || isPickingProvider || !!pendingProviderAdd || showHistory || showFileExplorer || showKeyHelp || showKeybindManager || isManagingMCP || !!mcpWizardMode;
 
   return (
     <>
@@ -327,6 +518,7 @@ export function App() {
             )}
             {isPickingProvider && (
               <ProviderManager
+                tick={tick}
                 configuredProviders={Object.keys(readAuth())}
                 onAdd={(id) => { open('provider-wizard', { providerId: id }); }}
                 onRemove={(id) => { removeProviderKey(id); addSystemMessage(`Removed key for ${id}.`); }}
@@ -343,6 +535,78 @@ export function App() {
             {showHistory && (
               <HistoryPicker
                 onSelect={(id) => { loadHistory(id); close(); addSystemMessage('Conversation loaded.'); }}
+                onClose={() => close()}
+              />
+            )}
+            {showFileExplorer && (
+              <FileExplorer
+                tick={tick}
+                onSelect={(path) => { openFileInPanel(path); close(); }}
+                onClose={() => close()}
+              />
+            )}
+            {showKeyHelp && (
+              <KeyHintOverlay
+                onClose={() => close()}
+              />
+            )}
+            {showKeybindManager && (
+              <KeybindingManager
+                onClose={() => close()}
+              />
+            )}
+            {isManagingMCP && (
+              <MCPManager
+                servers={mcpServers}
+                onAdd={() => open('mcp-wizard', { mode: 'add' })}
+                onEdit={(name) => open('mcp-wizard', { mode: 'edit', serverName: name })}
+                onRemove={async (name) => {
+                  await mcpManager.disconnectServer(name);
+                  removeMCPConfig(name);
+                  addSystemMessage(`Removed MCP server: ${name}`);
+                  setMcpServers(mcpManager.getAllServerInfo());
+                  setMcpServerCount(mcpManager.getConnectedServers().length);
+                }}
+                onConnect={async (name, config) => {
+                  try {
+                    await mcpManager.connectServer(name, config);
+                    addSystemMessage(`Connected to MCP server: ${name}`);
+                    setMcpServers(mcpManager.getAllServerInfo());
+                    setMcpServerCount(mcpManager.getConnectedServers().length);
+                  } catch (error) {
+                    addSystemMessage(`Failed to connect: ${error instanceof Error ? error.message : String(error)}`);
+                  }
+                }}
+                onDisconnect={async (name) => {
+                  await mcpManager.disconnectServer(name);
+                  addSystemMessage(`Disconnected from MCP server: ${name}`);
+                  setMcpServers(mcpManager.getAllServerInfo());
+                  setMcpServerCount(mcpManager.getConnectedServers().length);
+                }}
+                onClose={() => close()}
+              />
+            )}
+            {mcpWizardMode && (
+              <MCPWizard
+                mode={mcpWizardMode}
+                serverName={mcpWizardServer || undefined}
+                existingConfig={mcpWizardServer ? loadMCPConfig()[mcpWizardServer] : undefined}
+                onSave={async (name, config) => {
+                  saveMCPConfig(name, config);
+                  if (config.enabled !== false) {
+                    try {
+                      await mcpManager.connectServer(name, config);
+                      addSystemMessage(`MCP server ${mcpWizardMode === 'add' ? 'added' : 'updated'} and connected: ${name}`);
+                    } catch (error) {
+                      addSystemMessage(`Saved config but failed to connect: ${error instanceof Error ? error.message : String(error)}`);
+                    }
+                  } else {
+                    addSystemMessage(`MCP server ${mcpWizardMode === 'add' ? 'added' : 'updated'}: ${name}`);
+                  }
+                  setMcpServers(mcpManager.getAllServerInfo());
+                  setMcpServerCount(mcpManager.getConnectedServers().length);
+                  close();
+                }}
                 onClose={() => close()}
               />
             )}
@@ -376,7 +640,12 @@ export function App() {
             </Box>
 
             {sidePanel && (
-              <SidePanel {...sidePanel} scrollOffset={sidePanelScroll} onClose={() => setSidePanel(null)} />
+              <SidePanel 
+                {...sidePanel} 
+                isFocused={isSidePanelFocused} 
+                onClose={() => setSidePanel(null)} 
+                onSave={(content) => handleSaveFile(sidePanel.path, content)}
+              />
             )}
           </Box>
         )}
@@ -391,6 +660,7 @@ export function App() {
           mode={mode}
           tick={tick}
           cost={cost}
+          mcpServerCount={mcpServerCount}
         />
 
         <CommandAutocomplete filtered={cmdFiltered} selectedIndex={cmdSelectedIdx} visible={showCommandAutocomplete} />
@@ -405,7 +675,7 @@ export function App() {
           value={inputValue}
           onChange={setInputValue}
           onSubmit={handleSubmit}
-          isDisabled={anyOverlay}
+          isDisabled={anyOverlay || isSidePanelFocused}
           isStreaming={isStreaming}
         />
       </Box>

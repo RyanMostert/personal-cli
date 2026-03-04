@@ -5,6 +5,11 @@ type OverlayType =
   | 'provider-manager'
   | 'provider-wizard'
   | 'history'
+  | 'file-explorer'
+  | 'key-help'
+  | 'keybind-manager'
+  | 'mcp-manager'
+  | 'mcp-wizard'
   | null;
 
 interface OverlayState {

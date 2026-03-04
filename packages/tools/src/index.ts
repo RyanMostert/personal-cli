@@ -25,6 +25,7 @@ import {
 } from './types.js';
 
 export * from './types.js';
+export { MCPToolWrapper, wrapMCPTools, convertMCPToolsToRegistryFormat } from './mcp-tools.js';
 
 export interface CreateToolsOptions {
   onWrite?: WriteCallback;
@@ -66,7 +67,6 @@ export function createTools(
     gitDiff,
     gitLog,
     gitCommit: createGitCommit(resolvedPermission),
-    think,
     todoWrite,
     todoRead,
     patch: createPatch(resolvedPermission, onWrite),

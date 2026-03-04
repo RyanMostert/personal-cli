@@ -8,56 +8,56 @@
 
 ### ✅ Working
 
-| Feature | Location |
-|---|---|
-| Multi-provider AI (OpenAI, Anthropic, Google, Ollama, OpenCode Zen, Copilot) | `packages/core/src/providers/manager.ts` |
-| Streaming text + Markdown rendering | `packages/cli/src/components/StreamingMessage.tsx`, `MarkdownRenderer.tsx` |
-| Tool call display (read/write/edit/run/search/glob/git/web) | `packages/cli/src/components/ToolCallView.tsx` |
-| Permission prompt (Y/N/Always) | `packages/cli/src/components/PermissionPrompt.tsx` |
-| Model picker UI | `packages/cli/src/components/ModelPicker.tsx` |
-| Provider manager + wizard | `packages/cli/src/components/ProviderManager.tsx`, `ProviderWizard.tsx` |
-| Conversation history (save/load/browse) | `packages/core/src/persistence/conversations.ts`, `packages/cli/src/components/HistoryPicker.tsx` |
-| Slash command registry | `packages/cli/src/commands/registry.ts` |
-| Command autocomplete | `packages/cli/src/components/CommandAutocomplete.tsx` |
-| File autocomplete (`@file`, `/add`, `/open`) | `packages/cli/src/components/FileAutocomplete.tsx` |
-| Side panel (file viewer + diff viewer) | `packages/cli/src/components/SidePanel.tsx` |
-| Status bar (provider/model/tokens/mode) | `packages/cli/src/components/StatusBar.tsx` |
-| Input history (↑↓ navigation) | `packages/cli/src/app.tsx` |
-| Agent modes (ask/auto/build) | `packages/core/src/agent.ts` |
-| Conversation export to Markdown | `packages/core/src/index.ts` |
-| `/compact` method exists on Agent | `packages/core/src/agent.ts` (`compact()` method) |
-| Tools: read/write/edit/list/search/glob/git/run/webfetch/semantic-search/think/diagnostics | `packages/tools/src/tools/` |
-| Frecency-based file suggestions | `packages/core/src/persistence/frecency.ts` |
-| Settings file (`~/.personal-cli/settings.json`) | `packages/core/src/config/loader.ts` |
+| Feature                                                                                    | Location                                                                                          |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| Multi-provider AI (OpenAI, Anthropic, Google, Ollama, OpenCode Zen, Copilot)               | `packages/core/src/providers/manager.ts`                                                          |
+| Streaming text + Markdown rendering                                                        | `packages/cli/src/components/StreamingMessage.tsx`, `MarkdownRenderer.tsx`                        |
+| Tool call display (read/write/edit/run/search/glob/git/web)                                | `packages/cli/src/components/ToolCallView.tsx`                                                    |
+| Permission prompt (Y/N/Always)                                                             | `packages/cli/src/components/PermissionPrompt.tsx`                                                |
+| Model picker UI                                                                            | `packages/cli/src/components/ModelPicker.tsx`                                                     |
+| Provider manager + wizard                                                                  | `packages/cli/src/components/ProviderManager.tsx`, `ProviderWizard.tsx`                           |
+| Conversation history (save/load/browse)                                                    | `packages/core/src/persistence/conversations.ts`, `packages/cli/src/components/HistoryPicker.tsx` |
+| Slash command registry                                                                     | `packages/cli/src/commands/registry.ts`                                                           |
+| Command autocomplete                                                                       | `packages/cli/src/components/CommandAutocomplete.tsx`                                             |
+| File autocomplete (`@file`, `/add`, `/open`)                                               | `packages/cli/src/components/FileAutocomplete.tsx`                                                |
+| Side panel (file viewer + diff viewer)                                                     | `packages/cli/src/components/SidePanel.tsx`                                                       |
+| Status bar (provider/model/tokens/mode)                                                    | `packages/cli/src/components/StatusBar.tsx`                                                       |
+| Input history (↑↓ navigation)                                                              | `packages/cli/src/app.tsx`                                                                        |
+| Agent modes (ask/auto/build)                                                               | `packages/core/src/agent.ts`                                                                      |
+| Conversation export to Markdown                                                            | `packages/core/src/index.ts`                                                                      |
+| `/compact` method exists on Agent                                                          | `packages/core/src/agent.ts` (`compact()` method)                                                 |
+| Tools: read/write/edit/list/search/glob/git/run/webfetch/semantic-search/think/diagnostics | `packages/tools/src/tools/`                                                                       |
+| Frecency-based file suggestions                                                            | `packages/core/src/persistence/frecency.ts`                                                       |
+| Settings file (`~/.personal-cli/settings.json`)                                            | `packages/core/src/config/loader.ts`                                                              |
 
 ### ⚠️ Stub / Broken / Half-Done
 
-| Feature | Status | Location |
-|---|---|---|
-| `/compact` command | Calls `addSystemMessage('Compacting…')` but never calls `agent.compact()` | `packages/cli/src/commands/registry.ts:110` |
-| `/theme` command | Prints a message only — no actual theme applied to UI | `packages/cli/src/commands/registry.ts:122` |
-| `/rename` command | Prints a message only — not persisted | `packages/cli/src/commands/registry.ts:93` |
-| `/copy` command | Prints "Copied" — never touches clipboard API | `packages/cli/src/commands/registry.ts:100` |
-| `plan` mode | Mode is set but `write_file`/`edit_file`/`run_command` not actually restricted | `packages/tools/src/index.ts` |
-| MCP client | Designed in `implementation_plan.md` but zero code exists | Missing entirely |
-| LSP integration | `diagnostics` tool shells out to `tsc`, not real LSP protocol | `packages/tools/src/tools/diagnostics.ts` |
-| Docker sandbox | Planned, not started | Missing entirely |
-| Web search tool | Not implemented (only `web-fetch` exists) | Missing |
-| `/undo` + `/redo` | Not implemented | Missing |
-| `/init` — AGENTS.md project init | Not implemented | Missing |
-| `/share` — conversation sharing | Not implemented | Missing |
-| `todowrite` / `todoread` tools | Not implemented | Missing |
-| `question` tool (LLM asks user mid-task) | Not implemented | Missing |
-| `patch` tool (apply unified diffs) | Not implemented | Missing |
-| Auto-compaction when context fills | Not implemented | Missing |
-| Config JSON schema | Uses YAML, no validation, no schema | `packages/core/src/config/loader.ts` |
-| Autoupdate notification | Not implemented | Missing |
-| `@mention` subagents | Not implemented | Missing |
-| AGENTS.md / rules / instructions file | Not implemented | Missing |
-| Image attachment (drag & drop) | Not implemented | Missing |
-| `skill` tool | Not implemented | Missing |
-| Tab key → cycle Build/Plan mode | Tab unused in `app.tsx` | `packages/cli/src/app.tsx` |
-| Custom agents via config/markdown | Not implemented | Missing |
+| Feature                                  | Status                                                                         | Location                                                                                                          |
+| ---------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `/compact` command                       | Calls `addSystemMessage('Compacting…')` but never calls `agent.compact()`      | `packages/cli/src/commands/registry.ts:110`                                                                       |
+| `/theme` command                         | Prints a message only — no actual theme applied to UI                          | `packages/cli/src/commands/registry.ts:122`                                                                       |
+| `/rename` command                        | Prints a message only — not persisted                                          | `packages/cli/src/commands/registry.ts:93`                                                                        |
+| `/copy` command                          | Prints "Copied" — never touches clipboard API                                  | `packages/cli/src/commands/registry.ts:100`                                                                       |
+| `plan` mode                              | Mode is set but `write_file`/`edit_file`/`run_command` not actually restricted | `packages/tools/src/index.ts`                                                                                     |
+| MCP client                               | ✅ Fully implemented with MCPManager, MCPWizard, and all commands              | `packages/mcp-client/`, `packages/cli/src/components/MCPManager.tsx`, `packages/cli/src/components/MCPWizard.tsx` |
+| LSP integration                          | `diagnostics` tool shells out to `tsc`, not real LSP protocol                  | `packages/tools/src/tools/diagnostics.ts`                                                                         |
+| Docker sandbox                           | Planned, not started                                                           | Missing entirely                                                                                                  |
+| Web search tool                          | Not implemented (only `web-fetch` exists)                                      | Missing                                                                                                           |
+| `/undo` + `/redo`                        | Not implemented                                                                | Missing                                                                                                           |
+| `/init` — AGENTS.md project init         | Not implemented                                                                | Missing                                                                                                           |
+| `/share` — conversation sharing          | Not implemented                                                                | Missing                                                                                                           |
+| `todowrite` / `todoread` tools           | Not implemented                                                                | Missing                                                                                                           |
+| `question` tool (LLM asks user mid-task) | Not implemented                                                                | Missing                                                                                                           |
+| `patch` tool (apply unified diffs)       | Not implemented                                                                | Missing                                                                                                           |
+| Auto-compaction when context fills       | Not implemented                                                                | Missing                                                                                                           |
+| Config JSON schema                       | Uses YAML, no validation, no schema                                            | `packages/core/src/config/loader.ts`                                                                              |
+| Autoupdate notification                  | Not implemented                                                                | Missing                                                                                                           |
+| `@mention` subagents                     | Not implemented                                                                | Missing                                                                                                           |
+| AGENTS.md / rules / instructions file    | Not implemented                                                                | Missing                                                                                                           |
+| Image attachment (drag & drop)           | Not implemented                                                                | Missing                                                                                                           |
+| `skill` tool                             | Not implemented                                                                | Missing                                                                                                           |
+| Tab key → cycle Build/Plan mode          | Tab unused in `app.tsx`                                                        | `packages/cli/src/app.tsx`                                                                                        |
+| Custom agents via config/markdown        | Not implemented                                                                | Missing                                                                                                           |
 
 ---
 
@@ -233,7 +233,7 @@
 
 #### 2.5 Web Search Tool
 
-**Why**: `webfetch` exists but web *search* is missing — can't research topics without it  
+**Why**: `webfetch` exists but web _search_ is missing — can't research topics without it  
 **Files**: `packages/tools/src/tools/web-search.ts` (new), `packages/tools/src/index.ts`
 
 **Tasks**:
@@ -261,19 +261,30 @@
 ```json
 {
   "mcp": {
-    "github": { "type": "remote", "url": "https://api.githubcopilot.com/mcp/", "enabled": true },
-    "my-local": { "type": "local", "command": ["npx", "-y", "my-mcp-server"], "enabled": true }
+    "github": {
+      "type": "remote",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "enabled": true
+    },
+    "my-local": {
+      "type": "local",
+      "command": ["npx", "-y", "my-mcp-server"],
+      "enabled": true
+    }
   }
 }
 ```
 
 **Tasks**:
 
-- [ ] `pnpm add @modelcontextprotocol/sdk` in new `packages/mcp-client`
-- [ ] Build `McpClientManager` (start, stop, listTools, callTool)
-- [ ] Integrate into `createTools()` — merge MCP tools dynamically
-- [ ] Add `/mcp list` command to show loaded MCP servers and their tools
-- [ ] Show MCP tool calls in `ToolCallView` with distinct icon (🔌)
+- [x] `pnpm add @modelcontextprotocol/sdk` in new `packages/mcp-client`
+- [x] Build `MCPClientManager` (start, stop, listTools, callTool)
+- [x] Integrate into tool system — merge MCP tools dynamically
+- [x] Add `/mcp list` command to show loaded MCP servers and their tools
+- [x] Show MCP tool calls in `ToolCallView` with distinct icon (🔌)
+- [x] Create `MCPManager` component for interactive server management
+- [x] Create `MCPWizard` component for adding/editing servers
+- [x] Add all `/mcp` subcommands (add, edit, remove, connect, disconnect, reload)
 
 ---
 
@@ -390,6 +401,8 @@
 
 #### 4.1 Docker Sandbox (`packages/sandbox/`)
 
+### Note this is going to be skipped scope changed
+
 **Why**: All `run_command` calls execute in user's shell — zero isolation  
 **Files**: New `packages/sandbox/` package
 
@@ -416,31 +429,31 @@
 
 ## 🗺️ File-by-File Change Map
 
-| File | Changes Needed |
-|---|---|
-| `packages/cli/src/commands/registry.ts` | Fix `/compact`, `/copy`, `/rename`, `/theme`; add `/undo`, `/redo`, `/init`, `/share`, `/mcp`, `/sandbox` |
-| `packages/cli/src/types/commands.ts` | Add `compact`, `renameConversation`, `undo`, `redo`, `initProject`, `setTheme` to `CommandContext` |
-| `packages/cli/src/hooks/useAgent.ts` | Expose `compact`, `renameConversation`, `undo`, `redo` |
-| `packages/cli/src/app.tsx` | Tab → mode cycle; pass new ctx methods; `QuestionPrompt`; image drops |
-| `packages/cli/src/components/StatusBar.tsx` | Mode colour coding (green=build, yellow=ask, red=plan) |
-| `packages/cli/src/components/QuestionPrompt.tsx` | New — LLM mid-task question UI |
-| `packages/cli/src/context/ThemeContext.tsx` | New — theme state + `useTheme()` hook |
-| `packages/core/src/agent.ts` | Auto-compaction threshold; `initProject()`; `renameConversation()`; emit system events |
-| `packages/core/src/persistence/conversations.ts` | Add `renameConversation()` |
-| `packages/core/src/persistence/undo-stack.ts` | New — undo/redo stack |
-| `packages/core/src/config/loader.ts` | Add JSON config; project-level config; `mcp` section parsing |
-| `packages/core/src/prompts/default.ts` | Inject `AGENTS.md` content if present in CWD |
-| `packages/tools/src/tools/write-file.ts` | Push to undo stack before write |
-| `packages/tools/src/tools/edit-file.ts` | Push to undo stack before edit |
-| `packages/tools/src/tools/web-search.ts` | New tool |
-| `packages/tools/src/tools/todo.ts` | New — `todowrite` + `todoread` |
-| `packages/tools/src/tools/question.ts` | New — mid-task user question |
-| `packages/tools/src/tools/patch.ts` | New — apply unified diff |
-| `packages/tools/src/index.ts` | Register new tools; merge MCP tools at startup |
-| `packages/mcp-client/` | Entire new package |
-| `packages/sandbox/` | Entire new package |
-| `packages/shared/src/themes/index.ts` | New — theme palette definitions |
-| `packages/shared/src/config.schema.json` | New — JSON Schema for config validation |
+| File                                             | Changes Needed                                                                                            |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `packages/cli/src/commands/registry.ts`          | Fix `/compact`, `/copy`, `/rename`, `/theme`; add `/undo`, `/redo`, `/init`, `/share`, `/mcp`, `/sandbox` |
+| `packages/cli/src/types/commands.ts`             | Add `compact`, `renameConversation`, `undo`, `redo`, `initProject`, `setTheme` to `CommandContext`        |
+| `packages/cli/src/hooks/useAgent.ts`             | Expose `compact`, `renameConversation`, `undo`, `redo`                                                    |
+| `packages/cli/src/app.tsx`                       | Tab → mode cycle; pass new ctx methods; `QuestionPrompt`; image drops                                     |
+| `packages/cli/src/components/StatusBar.tsx`      | Mode colour coding (green=build, yellow=ask, red=plan)                                                    |
+| `packages/cli/src/components/QuestionPrompt.tsx` | New — LLM mid-task question UI                                                                            |
+| `packages/cli/src/context/ThemeContext.tsx`      | New — theme state + `useTheme()` hook                                                                     |
+| `packages/core/src/agent.ts`                     | Auto-compaction threshold; `initProject()`; `renameConversation()`; emit system events                    |
+| `packages/core/src/persistence/conversations.ts` | Add `renameConversation()`                                                                                |
+| `packages/core/src/persistence/undo-stack.ts`    | New — undo/redo stack                                                                                     |
+| `packages/core/src/config/loader.ts`             | Add JSON config; project-level config; `mcp` section parsing                                              |
+| `packages/core/src/prompts/default.ts`           | Inject `AGENTS.md` content if present in CWD                                                              |
+| `packages/tools/src/tools/write-file.ts`         | Push to undo stack before write                                                                           |
+| `packages/tools/src/tools/edit-file.ts`          | Push to undo stack before edit                                                                            |
+| `packages/tools/src/tools/web-search.ts`         | New tool                                                                                                  |
+| `packages/tools/src/tools/todo.ts`               | New — `todowrite` + `todoread`                                                                            |
+| `packages/tools/src/tools/question.ts`           | New — mid-task user question                                                                              |
+| `packages/tools/src/tools/patch.ts`              | New — apply unified diff                                                                                  |
+| `packages/tools/src/index.ts`                    | Register new tools; merge MCP tools at startup                                                            |
+| `packages/mcp-client/`                           | Entire new package                                                                                        |
+| `packages/sandbox/`                              | Entire new package                                                                                        |
+| `packages/shared/src/themes/index.ts`            | New — theme palette definitions                                                                           |
+| `packages/shared/src/config.schema.json`         | New — JSON Schema for config validation                                                                   |
 
 ---
 
@@ -481,7 +494,7 @@ Sprint 2 — Add missing essentials:
   ✦ patch tool
 
 Sprint 3 — Ecosystem features:
-  ✦ 2.6 MCP client (biggest piece of work)
+  ✅ 2.6 MCP client (FULLY IMPLEMENTED)
   ✦ 3.2 Real LSP integration
   ✦ 3.3 Custom agents
   ✦ 3.4 Config JSON schema + project config
@@ -495,10 +508,10 @@ Sprint 4 — Distribution:
 
 ## 📌 OpenCode Features We Are NOT Copying (and why)
 
-| Feature | Reason |
-|---|---|
-| Desktop app (Electron/Tauri) | Out of scope — TUI-first |
-| mDNS server mode (`opencode serve`) | Enterprise feature — not needed |
-| Remote org config via `.well-known/opencode` | Enterprise feature — defer |
-| GitHub Action integration | Future — after CLI is stable |
-| Built-in browser / web UI | Terminal-native only |
+| Feature                                      | Reason                          |
+| -------------------------------------------- | ------------------------------- |
+| Desktop app (Electron/Tauri)                 | Out of scope — TUI-first        |
+| mDNS server mode (`opencode serve`)          | Enterprise feature — not needed |
+| Remote org config via `.well-known/opencode` | Enterprise feature — defer      |
+| GitHub Action integration                    | Future — after CLI is stable    |
+| Built-in browser / web UI                    | Terminal-native only            |
