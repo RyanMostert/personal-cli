@@ -1,8 +1,8 @@
-import { writeFileSync } from 'fs';
+import { writeFileSync, unlinkSync } from 'fs';
 
 export interface UndoEntry {
   path: string;    // absolute path
-  before: string;  // file contents before the change (null = file was created)
+  before: string | null;  // file contents before the change (null = file was created)
   after: string;   // file contents after the change
 }
 
@@ -15,11 +15,16 @@ export class UndoStack {
     this.future = []; // new change wipes redo history
   }
 
-  undo(): { path: string; restored: string } | null {
+  undo(): { path: string; restored: string | null } | null {
     const entry = this.past.pop();
     if (!entry) return null;
     this.future.push(entry);
-    writeFileSync(entry.path, entry.before, 'utf-8');
+    if (entry.before === null) {
+      // File was created in the change — remove it to undo
+      try { unlinkSync(entry.path); } catch { }
+    } else {
+      writeFileSync(entry.path, entry.before, 'utf-8');
+    }
     return { path: entry.path, restored: entry.before };
   }
 

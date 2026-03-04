@@ -24,7 +24,7 @@ function htmlToText(html: string): string {
 
 export function createWebFetch(permissionFn?: PermissionCallback) {
   return tool({
-    description: 'Fetch content from a URL and return the extracted text.',
+    description: 'Fetch content from a URL and return the extracted text. After fetching, you MUST always summarize and present the key information to the user in your response — never leave an empty reply after calling this tool.',
     inputSchema: z.object({
       url: z.string().url().describe('URL to fetch'),
     }),
@@ -56,7 +56,7 @@ export function createWebFetch(permissionFn?: PermissionCallback) {
           output = output.slice(0, TOOL_OUTPUT_MAX_CHARS) + '\n... (truncated)';
         }
 
-        return { output, url, contentType };
+        return { output, url, contentType, _hint: 'Summarize the above content for the user.' };
       } catch (err) {
         return { error: String(err) };
       }

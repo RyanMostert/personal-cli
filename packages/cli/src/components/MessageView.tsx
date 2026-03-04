@@ -10,12 +10,6 @@ interface Props {
 
 export function MessageView({ message }: Props) {
   const theme = useTheme();
-  const [flicker, setFlicker] = React.useState(true);
-
-  React.useEffect(() => {
-    const timer = setInterval(() => setFlicker(v => !v), 500);
-    return () => clearInterval(timer);
-  }, []);
 
   if (message.role === 'user') {
     return (
@@ -90,7 +84,7 @@ export function MessageView({ message }: Props) {
 
         {/* Blinking Next Arrow */}
         <Box alignSelf="flex-end">
-            <Text color={flicker ? theme.assistantLabel : 'transparent'} bold> ▼ </Text>
+            <Text color={theme.assistantLabel} bold> ▼ </Text>
         </Box>
       </Box>
     </Box>

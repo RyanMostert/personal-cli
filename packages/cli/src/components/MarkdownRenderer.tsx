@@ -1,44 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { Box, Text } from 'ink';
 import { marked, type Token } from 'marked';
-import { highlightCode } from '../highlight.js';
 
 interface Props {
   text: string;
   dimmed?: boolean;
 }
 
-interface CodeBlockState {
-  key: string;
-  highlighted: string | null;
-}
-
 export function MarkdownRenderer({ text, dimmed = false }: Props) {
-  const [highlightedBlocks, setHighlightedBlocks] = useState<Map<string, string>>(new Map());
-  const pendingRef = useRef<Set<string>>(new Set());
-
+  // Parse synchronously — no async Shiki to avoid large grammar allocations
   const tokens = marked.lexer(text);
-
-  // Kick off async highlighting for code blocks we haven't processed yet
-  useEffect(() => {
-    const codeTokens = tokens.filter((t): t is Extract<Token, { type: 'code' }> => t.type === 'code');
-    for (const token of codeTokens) {
-      const key = `${token.lang ?? 'text'}:${token.text}`;
-      if (!highlightedBlocks.has(key) && !pendingRef.current.has(key)) {
-        pendingRef.current.add(key);
-        highlightCode(token.text, token.lang ?? 'text').then((result) => {
-          pendingRef.current.delete(key);
-          setHighlightedBlocks((prev) => {
-            const next = new Map(prev);
-            next.set(key, result);
-            return next;
-          });
-        });
-      }
-    }
-  }, [text]);
-
-  const color = dimmed ? 'gray' : undefined;
 
   return (
     <Box flexDirection="column">
@@ -46,7 +17,6 @@ export function MarkdownRenderer({ text, dimmed = false }: Props) {
         <TokenView
           key={`${token.type}-${i}`}
           token={token}
-          highlightedBlocks={highlightedBlocks}
           dimmed={dimmed}
         />
       ))}
@@ -56,11 +26,10 @@ export function MarkdownRenderer({ text, dimmed = false }: Props) {
 
 interface TokenViewProps {
   token: Token;
-  highlightedBlocks: Map<string, string>;
   dimmed: boolean;
 }
 
-function TokenView({ token, highlightedBlocks, dimmed }: TokenViewProps) {
+function TokenView({ token, dimmed }: TokenViewProps) {
   const muted = dimmed ? 'gray' : undefined;
 
   switch (token.type) {
@@ -87,8 +56,6 @@ function TokenView({ token, highlightedBlocks, dimmed }: TokenViewProps) {
       );
 
     case 'code': {
-      const key = `${token.lang ?? 'text'}:${token.text}`;
-      const highlighted = highlightedBlocks.get(key);
       return (
         <Box
           flexDirection="column"
@@ -109,11 +76,7 @@ function TokenView({ token, highlightedBlocks, dimmed }: TokenViewProps) {
               </Text>
             ) : null}
           </Box>
-          {highlighted ? (
-            <Text>{highlighted}</Text>
-          ) : (
-            <Text color={dimmed ? muted : 'white'}>{token.text}</Text>
-          )}
+          <Text color={dimmed ? muted : 'white'}>{token.text}</Text>
         </Box>
       );
     }

@@ -198,14 +198,16 @@ Write AGENTS.md content only — no markdown code fences, no preamble. Start dir
     };
     this.messages.push(userMessage);
 
-    // Add user message to coreMessages
-    this.coreMessages.push({ role: 'user', content: fullContent });
-
     // Auto-compact when token usage crosses 85% of budget
     if (this.totalTokensUsed > this.tokenBudget * 0.85) {
       await this.compact();
       yield { type: 'system', message: 'Context auto-compacted to stay within token budget.' };
     }
+
+    // Add user message to coreMessages
+    this.coreMessages.push({ role: 'user', content: fullContent });
+
+    
 
     const model = await this.providerManager.getModel();
     const apiMessages = this.coreMessages;

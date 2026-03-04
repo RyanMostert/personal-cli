@@ -7,8 +7,8 @@
     "pcli": "./dist/bin.js"
   },
   "scripts": {
-    "build": "tsup src/bin.ts src/app.tsx --format esm --dts --external ink react --external @personal-cli/core --external @personal-cli/shared --external @personal-cli/tools --platform node",
-    "dev": "tsup src/bin.ts src/app.tsx --format esm --watch --external ink react --external @personal-cli/core --external @personal-cli/shared --external @personal-cli/tools --platform node",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsup src/bin.ts src/app.tsx --format esm --dts --external ink react --external @personal-cli/core --external @personal-cli/shared --external @personal-cli/tools --platform node",
+    "dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsup src/bin.ts src/app.tsx --format esm --watch --external ink react --external @personal-cli/core --external @personal-cli/shared --external @personal-cli/tools --platform node",
     "start": "node dist/bin.js",
     "clean": "rm -rf dist"
   },
@@ -32,6 +32,7 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.14",
     "tsup": "^8.5.1",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "cross-env": "^7.0.3"
   }
 }

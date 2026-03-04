@@ -3,6 +3,12 @@ import { z } from 'zod';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { TOOL_OUTPUT_MAX_CHARS } from '@personal-cli/shared';
+import type { PermissionCallback } from '../types.js';
+
+let _permissionFn: PermissionCallback | undefined;
+export function setReadFilePermission(fn: PermissionCallback) {
+  _permissionFn = fn;
+}
 
 export const readFile = tool({
   description:
@@ -13,6 +19,11 @@ export const readFile = tool({
     endLine: z.number().int().positive().optional().describe('Last line to read (inclusive)'),
   }),
   execute: async ({ path, startLine, endLine }) => {
+    if (_permissionFn) {
+      const ok = await _permissionFn('readFile', { path });
+      if (!ok) return { error: 'Permission denied for readFile' };
+    }
+
     const abs = resolve(process.cwd(), path);
     if (!existsSync(abs)) return { error: `File not found: ${path}` };
 

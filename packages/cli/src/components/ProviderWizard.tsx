@@ -186,18 +186,10 @@ interface Props {
 
 export function ProviderWizard({ providerName, onSave, onClose }: Props) {
   const [key, setKey] = useState('');
-  const [scanPos, setScanPos] = useState(0);
   const [oauthPhase, setOauthPhase] = useState<'init' | 'waiting' | 'done' | 'error'>('init');
   const [deviceInfo, setDeviceInfo] = useState<{ userCode: string; verificationUri: string } | null>(null);
   const [oauthError, setOauthError] = useState<string | null>(null);
   const info = PROVIDER_INFO[providerName] ?? FALLBACK_INFO;
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setScanPos((p) => (p + 1) % 40);
-    }, 100);
-    return () => clearInterval(timer);
-  }, []);
 
   // Handle OAuth device flow for providers that use it
   useEffect(() => {
@@ -243,7 +235,7 @@ export function ProviderWizard({ providerName, onSave, onClose }: Props) {
     if (input && !inkKey.ctrl && !inkKey.meta) setKey(k => k + input);
   });
 
-  const scanLine = ' '.repeat(scanPos) + '█' + ' '.repeat(Math.max(0, 40 - scanPos));
+  const scanLine = '░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░';
 
   return (
     <Box

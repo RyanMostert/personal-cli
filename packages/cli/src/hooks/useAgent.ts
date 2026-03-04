@@ -125,10 +125,21 @@ export function useAgent() {
     try {
       const stream = agent.sendMessage(content, currentAttachedFiles);
 
+      // Buffer streaming text and flush at most every 80ms to reduce Ink repaints
+      let textBuf = '';
+      let flushTimer: ReturnType<typeof setTimeout> | null = null;
+      const flush = () => {
+        if (textBuf) { setStreamingText(prev => prev + textBuf); textBuf = ''; }
+        flushTimer = null;
+      };
+
       for await (const event of stream) {
         switch (event.type) {
           case 'text-delta':
-            if (event.delta) setStreamingText((prev) => prev + event.delta);
+            if (event.delta) {
+              textBuf += event.delta;
+              if (!flushTimer) flushTimer = setTimeout(flush, 80);
+            }
             break;
           case 'tool-call-start':
             setState((prev) => ({
@@ -161,6 +172,10 @@ export function useAgent() {
         }
       }
 
+      // Flush any remaining buffered text before clearing streaming state
+      if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
+      if (textBuf) { setStreamingText(prev => prev + textBuf); textBuf = ''; }
+
       // Stream completed (normal finish or after abort) — always runs
       setState((prev) => ({
         ...prev,
@@ -173,6 +188,7 @@ export function useAgent() {
       setStreamingText('');
 
     } catch (err) {
+      if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
       setStreamingText('');
       setState((prev) => ({
         ...prev,

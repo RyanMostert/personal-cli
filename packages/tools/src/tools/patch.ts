@@ -72,6 +72,12 @@ function applyUnifiedDiff(original: string, diff: string): string {
     }
 
     const at = origStart + lineOffset;
+    // Validate that the existing file content matches the hunk's 'toRemove' context before applying
+    const existing = result.slice(at, at + toRemove.length);
+    const mismatch = toRemove.length !== existing.length || toRemove.some((ln, idx) => existing[idx] !== ln);
+    if (mismatch) {
+      throw new Error('Patch hunk context mismatch: target file differs at expected hunk location. Aborting to avoid corrupting file.');
+    }
     result.splice(at, toRemove.length, ...toAdd);
     lineOffset += toAdd.length - toRemove.length;
   }

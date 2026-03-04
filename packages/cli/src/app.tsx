@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Box, Text, useInput, useApp } from 'ink';
+import { Box, Text, useInput, useApp, Static } from 'ink';
 import { StatusBar } from './components/StatusBar.js';
 import { MessageView } from './components/MessageView.js';
 import { StreamingMessage } from './components/StreamingMessage.js';
@@ -16,6 +16,7 @@ import { HistoryPicker } from './components/HistoryPicker.js';
 import { CommandAutocomplete, filterCommands } from './components/CommandAutocomplete.js';
 import { FileAutocomplete } from './components/FileAutocomplete.js';
 import { SidePanel } from './components/SidePanel.js';
+import { CostRecommendation, shouldShowRecommendation } from './components/CostRecommendation.js';
 import { useAgent } from './hooks/useAgent.js';
 import { useOverlay } from './context/OverlayContext.js';
 import { useSetTheme } from './context/ThemeContext.js';
@@ -31,13 +32,11 @@ import {
 import { promises as fs } from 'fs';
 import clipboardy from 'clipboardy';
 
-const MAX_VISIBLE_MESSAGES = 20;
 
 export function App() {
   const [inputValue, setInputValue] = useState('');
   const { overlay, open, close } = useOverlay();
   const setThemeName = useSetTheme();
-  const [scrollOffset, setScrollOffset] = useState(0);
   const [inputHistory, setInputHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [savedDraft, setSavedDraft] = useState('');
@@ -68,13 +67,23 @@ export function App() {
   } = useAgent();
   const { exit } = useApp();
 
+  // Single root-level animation tick — ONE re-render per interval for ALL animated
+  // children instead of each component having its own setInterval.
+  // Paused while streaming so animation timer doesn't add extra repaints on top of
+  // the high-frequency text-delta updates.
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (isStreaming) return;
+    const timer = setInterval(() => setTick(t => t + 1), 500);
+    return () => clearInterval(timer);
+  }, [isStreaming]);
+
   // Derived overlay states for backward compatibility
   const isPickingProvider = overlay.type === 'provider-manager';
   const pendingProviderAdd = overlay.type === 'provider-wizard' ? (overlay.props?.providerId as string) : null;
   const showHistory = overlay.type === 'history';
 
   useEffect(() => { setInputHistory(loadPromptHistory()); }, []);
-  useEffect(() => { setScrollOffset(0); }, [messages.length]);
   useEffect(() => { setSidePanelScroll(0); }, [sidePanel?.path]);
 
   // ── Open file in side panel ──────────────────────────────────────────────
@@ -240,8 +249,7 @@ export function App() {
         else { setHistoryIndex(-1); setInputValue(savedDraft); }
         return;
       }
-      if (key.pageUp) setScrollOffset(o => Math.min(o + 5, Math.max(0, messages.length - MAX_VISIBLE_MESSAGES)));
-      if (key.pageDown) setScrollOffset(o => Math.max(0, o - 5));
+      // Terminal native scrollback handles message history — no pageUp/pageDown needed here
     }
   });
 
@@ -253,7 +261,7 @@ export function App() {
     if (trimmed === '/exit' || trimmed === '/quit') { setIsGameOver(true); return; }
     if (trimmed === '/clear') { clearMessages(); setInputValue(''); return; }
     if (trimmed === '/help') {
-      addSystemMessage('Commands: /model /mode /provider /add /history /compact /copy /export /rename /theme /cost /clear /undo /redo /init /help /exit\nType / and use ↑↓ to browse with autocomplete.');
+      addSystemMessage('Commands: /model /mode /provider /add /history /open /compact /copy /export /rename /theme /cost /clear /undo /redo /init /help /exit\nModes: cycle ask → plan → build with Tab, or use /mode <name>.\nType / and use ↑↓ to browse with autocomplete.');
       setInputValue(''); return;
     }
     if (trimmed === '/cost') {
@@ -367,15 +375,11 @@ export function App() {
     undo, redo, initProject,
   ]);
 
-  // ── Visible message window ───────────────────────────────────────────────
-  const totalMessages = messages.length;
-  const windowStart = Math.max(0, totalMessages - MAX_VISIBLE_MESSAGES - scrollOffset);
-  const windowEnd = Math.max(0, totalMessages - scrollOffset);
-  const visibleMessages = messages.slice(windowStart, windowEnd);
-  const hiddenAbove = windowStart;
-  const hiddenBelow = totalMessages - windowEnd;
-
-  // Full-screen pickers replace the message area so layout height stays stable
+  // ── Message rendering ─────────────────────────────────────────────────────
+  // Completed messages go into Static — Ink prints them ONCE to the terminal
+  // scrollback buffer and never repaints them. Only the active area (streaming
+  // text, tool calls, input) is managed by Ink's live render area.
+  // This is the correct approach for scroll stability — see how Gemini CLI works.
   const showFullscreenOverlay = isPickingModel || isPickingProvider || !!pendingProviderAdd || showHistory;
 
   if (isGameOver) {
@@ -390,118 +394,134 @@ export function App() {
   }
 
   return (
-    <Box flexDirection="column">
-      <StatusBar
-        provider={activeModel.provider}
-        modelId={activeModel.modelId}
-        tokensUsed={tokensUsed}
-        tokenBudget={DEFAULT_TOKEN_BUDGET}
-        isStreaming={isStreaming}
-        attachedFiles={attachedFiles}
-        mode={mode}
-      />
+    <>
+      {/* Static MUST be at root level — not inside any Box. Ink prints each item
+          once to the terminal scrollback buffer and never repaints it. Nesting
+          Static inside a Box causes Ink to include it in its managed height and
+          overwrite the content on every repaint ("disappearing" bug). */}
+      <Static items={messages}>
+        {(message) => <MessageView key={message.id} message={message} />}
+      </Static>
 
-      <Box flexDirection="row">
-        <Box flexDirection="column" flexGrow={1} width={sidePanel ? "50%" : "100%"}>
-          {showFullscreenOverlay ? (
-            /* Pickers swap in place of messages — no new lines, no terminal jump */
-            <Box flexDirection="column" paddingX={1}>
-              {isPickingModel && (
-                <ModelPicker
-                  onSelect={(provider, modelId) => {
-                    switchModel(provider, modelId);
-                    closeModelPicker();
-                    addSystemMessage(`Switched to ${provider}/${modelId}`);
-                  }}
-                  onClose={closeModelPicker}
-                />
-              )}
-              {isPickingProvider && (
-                <ProviderManager
-                  configuredProviders={Object.keys(readAuth())}
-                  onAdd={(id) => { open('provider-wizard', { providerId: id }); }}
-                  onRemove={(id) => { removeProviderKey(id); addSystemMessage(`Removed key for ${id}.`); }}
-                  onClose={() => close()}
-                />
-              )}
-              {pendingProviderAdd && (
-                <ProviderWizard
-                  providerName={pendingProviderAdd}
-                  onSave={(key) => {
-                    // 'oauth' is a sentinel for OAuth flows where the key is already persisted
-                    if (key !== 'oauth') {
-                      setProviderKey(pendingProviderAdd, key);
-                    }
-                    addSystemMessage(`Configured ${pendingProviderAdd}.`);
-                    close();
-                  }}
-                  onClose={() => close()}
-                />
-              )}
-              {showHistory && (
-                <HistoryPicker
-                  onSelect={(id) => { loadHistory(id); close(); addSystemMessage('Conversation loaded.'); }}
-                  onClose={() => close()}
-                />
-              )}
-            </Box>
-          ) : (
-            /* Normal chat view */
-            <Box flexDirection="column" paddingX={1}>
-              {hiddenAbove > 0 && (
-                <Text color="#484F58">↑ {hiddenAbove} message{hiddenAbove !== 1 ? 's' : ''} above — PgUp</Text>
-              )}
-              {visibleMessages.length === 0 && !isStreaming && <WelcomeScreen />}
-              {visibleMessages.map(message => <MessageView key={message.id} message={message} />)}
-              {hiddenBelow > 0 && (
-                <Text color="#484F58">↓ {hiddenBelow} message{hiddenBelow !== 1 ? 's' : ''} below — PgDn</Text>
-              )}
-              {toolCalls.map(tc => <ToolCallView key={tc.toolCallId} tool={tc} />)}
-              {isStreaming && <StreamingMessage text={streamingText} />}
-              {pendingPermission && <PermissionPrompt permission={pendingPermission} />}
-              {pendingQuestion && <QuestionPrompt question={pendingQuestion} />}
-              {error && (
-                <Box marginBottom={1} flexDirection="column">
-                  <Text color="#F85149">Error: {error}</Text>
-                  {/rate limit|429|FreeUsageLimit/i.test(error) && (
-                    <Text color="#8C959F">Tip: /model to browse free models</Text>
-                  )}
-                </Box>
-              )}
-            </Box>
+      <Box flexDirection="column">
+        <StatusBar
+          provider={activeModel.provider}
+          modelId={activeModel.modelId}
+          tokensUsed={tokensUsed}
+          tokenBudget={DEFAULT_TOKEN_BUDGET}
+          isStreaming={isStreaming}
+          attachedFiles={attachedFiles}
+          mode={mode}
+          tick={tick}
+          cost={cost}
+        />
+
+        <Box flexDirection="row">
+          <Box flexDirection="column" flexGrow={1} width={sidePanel ? "50%" : "100%"}>
+            {showFullscreenOverlay ? (
+              <Box flexDirection="column" paddingX={1}>
+                {isPickingModel && (
+                  <ModelPicker
+                    tick={tick}
+                    onSelect={(provider, modelId) => {
+                      switchModel(provider, modelId);
+                      closeModelPicker();
+                      addSystemMessage(`Switched to ${provider}/${modelId}`);
+                    }}
+                    onClose={closeModelPicker}
+                  />
+                )}
+                {isPickingProvider && (
+                  <ProviderManager
+                    configuredProviders={Object.keys(readAuth())}
+                    onAdd={(id) => { open('provider-wizard', { providerId: id }); }}
+                    onRemove={(id) => { removeProviderKey(id); addSystemMessage(`Removed key for ${id}.`); }}
+                    onClose={() => close()}
+                  />
+                )}
+                {pendingProviderAdd && (
+                  <ProviderWizard
+                    providerName={pendingProviderAdd}
+                    onSave={(key) => {
+                      if (key !== 'oauth') {
+                        setProviderKey(pendingProviderAdd, key);
+                      }
+                      addSystemMessage(`Configured ${pendingProviderAdd}.`);
+                      close();
+                    }}
+                    onClose={() => close()}
+                  />
+                )}
+                {showHistory && (
+                  <HistoryPicker
+                    onSelect={(id) => { loadHistory(id); close(); addSystemMessage('Conversation loaded.'); }}
+                    onClose={() => close()}
+                  />
+                )}
+              </Box>
+            ) : (
+              <Box flexDirection="column" paddingX={1}>
+                {messages.length === 0 && !isStreaming && <WelcomeScreen tick={tick} />}
+                {/* Active area: only this small section repaints on streaming updates */}
+                {toolCalls.map(tc => <ToolCallView key={tc.toolCallId} tool={tc} />)}
+                {isStreaming && <StreamingMessage text={streamingText} />}
+                {pendingPermission && <PermissionPrompt permission={pendingPermission} />}
+                {pendingQuestion && <QuestionPrompt question={pendingQuestion} />}
+                {error && (
+                  <Box marginBottom={1} flexDirection="column">
+                    <Text color="#F85149">Error: {error}</Text>
+                    {/rate limit|429|FreeUsageLimit/i.test(error) && (
+                      <Text color="#8C959F">Tip: /model to browse free models</Text>
+                    )}
+                  </Box>
+                )}
+                {/* Show cost-saving recommendations when budget is being approached */}
+                {shouldShowRecommendation(cost, 5) && !showFullscreenOverlay && (
+                  <CostRecommendation
+                    currentProvider={activeModel.provider}
+                    currentModelId={activeModel.modelId}
+                    currentCost={cost}
+                    onSelect={(provider, modelId) => {
+                      switchModel(provider, modelId);
+                      addSystemMessage(`Switched to ${provider}/${modelId} for cost savings`);
+                    }}
+                  />
+                )}
+              </Box>
+            )}
+          </Box>
+
+          {sidePanel && (
+            <SidePanel
+              {...sidePanel}
+              scrollOffset={sidePanelScroll}
+              onClose={() => setSidePanel(null)}
+            />
           )}
         </Box>
 
-        {sidePanel && (
-          <SidePanel
-            {...sidePanel}
-            scrollOffset={sidePanelScroll}
-            onClose={() => setSidePanel(null)}
-          />
-        )}
+        {/* Autocomplete dropdowns sit between content and input — no layout jump
+            because InputBox is disabled (focus=false) while they're shown */}
+        <CommandAutocomplete
+          filtered={cmdFiltered}
+          selectedIndex={cmdSelectedIdx}
+          visible={showCommandAutocomplete}
+        />
+        <FileAutocomplete
+          query={fileQuery}
+          visible={showFileAutocomplete}
+          selectedIndex={fileAutoSelectedIdx}
+          onFilesChange={(files) => { setFileAutoFiles(files); setFileAutoSelectedIdx(0); }}
+        />
+
+        <InputBox
+          value={inputValue}
+          onChange={setInputValue}
+          onSubmit={handleSubmit}
+          isDisabled={anyOverlay}
+          isStreaming={isStreaming}
+        />
       </Box>
-
-      {/* Autocomplete dropdowns sit between content and input — no layout jump
-          because InputBox is disabled (focus=false) while they're shown */}
-      <CommandAutocomplete
-        filtered={cmdFiltered}
-        selectedIndex={cmdSelectedIdx}
-        visible={showCommandAutocomplete}
-      />
-      <FileAutocomplete
-        query={fileQuery}
-        visible={showFileAutocomplete}
-        selectedIndex={fileAutoSelectedIdx}
-        onFilesChange={(files) => { setFileAutoFiles(files); setFileAutoSelectedIdx(0); }}
-      />
-
-      <InputBox
-        value={inputValue}
-        onChange={setInputValue}
-        onSubmit={handleSubmit}
-        isDisabled={anyOverlay}
-        isStreaming={isStreaming}
-      />
-    </Box>
+    </>
   );
 }

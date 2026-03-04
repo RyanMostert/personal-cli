@@ -44,6 +44,12 @@ export function createTools(
 
   const { onWrite, questionFn } = options ?? {};
 
+  // Hook resolvedPermission into tools that need it
+  // Lazy hook to inject resolvedPermission into read-file tool without making createTools async
+  import('./tools/read-file.js')
+    .then(mod => { if (mod && typeof mod.setReadFilePermission === 'function') mod.setReadFilePermission(resolvedPermission); })
+    .catch(() => { /* ignore */ });
+
   return {
     readFile,
     writeFile: createWriteFile(resolvedPermission, onWrite),
@@ -78,7 +84,7 @@ function makePermissionResolver(
     // Check rules in reverse order (last match wins, like CSS)
     for (const rule of [...rules].reverse()) {
       const toolMatch = rule.tool === '*' || rule.tool === toolName;
-      const patternMatch = !rule.pattern || minimatch(pathArg, rule.pattern);
+      const patternMatch = !rule.pattern || minimatch(pathArg, rule.pattern, { dot: true, matchBase: true });
       if (!toolMatch || !patternMatch) continue;
 
       if (rule.action === 'allow') return true;
