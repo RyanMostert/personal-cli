@@ -13,8 +13,11 @@ MCP server implementation for OpenCode Zen Gateway - providing unified access to
 
 ## Installation
 
+This package is part of the `personal-cli` monorepo workspace and is not published to npm. To use it within the workspace:
+
 ```bash
-npm install @personal-cli/zen-mcp-server
+pnpm install
+pnpm --filter @personal-cli/zen-mcp-server build
 ```
 
 ## Usage
@@ -119,8 +122,9 @@ The server handles common error scenarios:
 
 When used with personal-cli, the configuration is stored in:
 ```
-~/.config/personal-cli/mcp.json
+~/.personal-cli/mcp.json
 ```
+(Windows: `%USERPROFILE%\.personal-cli\mcp.json`)
 
 Example configuration:
 ```json

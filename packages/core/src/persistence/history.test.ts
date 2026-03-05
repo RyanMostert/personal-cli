@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { appendHistory, loadHistory } from './history.js';
 import * as fs from 'fs';
 import { homedir } from 'os';
@@ -18,9 +18,14 @@ describe('history', () => {
   const mockHome = '/mock/home';
 
   beforeEach(() => {
+    vi.useFakeTimers();
     vi.clearAllMocks();
     vi.mocked(homedir).mockReturnValue(mockHome);
     vi.setSystemTime(new Date('2024-01-01T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe('appendHistory', () => {
