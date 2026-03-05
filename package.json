@@ -2,7 +2,7 @@
   "name": "personal-cli",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "build": "turbo build",
     "build:dev": "turbo dev",
