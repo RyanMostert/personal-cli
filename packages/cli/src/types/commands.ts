@@ -10,6 +10,7 @@ export interface CommandContext {
   switchMode: (mode: AgentMode) => void;
   openModelPicker: () => void;
   openProviderManager: () => void;
+  openPluginManager: () => void;
   openHistory: () => void;
   openMCPManager: () => void;
   attachFile: (path: string) => Promise<boolean>;
@@ -22,4 +23,8 @@ export interface CommandContext {
   redo: () => string;
   initProject: () => Promise<string>;
   exit: () => void;
+  abort: () => void;
+  loadPlugins: () => Promise<import('@personal-cli/tools').LoadedPlugin[]>;
+  saveWorkspace: (path: string) => void;
+  loadWorkspace: (path: string) => void;
 }

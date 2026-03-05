@@ -1,6 +1,7 @@
 import { readdirSync, existsSync, readFileSync, mkdirSync, writeFileSync, unlinkSync } from 'fs';
 import { join, extname } from 'path';
 import { homedir } from 'os';
+import { pathToFileURL } from 'url';
 import type { LoadedPlugin, PluginManifest, ToolSchema } from './types.js';
 
 const PLUGIN_DIR = () => join(homedir(), '.personal-cli', 'plugins');
@@ -49,12 +50,15 @@ export async function loadPlugins(): Promise<LoadedPlugin[]> {
         continue;
       }
       
-      const module = await import(modulePath);
+      const moduleUrl = pathToFileURL(modulePath).href;
+      const module = await import(moduleUrl);
       const tools: Record<string, unknown> = {};
       
       for (const toolSchema of manifest.tools) {
         if (module[toolSchema.name]) {
           tools[toolSchema.name] = module[toolSchema.name];
+        } else {
+          console.warn(`Plugin ${entry.name}: Tool '${toolSchema.name}' defined in manifest but not exported from index.js`);
         }
       }
       

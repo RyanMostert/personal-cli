@@ -9,9 +9,10 @@ export interface PendingPermission {
 
 interface Props {
   permission: PendingPermission | null;
+  onExplain?: () => void;
 }
 
-export function PermissionPrompt({ permission }: Props) {
+export function PermissionPrompt({ permission, onExplain }: Props) {
   useInput((input, key) => {
     if (!permission) return;
     
@@ -40,12 +41,21 @@ export function PermissionPrompt({ permission }: Props) {
           {permission.args ? JSON.stringify(permission.args, null, 2) : 'No arguments'}
         </Text>
       </Box>
-      <Box>
-        <Text color="#484F58">Press </Text>
-        <Text bold color="#3FB950">Y</Text>
-        <Text color="#484F58">es or </Text>
-        <Text bold color="#F85149">N</Text>
-        <Text color="#484F58">o</Text>
+      <Box justifyContent="space-between">
+        <Box>
+          <Text color="#484F58">Press </Text>
+          <Text bold color="#3FB950">Y</Text>
+          <Text color="#484F58">es or </Text>
+          <Text bold color="#F85149">N</Text>
+          <Text color="#484F58">o</Text>
+        </Box>
+        {onExplain && (
+          <Box>
+            <Text color="#484F58"> │ </Text>
+            <Text bold color="#00E5FF">CTRL+X + E</Text>
+            <Text color="#484F58">:Explain Change</Text>
+          </Box>
+        )}
       </Box>
     </Box>
   );

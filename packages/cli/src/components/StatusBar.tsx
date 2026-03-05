@@ -12,6 +12,8 @@ interface Props {
   tick: number;
   cost: number;
   mcpServerCount?: number;
+  activeToolCount?: number;
+  leaderKeyActive?: boolean;
 }
 
 const HINTS = [
@@ -19,7 +21,7 @@ const HINTS = [
   "CTRL+O TO BROWSE PROJECT FILES",
   "CTRL+L TO TOGGLE PANEL FOCUS",
   "CTRL+M TO SWITCH MODELS",
-  "TAB TO CYCLE AGENT MODES",
+  "CTRL+TAB TO CYCLE AGENT MODES",
   "CTRL+K TO CUSTOMIZE KEYBINDS",
   "TYPE / FOR COMMAND AUTOCOMPLETE",
   "ATTACH FILES WITH @FILENAME",
@@ -27,7 +29,7 @@ const HINTS = [
 ];
 
 export function StatusBar({ 
-  provider, modelId, tokensUsed, tokenBudget, isStreaming, attachedFiles = [], mode = 'ask', tick, cost, mcpServerCount = 0 
+  provider, modelId, tokensUsed, tokenBudget, isStreaming, attachedFiles = [], mode = 'ask', tick, cost, mcpServerCount = 0, activeToolCount = 0, leaderKeyActive = false 
 }: Props) {
   const [hintIndex, setHintIndex] = useState(0);
 
@@ -46,13 +48,39 @@ export function StatusBar({
   const hpColor = progress > 0.9 ? '#F85149' : (progress > 0.7 ? '#D29922' : '#3FB950');
   const costStr = cost > 0 ? `$${cost.toFixed(4)}` : '$0.00';
 
+  const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+  const spinner = spinnerFrames[tick % spinnerFrames.length];
+
+  // Contextual Tips
+  let activeHint = HINTS[hintIndex];
+  if (progress > 0.8) {
+    activeHint = "⚠️ HIGH TOKEN USAGE: RUN /compact TO ARCHIVE CONTEXT";
+  } else if (attachedFiles.length > 5) {
+    activeHint = "💡 LARGE INVENTORY: USE /detach TO CLEAR OLD FILES";
+  }
+
   return (
     <Box flexDirection="column" marginTop={1}>
+      {/* Activity Line */}
+      {(isStreaming || activeToolCount > 0 || leaderKeyActive) && (
+        <Box paddingX={1} marginBottom={0} justifyContent="space-between">
+          <Box>
+            <Text color="#00E5FF" bold>{spinner} </Text>
+            {isStreaming && <Text color="#00E5FF" bold>LLM_STREAMING... </Text>}
+            {activeToolCount > 0 && <Text color="#D29922" bold>RUNNING_TOOLS:{activeToolCount} </Text>}
+            {leaderKeyActive && <Text color="#FF00AA" bold>LEADER_KEY_ACTIVE (waiting for sequence...) </Text>}
+          </Box>
+          <Text color="#484F58">SYSTEM_BUSY</Text>
+        </Box>
+      )}
+
       {/* Hint Line */}
-      <Box paddingX={1} marginBottom={0}>
-        <Text color="#484F58">» </Text>
-        <Text color="#00E5FF" bold>{HINTS[hintIndex]}</Text>
-      </Box>
+      {!isStreaming && activeToolCount === 0 && (
+        <Box paddingX={1} marginBottom={0}>
+          <Text color="#484F58">» </Text>
+          <Text color={activeHint.startsWith('⚠️') ? '#F85149' : "#00E5FF"} bold>{activeHint}</Text>
+        </Box>
+      )}
 
       {/* Separator */}
       <Text color="#484F58">
@@ -66,7 +94,18 @@ export function StatusBar({
           <Text color="#484F58">│ </Text>
           <Text color="white" bold>{provider}/{modelId}</Text>
           <Text color="#484F58"> │ </Text>
-          <Text color="#00E5FF" bold>{mode.toUpperCase()}</Text>
+          {mode === 'ask' && (
+            <Text color="#3FB950" bold>[🛡️ GUARDIAN:ASK]</Text>
+          )}
+          {mode === 'plan' && (
+            <Text color="#D29922" bold>[🧠 STRATEGIST:PLAN]</Text>
+          )}
+          {mode === 'build' && (
+            <Text color="#F85149" bold>[⚔️ ARCHITECT:BUILD]</Text>
+          )}
+          {mode === 'auto' && (
+            <Text color="#00E5FF" bold>[🤖 AUTONOMOUS:AUTO]</Text>
+          )}
         </Box>
 
         <Box>

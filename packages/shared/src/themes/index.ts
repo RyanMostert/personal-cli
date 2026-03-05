@@ -53,6 +53,13 @@ export const THEMES: Record<string, Theme> = {
     userLabel: '#83A598', assistantLabel: '#B8BB26', systemLabel: '#928374',
     toolBorder: '#3C3836', toolName: '#8EC07C',
   },
+  matrix: {
+    name: 'The Matrix',
+    primary: '#00FF41', success: '#00FF41', warning: '#D29922',
+    error: '#FF0000', muted: '#003B00', text: '#00FF41', dim: '#003B00',
+    userLabel: '#00FF41', assistantLabel: '#00FF41', systemLabel: '#008F11',
+    toolBorder: '#003B00', toolName: '#00FF41',
+  },
 };
 
 export type ThemeName = keyof typeof THEMES;

@@ -2,7 +2,7 @@ import { streamText, type ModelMessage } from 'ai';
 import { generateId, type Message, type StreamEvent, type ActiveModel, type AgentMode, type ProviderName, getModelEntry, type Attachment } from '@personal-cli/shared';
 import { DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
 import { ProviderManager } from './providers/manager.js';
-import { saveConversation, loadConversation, renameConversation as persistRename } from './persistence/conversations.js';
+import { saveConversation, loadConversation, renameConversation as persistRename, saveWorkspace, loadWorkspace, type SavedWorkspace } from './persistence/conversations.js';
 import { createTools, type PermissionCallback, type QuestionCallback, loadPlugins, type LoadedPlugin } from '@personal-cli/tools';
 import { DEFAULT_SYSTEM_PROMPT } from './prompts/default.js';
 import { generateTitle } from './agent/title.js';
@@ -143,6 +143,14 @@ export class Agent {
       name,
       description: (tool as any).description,
     }));
+  }
+
+  async getLoadedPlugins(): Promise<LoadedPlugin[]> {
+    if (this.loadedPlugins.length === 0) {
+      // Re-try loading if empty
+      await this.loadPluginsAsync();
+    }
+    return this.loadedPlugins;
   }
 
   getEventTracker(): AgentEventTracker {
@@ -726,5 +734,35 @@ export class Agent {
     this.coreMessages = [{ role: 'assistant', content: `**Conversation Summary:**\n\n${summary}` }];
 
     return 'Conversation compacted successfully.';
+  }
+
+  saveWorkspace(path: string, attachments: Attachment[]) {
+    saveWorkspace(path, {
+      id: this.conversationId || generateId(),
+      title: this.conversationTitle || 'Workspace',
+      date: Date.now(),
+      model: this.providerManager.getActiveModel(),
+      messages: this.messages,
+      attachments,
+      tokensUsed: this.totalTokensUsed,
+      cost: this.totalCost,
+    });
+  }
+
+  loadWorkspace(path: string): Attachment[] | null {
+    const data = loadWorkspace(path);
+    if (!data) return null;
+    
+    this.messages = data.messages;
+    this.coreMessages = this.messages
+      .filter(m => m.role !== 'system')
+      .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+    this.totalTokensUsed = data.tokensUsed;
+    this.totalCost = data.cost;
+    this.conversationId = data.id;
+    this.conversationTitle = data.title;
+    this.providerManager.switchModel(data.model.provider, data.model.modelId);
+    
+    return data.attachments;
   }
 }

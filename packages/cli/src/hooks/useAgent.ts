@@ -310,8 +310,31 @@ export function useAgent() {
     initProject: useCallback(async () => {
       return getAgent().initProject();
     }, [getAgent]),
+    synthesizeAnswer: useCallback(async (topic: string) => {
+      return getAgent().synthesizeAnswer(topic);
+    }, [getAgent]),
     getTools: useCallback(() => {
       return getAgent().getTools();
+    }, [getAgent]),
+    loadPlugins: useCallback(async () => {
+      return getAgent().getLoadedPlugins();
+    }, [getAgent]),
+    saveWorkspace: useCallback((path: string) => {
+      getAgent().saveWorkspace(path, state.attachedFiles);
+    }, [getAgent, state.attachedFiles]),
+    loadWorkspace: useCallback((path: string) => {
+      const agent = getAgent();
+      const attachments = agent.loadWorkspace(path);
+      if (attachments) {
+        attachedFilesRef.current = attachments;
+        setState(prev => ({
+          ...prev,
+          messages: [...agent.getMessages()],
+          tokensUsed: agent.getTokensUsed(),
+          cost: agent.getCost(),
+          attachedFiles: attachments,
+        }));
+      }
     }, [getAgent]),
   };
 }

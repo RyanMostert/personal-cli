@@ -11,7 +11,6 @@ export const diagnostics = tool({
   inputSchema: z.object({
     paths: z.array(z.string()).describe('List of exact file paths to get diagnostics for (e.g., ["packages/cli/src/app.tsx"])'),
   }),
-  // @ts-expect-error Type inference fails on required zod arrays in Vercel AI SDK 6
   execute: async ({ paths }) => {
     try {
       const cwd = process.cwd();

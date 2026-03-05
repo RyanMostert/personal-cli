@@ -28,7 +28,7 @@ export const DEFAULT_KEYBINDINGS: Keybinding[] = [
   // Navigation / Focus
   { id: 'toggle_focus', combo: { ctrl: true, input: 'l' }, action: 'toggle_focus', description: 'Toggle focus between input and panel', category: 'navigation' },
   { id: 'tool_focus', combo: { ctrl: true, input: 't' }, action: 'tool_focus', description: 'Cycle focus through tool calls', category: 'navigation' },
-  { id: 'cycle_mode', combo: { key: 'tab' }, action: 'cycle_mode', description: 'Cycle agent mode (ask/plan/build)', category: 'navigation' },
+  { id: 'cycle_mode', combo: { ctrl: true, key: 'tab' }, action: 'cycle_mode', description: 'Cycle agent mode (ask/plan/build)', category: 'navigation' },
   
   // Panels
   { id: 'close_overlay', combo: { key: 'escape' }, action: 'close_overlay', description: 'Close current overlay or panel', category: 'panel' },

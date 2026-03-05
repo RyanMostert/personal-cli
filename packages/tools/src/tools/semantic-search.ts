@@ -70,7 +70,6 @@ export const semanticSearch = tool({
   inputSchema: z.object({
     patterns: z.array(z.string().describe('Exact file path or glob pattern to analyze (e.g., "src/**/*.ts")')),
   }),
-  // @ts-expect-error Type inference fails on required zod arrays in Vercel AI SDK 6
   execute: async ({ patterns }) => {
     try {
       const cwd = process.cwd();
