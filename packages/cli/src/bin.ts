@@ -32,10 +32,27 @@ program
   .name(APP_NAME)
   .description('A multi-provider, token-efficient CLI AI agent')
   .version(APP_VERSION)
-  .action(async () => {
+  .option('-f, --file <path>', 'attach a file to the conversation (can be used multiple times)', collect, [])
+  .option('-i, --image <path>', 'attach an image to the conversation (can be used multiple times)', collect, [])
+  .action(async (options) => {
+    // Process attached files from CLI arguments
+    const attachments: Array<{ path: string; type: 'file' | 'image' }> = [];
+    
+    for (const filePath of options.file) {
+      attachments.push({ path: filePath, type: 'file' });
+    }
+    
+    for (const imagePath of options.image) {
+      attachments.push({ path: imagePath, type: 'image' });
+    }
+    
     const { unmount, waitUntilExit } = render(
       React.createElement(ErrorBoundary, {
-        children: React.createElement(ThemeProvider, { children: React.createElement(OverlayProvider, { children: React.createElement(App) }) }),
+        children: React.createElement(ThemeProvider, { 
+          children: React.createElement(OverlayProvider, { 
+            children: React.createElement(App, { initialAttachments: attachments })
+          }) 
+        }),
       }),
       {
         exitOnCtrlC: false,
@@ -46,6 +63,11 @@ program
     unmount();
     process.exit(0);
   });
+
+// Helper to collect multiple values for an option
+function collect(value: string, previous: string[]) {
+  return previous.concat([value]);
+}
 
 process.on('uncaughtException', (error) => {
   console.error('\n\n [!] UNCAUGHT_EXCEPTION_DETECTED');

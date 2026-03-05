@@ -25,7 +25,7 @@ import { CostRecommendation, shouldShowRecommendation } from './components/CostR
 import { useAgent } from './hooks/useAgent.js';
 import { useOverlay } from './context/OverlayContext.js';
 import { useSetTheme } from './context/ThemeContext.js';
-import { DEFAULT_TOKEN_BUDGET, type ProviderName, type AgentMode } from '@personal-cli/shared';
+import { DEFAULT_TOKEN_BUDGET, type ProviderName, type AgentMode, loadAttachment, formatAttachmentForDisplay, type Attachment } from '@personal-cli/shared';
 import {
   setProviderKey, removeProviderKey, readAuth,
   appendHistory, loadHistory as loadPromptHistory,
@@ -38,7 +38,11 @@ import { promises as fs } from 'fs';
 import clipboardy from 'clipboardy';
 
 
-export function App() {
+interface AppProps {
+  initialAttachments?: Array<{ path: string; type: 'file' | 'image' }>;
+}
+
+export function App({ initialAttachments = [] }: AppProps) {
   const [inputValue, setInputValue] = useState('');
   const { overlay, open, close } = useOverlay();
   const setThemeName = useSetTheme();
@@ -94,6 +98,36 @@ export function App() {
   const mcpWizardServer = overlay.type === 'mcp-wizard' ? (overlay.props?.serverName as string) : null;
 
   useEffect(() => { setInputHistory(loadPromptHistory()); }, []);
+
+  // Load initial attachments from CLI arguments
+  useEffect(() => {
+    if (initialAttachments.length > 0) {
+      const loadedAttachments: Attachment[] = [];
+      const failedPaths: string[] = [];
+      
+      for (const att of initialAttachments) {
+        const loaded = loadAttachment(att.path, att.type);
+        if (loaded) {
+          loadedAttachments.push(loaded);
+        } else {
+          failedPaths.push(att.path);
+        }
+      }
+      
+      if (loadedAttachments.length > 0) {
+        // Add loaded attachments to the agent
+        loadedAttachments.forEach(att => attachFile(att.path));
+        
+        // Show confirmation message
+        const attachmentList = loadedAttachments.map(formatAttachmentForDisplay).join(', ');
+        addSystemMessage(`Attached: ${attachmentList}`);
+      }
+      
+      if (failedPaths.length > 0) {
+        addSystemMessage(`Failed to attach: ${failedPaths.join(', ')}`);
+      }
+    }
+  }, []); // Run once on mount
   
   useEffect(() => { 
     if (sidePanel) setIsSidePanelFocused(true); 

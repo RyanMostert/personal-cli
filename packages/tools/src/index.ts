@@ -19,16 +19,19 @@ import {
   type PermissionRule,
   type WriteCallback,
   type QuestionCallback,
+  type LoadedPlugin,
   DEFAULT_PERMISSION_RULES,
   MODE_RULES,
 } from './types.js';
 
 export * from './types.js';
+export * from './plugin-loader.js';
 export { MCPToolWrapper, wrapMCPTools, convertMCPToolsToRegistryFormat } from './mcp-tools.js';
 
 export interface CreateToolsOptions {
   onWrite?: WriteCallback;
   questionFn?: QuestionCallback;
+  plugins?: LoadedPlugin[];
 }
 
 export function createTools(
@@ -42,7 +45,7 @@ export function createTools(
   // Wrap permissionFn with rule pre-check
   const resolvedPermission = makePermissionResolver(rules, permissionFn);
 
-  const { onWrite, questionFn } = options ?? {};
+  const { onWrite, questionFn, plugins } = options ?? {};
 
   // Hook resolvedPermission into tools that need it
   // Lazy hook to inject resolvedPermission into read-file tool without making createTools async
@@ -50,7 +53,7 @@ export function createTools(
     .then(mod => { if (mod && typeof mod.setReadFilePermission === 'function') mod.setReadFilePermission(resolvedPermission); })
     .catch(() => { /* ignore */ });
 
-  return {
+  const baseTools = {
     readFile,
     writeFile: createWriteFile(resolvedPermission, onWrite),
     editFile: createEditFile(resolvedPermission, onWrite),
@@ -71,6 +74,15 @@ export function createTools(
     patch: createPatch(resolvedPermission, onWrite),
     question: createQuestionTool(questionFn),
   };
+
+  // Merge plugin tools
+  if (plugins && plugins.length > 0) {
+    for (const plugin of plugins) {
+      Object.assign(baseTools, plugin.tools);
+    }
+  }
+
+  return baseTools;
 }
 
 function makePermissionResolver(

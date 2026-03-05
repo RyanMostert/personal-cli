@@ -1,15 +1,10 @@
 import { useState, useCallback, useRef } from 'react';
 import { Agent, ProviderManager, loadConfig, getDefaultModel, loadSettings } from '@personal-cli/core';
-import type { Message, StreamEvent, ToolCallInfo, AgentMode, ProviderName } from '@personal-cli/shared';
-import { DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
+import type { Message, StreamEvent, ToolCallInfo, AgentMode, ProviderName, Attachment } from '@personal-cli/shared';
+import { DEFAULT_TOKEN_BUDGET, loadAttachment } from '@personal-cli/shared';
 import type { PendingPermission } from '../components/PermissionPrompt.js';
 import type { PendingQuestion } from '../components/QuestionPrompt.js';
 import { promises as fs } from 'fs';
-
-interface AttachedFile {
-  path: string;
-  content: string;
-}
 
 interface AgentState {
   messages: Message[];
@@ -21,13 +16,13 @@ interface AgentState {
   pendingQuestion: PendingQuestion | null;
   error: string | null;
   isPickingModel: boolean;
-  attachedFiles: AttachedFile[];
+  attachedFiles: Attachment[];
   mode: AgentMode;
 }
 
 export function useAgent() {
   const agentRef = useRef<Agent | null>(null);
-  const attachedFilesRef = useRef<AttachedFile[]>([]);
+  const attachedFilesRef = useRef<Attachment[]>([]);
 
   // Split streamingText and streamingThought into isolated state to prevent re-renders of the main state tree
   const [streamingText, setStreamingText] = useState('');
@@ -269,16 +264,13 @@ export function useAgent() {
       setState((prev) => ({ ...prev, isPickingModel: false }));
     }, []),
     attachFile: useCallback(async (filePath: string) => {
-      try {
-        const content = await fs.readFile(filePath, 'utf-8');
-        const truncated = content.length > 50_000 ? content.slice(0, 50_000) + '\n... [truncated]' : content;
-        const entry = { path: filePath, content: truncated };
-        attachedFilesRef.current = [...attachedFilesRef.current, entry];
+      const attachment = loadAttachment(filePath);
+      if (attachment) {
+        attachedFilesRef.current = [...attachedFilesRef.current, attachment];
         setState(prev => ({ ...prev, attachedFiles: attachedFilesRef.current }));
         return true;
-      } catch {
-        return false;
       }
+      return false;
     }, []),
     clearAttachments: useCallback(() => {
       attachedFilesRef.current = [];

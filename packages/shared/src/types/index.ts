@@ -53,12 +53,23 @@ export interface ActiveModel {
 
 export type MessageRole = 'user' | 'assistant' | 'system';
 
+export interface Attachment {
+  id: string;
+  path: string;
+  name: string;
+  type: 'file' | 'image';
+  size?: number;
+  content?: string; // Base64 encoded for images, text content for files
+  mimeType?: string;
+}
+
 export interface Message {
   id: string;
   role: MessageRole;
   content: string;
   thought?: string;
   toolCalls?: ToolCallInfo[];
+  attachments?: Attachment[];
   timestamp: number;
 }
 

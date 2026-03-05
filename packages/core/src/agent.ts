@@ -1,15 +1,17 @@
 import { streamText, type ModelMessage } from 'ai';
-import { generateId, type Message, type StreamEvent, type ActiveModel, type AgentMode, type ProviderName, getModelEntry } from '@personal-cli/shared';
+import { generateId, type Message, type StreamEvent, type ActiveModel, type AgentMode, type ProviderName, getModelEntry, type Attachment } from '@personal-cli/shared';
 import { DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
 import { ProviderManager } from './providers/manager.js';
 import { saveConversation, loadConversation, renameConversation as persistRename } from './persistence/conversations.js';
-import { createTools, type PermissionCallback, type QuestionCallback } from '@personal-cli/tools';
+import { createTools, type PermissionCallback, type QuestionCallback, loadPlugins, type LoadedPlugin } from '@personal-cli/tools';
 import { DEFAULT_SYSTEM_PROMPT } from './prompts/default.js';
 import { generateTitle } from './agent/title.js';
 import { COMPACTION_PROMPT } from './prompts/compaction.js';
 import { UndoStack } from './persistence/undo-stack.js';
 import { existsSync, readFileSync, writeFileSync, readdirSync } from 'fs';
 import { join } from 'path';
+import { ToolFallbackManager, createFallbackManager, type FallbackConfig } from './fallback/tool-fallback.js';
+import { AgentEventTracker, createEventTracker, type AgentEvent } from './fallback/event-tracker.js';
 
 export interface AgentOptions {
   providerManager: ProviderManager;
@@ -38,14 +40,19 @@ export class Agent {
   private currentAbortController: AbortController | null = null;
   private undoStack = new UndoStack();
   private questionFn?: QuestionCallback;
+  private loadedPlugins: LoadedPlugin[] = [];
+  private fallbackManager: ToolFallbackManager;
+  private eventTracker: AgentEventTracker;
 
-  constructor(options: AgentOptions) {
+  constructor(options: AgentOptions & { fallbackConfig?: FallbackConfig }) {
     this.providerManager = options.providerManager;
     this.tokenBudget = options.tokenBudget ?? DEFAULT_TOKEN_BUDGET;
     this.mode = options.mode ?? 'ask';
     this.permissionFn = options.permissionFn;
     this.questionFn = options.questionFn;
     this.maxSteps = options.maxSteps ?? 20;
+    this.fallbackManager = createFallbackManager(options.fallbackConfig);
+    this.eventTracker = createEventTracker();
 
     // Inject project context from various hint files if present
     let base = options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
@@ -67,7 +74,25 @@ export class Agent {
     }
     this.systemPrompt = base;
 
+    // Initialize with empty plugins - will load async
     this.tools = this.buildTools();
+
+    // Track conversation start
+    this.eventTracker.trackConversationStart();
+
+    // Load plugins asynchronously
+    this.loadPluginsAsync();
+  }
+
+  private async loadPluginsAsync(): Promise<void> {
+    try {
+      this.loadedPlugins = await loadPlugins();
+      if (this.loadedPlugins.length > 0) {
+        this.tools = this.buildTools();
+      }
+    } catch (err) {
+      console.warn('Failed to load plugins:', err);
+    }
   }
 
   private buildTools() {
@@ -76,6 +101,7 @@ export class Agent {
         if (before !== null) this.undoStack.push({ path, before, after });
       },
       questionFn: this.questionFn,
+      plugins: this.loadedPlugins,
     });
   }
 
@@ -117,6 +143,46 @@ export class Agent {
       name,
       description: (tool as any).description,
     }));
+  }
+
+  getEventTracker(): AgentEventTracker {
+    return this.eventTracker;
+  }
+
+  getFallbackManager(): ToolFallbackManager {
+    return this.fallbackManager;
+  }
+
+  getRecentEvents(limit?: number): AgentEvent[] {
+    return this.eventTracker.getEvents({ limit });
+  }
+
+  exportEvents(): string {
+    return this.eventTracker.exportToJSON();
+  }
+
+  async synthesizeAnswer(topic: string): Promise<string> {
+    try {
+      const model = await this.providerManager.getModel();
+      const prompt = `The user is asking about "${topic}". Please provide a clear, concise explanation with examples if relevant. Format your response in markdown.`;
+      
+      const result = streamText({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        maxOutputTokens: 2048,
+      } as any);
+
+      let answer = '';
+      for await (const part of result.fullStream) {
+        if (part.type === 'text-delta') {
+          answer += part.text;
+        }
+      }
+
+      return answer.trim();
+    } catch (err) {
+      return `I apologize, but I'm unable to generate an explanation for "${topic}" at the moment. Please try rephrasing your question or ask about a specific aspect of this topic.`;
+    }
   }
 
   clearHistory() {
@@ -193,10 +259,10 @@ export class Agent {
     });
   }
 
-  async *sendMessage(userContent: string, attachedFiles?: Array<{ path: string; content: string }>): AsyncGenerator<StreamEvent> {
+  async *sendMessage(userContent: string, attachedFiles?: Attachment[]): AsyncGenerator<StreamEvent> {
     // Build context block if files are attached
     const contextBlock = attachedFiles?.length
-      ? `<context>\n${attachedFiles.map(f => `<file path="${f.path}">\n${f.content}\n</file>`).join('\n')}\n</context>\n\n`
+      ? `<context>\n${attachedFiles.map(f => `<file path="${f.path}">\n${f.content || ''}\n</file>`).join('\n')}\n</context>\n\n`
       : '';
     const fullContent = contextBlock + userContent;
 
@@ -331,6 +397,10 @@ export class Agent {
                 toolName: toolName,
                 args: args,
               };
+              
+              // Track tool call start
+              this.eventTracker.trackToolCall(toolName, args);
+              
               yield {
                 type: 'tool-call-start',
                 toolCall: allToolCalls[part.toolCallId],
@@ -339,15 +409,111 @@ export class Agent {
             }
 
             case 'tool-result': {
-              if (allToolCalls[part.toolCallId]) {
-                allToolCalls[part.toolCallId].result = ('result' in part ? part.result : (part as any).output);
+              const toolName = part.toolName;
+              const rawToolResult = ('result' in part ? part.result : (part as any).output);
+              
+              // Normalize tool result - extract output string if it's an object
+              let toolResult: unknown = rawToolResult;
+              let resultForCheck: unknown = rawToolResult;
+              
+              if (typeof rawToolResult === 'object' && rawToolResult !== null) {
+                const resultObj = rawToolResult as Record<string, unknown>;
+                // If it has an output field, use that for checking
+                if (resultObj.output !== undefined) {
+                  resultForCheck = resultObj.output;
+                }
+                // If it has an error field, that's a failure
+                if (resultObj.error !== undefined) {
+                  resultForCheck = { error: resultObj.error, ...resultObj };
+                }
               }
+              
+              if (allToolCalls[part.toolCallId]) {
+                allToolCalls[part.toolCallId].result = toolResult;
+              }
+              
+              // Track the tool result
+              this.eventTracker.trackToolSuccess(toolName, toolResult, 0);
+              
+              // Check if we need fallback - use the normalized result
+              const needsFallback = this.fallbackManager.shouldAttemptFallback(toolName, resultForCheck);
+              
+              if (needsFallback && allToolCalls[part.toolCallId]) {
+                const args = allToolCalls[part.toolCallId].args || {};
+                
+                // Yield fallback attempt event
+                yield {
+                  type: 'system' as const,
+                  message: `Tool "${toolName}" returned no results. Attempting fallback strategies...`,
+                };
+                
+                // Try fallback asynchronously - use normalized result
+                const fallbackResult = await this.fallbackManager.attemptFallback(
+                  toolName,
+                  args,
+                  resultForCheck
+                );
+                
+                if (fallbackResult) {
+                  // Track fallback success
+                  fallbackResult.attempts.forEach(attempt => {
+                    if (attempt.success) {
+                      this.eventTracker.trackFallbackSuccess(toolName, attempt.strategy, fallbackResult.output, attempt.duration);
+                    } else {
+                      this.eventTracker.trackFallbackFailure(toolName, attempt.strategy, attempt.error || 'Unknown error', attempt.duration);
+                    }
+                  });
+                  
+                  // If it's LLM synthesis needed, generate answer immediately
+                  if (fallbackResult.output.includes('[LLM_SYNTHESIS_NEEDED]')) {
+                    const query = fallbackResult.output.replace('[LLM_SYNTHESIS_NEEDED]', '').trim();
+                    yield {
+                      type: 'system' as const,
+                      message: `No instant results found. Generating explanation for: "${query}"...`,
+                    };
+                    
+                    // Synthesize answer
+                    const synthesizedAnswer = await this.synthesizeAnswer(query);
+                    allToolCalls[part.toolCallId].result = synthesizedAnswer;
+                    
+                    yield {
+                      type: 'system' as const,
+                      message: `✓ Generated explanation based on AI knowledge`,
+                    };
+                  } else if (fallbackResult.output.includes('[CODE_SEARCH_NEEDED]')) {
+                    yield {
+                      type: 'system' as const,
+                      message: `Searching codebase for relevant examples...`,
+                    };
+                  } else if (fallbackResult.source === 'web_fetch_recovery') {
+                    // For web fetch failures, show the helpful recovery message
+                    allToolCalls[part.toolCallId].result = fallbackResult.output;
+                    yield {
+                      type: 'system' as const,
+                      message: fallbackResult.output,
+                    };
+                  } else {
+                    // Update the tool result with fallback output
+                    allToolCalls[part.toolCallId].result = fallbackResult.output;
+                    yield {
+                      type: 'system' as const,
+                      message: `Fallback successful: ${fallbackResult.output.slice(0, 200)}${fallbackResult.output.length > 200 ? '...' : ''}`,
+                    };
+                  }
+                } else {
+                  yield {
+                    type: 'system' as const,
+                    message: `Fallback strategies exhausted. I'll provide the best answer I can based on available information.`,
+                  };
+                }
+              }
+              
               yield {
                 type: 'tool-call-result',
                 toolCall: {
                   toolCallId: part.toolCallId,
                   toolName: part.toolName,
-                  result: ('result' in part ? part.result : (part as any).output),
+                  result: allToolCalls[part.toolCallId]?.result || toolResult,
                 },
               };
               break;

@@ -1,11 +1,28 @@
 import type { CommandContext } from '../types/commands.js';
+import { getAllToolSchemas, listMacros, getPluginDir, getMacroDir } from '@personal-cli/tools';
 
 export interface Command {
   cmd: string;
   description: string;
   aliases?: string[];
+  category?: string;
+  examples?: string[];
   handler: (args: string, ctx: CommandContext) => void | Promise<void>;
 }
+
+const EXAMPLE_TASKS = [
+  { task: 'Explain a concept', example: "Explain how async/await works in JavaScript" },
+  { task: 'Search code', example: "Find all uses of the useEffect hook" },
+  { task: 'Refactor', example: "Refactor this function to use TypeScript" },
+  { task: 'Debug', example: "Why am I getting 'undefined is not a function'?" },
+  { task: 'Documentation', example: "Generate JSDoc for this file" },
+];
+
+const FALLBACK_EXAMPLES = [
+  "If search fails, I'll check MDN for web docs",
+  "If file not found, I'll search similar filenames",
+  "If tool unavailable, I'll explain using my training",
+];
 
 const commands: Command[] = [
   {
@@ -138,10 +155,76 @@ const commands: Command[] = [
   },
   {
     cmd: '/help',
-    description: 'Show available commands',
-    handler: (_, ctx) => {
-      const list = commands.map(c => `${c.cmd} — ${c.description}`).join('\n');
-      ctx.addSystemMessage(list);
+    description: 'Show available commands and examples',
+    category: 'help',
+    handler: (args, ctx) => {
+      if (args === 'examples') {
+        let msg = '## Example Tasks\n\n';
+        for (const ex of EXAMPLE_TASKS) {
+          msg += `**${ex.task}:**\n> ${ex.example}\n\n`;
+        }
+        msg += '\n## Fallback Examples\n';
+        for (const fb of FALLBACK_EXAMPLES) {
+          msg += `• ${fb}\n`;
+        }
+        ctx.addSystemMessage(msg);
+        return;
+      }
+
+      if (args === 'tools') {
+        const tools = getAllToolSchemas([]);
+        const byCategory: Record<string, typeof tools> = {};
+        for (const tool of tools) {
+          if (!byCategory[tool.category]) byCategory[tool.category] = [];
+          byCategory[tool.category].push(tool);
+        }
+        let msg = '## Available Tools\n\n';
+        for (const [cat, catTools] of Object.entries(byCategory)) {
+          msg += `### ${cat}\n`;
+          for (const t of catTools.slice(0, 5)) {
+            msg += `- **${t.name}**: ${t.description}\n`;
+          }
+          if (catTools.length > 5) {
+            msg += `... and ${catTools.length - 5} more\n`;
+          }
+          msg += '\n';
+        }
+        msg += `Use "/tools" for full list. Plugin dir: ${getPluginDir()}`;
+        ctx.addSystemMessage(msg);
+        return;
+      }
+
+      // Default help
+      const categories: Record<string, Command[]> = {};
+      for (const cmd of commands) {
+        const cat = cmd.category || 'general';
+        if (!categories[cat]) categories[cat] = [];
+        categories[cat].push(cmd);
+      }
+
+      let msg = '## Available Commands\n\n';
+      for (const [cat, cmds] of Object.entries(categories)) {
+        msg += `### ${cat.charAt(0).toUpperCase() + cat.slice(1)}\n`;
+        for (const c of cmds) {
+          const aliasStr = c.aliases ? ` (${c.aliases.join(', ')})` : '';
+          msg += `${c.cmd}${aliasStr} — ${c.description}\n`;
+        }
+        msg += '\n';
+      }
+
+      msg += '\n## Quick Tips\n';
+      msg += '• Use Tab for autocompletion\n';
+      msg += '• Use ↑↓ to browse history\n';
+      msg += '• Press Ctrl+C to exit\n';
+      msg += '• Use `/help examples` for sample tasks\n';
+      msg += '• Use `/help tools` to see available tools\n';
+
+      msg += '\n## CLI Arguments\n';
+      msg += '• `--file <path>` or `-f <path>` — Attach a file (can be used multiple times)\n';
+      msg += '• `--image <path>` or `-i <path>` — Attach an image (can be used multiple times)\n';
+      msg += '• Example: `pcli -f README.md -i screenshot.png`\n';
+
+      ctx.addSystemMessage(msg);
     },
   },
   {
@@ -150,6 +233,50 @@ const commands: Command[] = [
     handler: (args, ctx) => {
       if (!args) { ctx.openMCPManager(); return; }
       // Subcommands handled in app.tsx
+    },
+  },
+  {
+    cmd: '/tools',
+    description: 'List all available tools (built-in + plugins)',
+    handler: (_, ctx) => {
+      const tools = getAllToolSchemas([]);
+      const byCategory: Record<string, typeof tools> = {};
+      for (const tool of tools) {
+        if (!byCategory[tool.category]) byCategory[tool.category] = [];
+        byCategory[tool.category].push(tool);
+      }
+      let msg = '## Available Tools\n\n';
+      for (const [cat, catTools] of Object.entries(byCategory)) {
+        msg += `### ${cat}\n`;
+        for (const t of catTools) {
+          msg += `- **${t.name}**: ${t.description}\n`;
+        }
+        msg += '\n';
+      }
+      msg += `\nPlugin dir: ${getPluginDir()}`;
+      ctx.addSystemMessage(msg);
+    },
+  },
+  {
+    cmd: '/macros',
+    description: 'List, create, or run macros',
+    handler: (args, ctx) => {
+      const macros = listMacros();
+      if (!args) {
+        if (macros.length === 0) {
+          ctx.addSystemMessage('No macros defined. Create one at: ' + getMacroDir());
+          return;
+        }
+        let msg = '## Macros\n\n';
+        for (const m of macros) {
+          msg += `- **${m.name}**: ${m.description || 'No description'}\n`;
+          msg += `  Steps: ${m.steps.length}\n`;
+        }
+        msg += `\nCreate macros at: ${getMacroDir()}`;
+        ctx.addSystemMessage(msg);
+        return;
+      }
+      ctx.addSystemMessage('Usage: /macros (list) or create JSON in: ' + getMacroDir());
     },
   },
   {
