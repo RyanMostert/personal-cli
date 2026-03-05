@@ -79,7 +79,7 @@ set ZEN_ENDPOINT=https://zen-gateway.opencode.com/api/v1  # Optional
 
 If you prefer to configure manually, edit your MCP config file:
 
-**Location:** `~/.config/personal-cli/mcp.json`
+**Location:** `~/.personal-cli/mcp.json` (Windows: `%USERPROFILE%\.personal-cli\mcp.json`)
 
 ```json
 {

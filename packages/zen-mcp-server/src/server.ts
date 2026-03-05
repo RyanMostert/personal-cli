@@ -244,8 +244,8 @@ export class ZenMCPServer {
   getMCPServerConfig(): MCPServerConfig {
     return {
       transport: 'stdio',
-      command: 'node',
-      args: [process.argv[1]],
+      command: 'npx',
+      args: ['-y', '@personal-cli/zen-mcp-server'],
       env: {
         ZEN_API_KEY: this.config.apiKey,
         ZEN_ENDPOINT: this.config.endpoint,
