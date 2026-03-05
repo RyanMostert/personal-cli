@@ -16,7 +16,7 @@ export function createEditFile(permissionFn?: PermissionCallback, onWrite?: Writ
     }),
     execute: async ({ path, oldText, newText, allowMultiple }) => {
       if (permissionFn) {
-        const ok = await permissionFn('edit_file', { path, oldText: oldText.slice(0, 100) });
+        const ok = await permissionFn('editFile', { path, oldText: oldText.slice(0, 100) });
         if (!ok) return { error: 'Permission denied by user.' };
       }
 

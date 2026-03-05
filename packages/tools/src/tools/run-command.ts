@@ -15,7 +15,7 @@ export function createRunCommand(permissionFn?: PermissionCallback) {
     }),
     execute: async ({ command, cwd }) => {
       if (permissionFn) {
-        const ok = await permissionFn('run_command', { command, cwd });
+        const ok = await permissionFn('runCommand', { command, cwd });
         if (!ok) return { error: 'Permission denied by user.' };
       }
 

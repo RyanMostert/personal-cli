@@ -76,25 +76,124 @@ export async function loadPlugins(): Promise<LoadedPlugin[]> {
 
 export function getBuiltInToolSchemas(): ToolSchema[] {
   return [
-    { name: 'readFile', description: 'Read the contents of a file', category: 'file', args: { path: { type: 'string', required: true } } },
-    { name: 'writeFile', description: 'Write content to a file', category: 'file', args: { path: { type: 'string', required: true }, content: { type: 'string', required: true } } },
-    { name: 'editFile', description: 'Edit a file using a find/replace operation', category: 'file', args: { path: { type: 'string', required: true }, search: { type: 'string', required: true }, replace: { type: 'string', required: true } } },
-    { name: 'listDir', description: 'List directory contents', category: 'file', args: { path: { type: 'string' } } },
-    { name: 'searchFiles', description: 'Search for text in files', category: 'search', args: { query: { type: 'string', required: true }, path: { type: 'string' } } },
-    { name: 'globFiles', description: 'Find files matching a glob pattern', category: 'search', args: { pattern: { type: 'string', required: true }, path: { type: 'string' } } },
-    { name: 'semanticSearch', description: 'Search files using semantic understanding', category: 'search', args: { query: { type: 'string', required: true } } },
-    { name: 'diagnostics', description: 'Get linting/type errors for files', category: 'utility', args: { path: { type: 'string' } } },
-    { name: 'runCommand', description: 'Run a shell command', category: 'system', args: { command: { type: 'string', required: true } } },
-    { name: 'webFetch', description: 'Fetch content from a URL', category: 'web', args: { url: { type: 'string', required: true } } },
-    { name: 'webSearch', description: 'Search the web', category: 'web', args: { query: { type: 'string', required: true } } },
-    { name: 'gitStatus', description: 'Show git status', category: 'git' },
-    { name: 'gitDiff', description: 'Show git diff', category: 'git', args: { path: { type: 'string' } } },
-    { name: 'gitLog', description: 'Show git commit history', category: 'git', args: { limit: { type: 'number' } } },
-    { name: 'gitCommit', description: 'Create a git commit', category: 'git', args: { message: { type: 'string', required: true } } },
-    { name: 'todoWrite', description: 'Write to a todo list', category: 'utility', args: { task: { type: 'string', required: true }, done: { type: 'boolean' } } },
-    { name: 'todoRead', description: 'Read the todo list', category: 'utility' },
-    { name: 'patch', description: 'Apply a patch to a file', category: 'file', args: { path: { type: 'string', required: true }, patch: { type: 'string', required: true } } },
-    { name: 'question', description: 'Ask the user a question', category: 'utility', args: { header: { type: 'string', required: true }, options: { type: 'array', required: true } } },
+    {
+      name: 'readFile', description: 'Read the contents of a file', category: 'file',
+      args: {
+        path: { type: 'string', required: true },
+        startLine: { type: 'number' },
+        endLine: { type: 'number' },
+      },
+    },
+    {
+      name: 'writeFile', description: 'Write content to a file', category: 'file',
+      args: {
+        path: { type: 'string', required: true },
+        content: { type: 'string', required: true },
+      },
+    },
+    {
+      name: 'editFile', description: 'Apply a surgical edit to a file by replacing an exact string', category: 'file',
+      args: {
+        path: { type: 'string', required: true },
+        oldText: { type: 'string', required: true },
+        newText: { type: 'string', required: true },
+        allowMultiple: { type: 'boolean' },
+      },
+    },
+    {
+      name: 'listDir', description: 'List directory contents', category: 'file',
+      args: { path: { type: 'string' } },
+    },
+    {
+      name: 'searchFiles', description: 'Search for text in files', category: 'search',
+      args: {
+        query: { type: 'string', required: true },
+        path: { type: 'string' },
+        filePattern: { type: 'string' },
+        caseSensitive: { type: 'boolean' },
+      },
+    },
+    {
+      name: 'globFiles', description: 'Find files matching a glob pattern', category: 'search',
+      args: {
+        pattern: { type: 'string', required: true },
+        path: { type: 'string' },
+      },
+    },
+    {
+      name: 'semanticSearch', description: 'AST-aware semantic outline search over files', category: 'search',
+      args: { patterns: { type: 'array', required: true } },
+    },
+    {
+      name: 'diagnostics', description: 'Get TypeScript type errors for specific files', category: 'utility',
+      args: { paths: { type: 'array', required: true } },
+    },
+    {
+      name: 'runCommand', description: 'Run a shell command', category: 'system',
+      args: {
+        command: { type: 'string', required: true },
+        cwd: { type: 'string' },
+      },
+    },
+    {
+      name: 'webFetch', description: 'Fetch content from a URL', category: 'web',
+      args: {
+        url: { type: 'string', required: true },
+        useRaw: { type: 'boolean' },
+      },
+    },
+    {
+      name: 'webSearch', description: 'Search the web', category: 'web',
+      args: {
+        query: { type: 'string', required: true },
+        maxResults: { type: 'number' },
+      },
+    },
+    {
+      name: 'gitStatus', description: 'Show git status', category: 'git',
+      args: { cwd: { type: 'string' } },
+    },
+    {
+      name: 'gitDiff', description: 'Show git diff', category: 'git',
+      args: {
+        staged: { type: 'boolean' },
+        file: { type: 'string' },
+        cwd: { type: 'string' },
+      },
+    },
+    {
+      name: 'gitLog', description: 'Show git commit history', category: 'git',
+      args: {
+        limit: { type: 'number' },
+        cwd: { type: 'string' },
+      },
+    },
+    {
+      name: 'gitCommit', description: 'Create a git commit', category: 'git',
+      args: {
+        message: { type: 'string', required: true },
+        cwd: { type: 'string' },
+      },
+    },
+    {
+      name: 'todoWrite', description: 'Write or update the session task list', category: 'utility',
+      args: { tasks: { type: 'array', required: true } },
+    },
+    { name: 'todoRead', description: 'Read the session task list', category: 'utility' },
+    {
+      name: 'patch', description: 'Apply a patch to a file', category: 'file',
+      args: {
+        path: { type: 'string', required: true },
+        patch: { type: 'string', required: true },
+      },
+    },
+    {
+      name: 'question', description: 'Ask the user a question', category: 'utility',
+      args: {
+        header: { type: 'string', required: true },
+        options: { type: 'array', required: true },
+      },
+    },
   ];
 }
 

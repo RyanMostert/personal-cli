@@ -1,6 +1,4 @@
 
-import { globalAgent } from 'https';
-
 async function run() {
   const url = 'https://music.youtube.com/watch?v=RXT5OvdtTT0&list=RDAMVMRXT5OvdtTT0';
   console.log('Fetching ' + url);

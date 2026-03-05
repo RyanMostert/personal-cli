@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import type { MCPServerConfig } from '@personal-cli/mcp-client';
@@ -21,6 +21,7 @@ export function saveMCPConfig(name: string, config: MCPServerConfig): void {
   configs[name] = config;
   
   const mcpPath = join(homedir(), CONFIG_DIR, 'mcp.json');
+  mkdirSync(join(homedir(), CONFIG_DIR), { recursive: true });
   writeFileSync(mcpPath, JSON.stringify(configs, null, 2));
 }
 
@@ -29,5 +30,6 @@ export function removeMCPConfig(name: string): void {
   delete configs[name];
   
   const mcpPath = join(homedir(), CONFIG_DIR, 'mcp.json');
+  mkdirSync(join(homedir(), CONFIG_DIR), { recursive: true });
   writeFileSync(mcpPath, JSON.stringify(configs, null, 2));
 }

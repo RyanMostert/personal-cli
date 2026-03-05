@@ -1,10 +1,7 @@
-<!--
-# openrouter.md
-This file contains the API key for OpenRouter. **Keep this file secure and do not expose its contents publicly.**
--->
-
 # openrouter.md
 
-This file contains an OpenRouter API key for authentication and integration with the OpenRouter platform. **Do not share this file publicly.**
+Set the `OPENROUTER_API_KEY` environment variable or configure it via the CLI auth system. Do **not** commit API keys here.
 
-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
+```
+OPENROUTER_API_KEY=sk-or-v1-...
+```

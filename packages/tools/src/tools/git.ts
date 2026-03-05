@@ -82,7 +82,7 @@ export function createGitCommit(permissionFn?: PermissionCallback) {
     }),
     execute: async ({ message, cwd }) => {
       if (permissionFn) {
-        const ok = await permissionFn('git_commit', { message });
+        const ok = await permissionFn('gitCommit', { message });
         if (!ok) return { error: 'Permission denied by user.' };
       }
       try {
