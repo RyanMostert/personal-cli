@@ -1,3 +1,5 @@
+import { tool } from 'ai';
+import { z } from 'zod';
 import { readFile } from './tools/read-file.js';
 import { createWriteFile } from './tools/write-file.js';
 import { createEditFile } from './tools/edit-file.js';
@@ -20,6 +22,7 @@ import {
   type WriteCallback,
   type QuestionCallback,
   type LoadedPlugin,
+  type ToolArgSchema,
   DEFAULT_PERMISSION_RULES,
   MODE_RULES,
 } from './types.js';
@@ -53,7 +56,7 @@ export function createTools(
     .then(mod => { if (mod && typeof mod.setReadFilePermission === 'function') mod.setReadFilePermission(resolvedPermission); })
     .catch(() => { /* ignore */ });
 
-  const baseTools = {
+  const baseTools: Record<string, any> = {
     readFile,
     writeFile: createWriteFile(resolvedPermission, onWrite),
     editFile: createEditFile(resolvedPermission, onWrite),
@@ -78,11 +81,47 @@ export function createTools(
   // Merge plugin tools
   if (plugins && plugins.length > 0) {
     for (const plugin of plugins) {
-      Object.assign(baseTools, plugin.tools);
+      for (const schema of plugin.manifest.tools) {
+        const fn = plugin.tools[schema.name] as any;
+        if (typeof fn === 'function') {
+          baseTools[schema.name] = tool({
+            description: schema.description,
+            execute: fn,
+            inputSchema: convertArgsToZod(schema.args),
+          });
+        }
+      }
     }
   }
 
   return baseTools;
+}
+
+function convertArgsToZod(args?: Record<string, ToolArgSchema>) {
+  if (!args || Object.keys(args).length === 0) {
+    return z.object({});
+  }
+
+  const shape: any = {};
+  for (const [key, config] of Object.entries(args)) {
+    let zodType: any;
+    switch (config.type) {
+      case 'string': zodType = z.string(); break;
+      case 'number': zodType = z.number(); break;
+      case 'boolean': zodType = z.boolean(); break;
+      case 'object': zodType = z.record(z.any()); break;
+      case 'array': zodType = z.array(z.any()); break;
+      default: zodType = z.any();
+    }
+
+    if (config.description) zodType = zodType.describe(config.description);
+    if (!config.required) zodType = zodType.optional();
+    if (config.default !== undefined) zodType = zodType.default(config.default);
+
+    shape[key] = zodType;
+  }
+
+  return z.object(shape);
 }
 
 function makePermissionResolver(

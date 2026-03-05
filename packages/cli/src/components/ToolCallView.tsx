@@ -136,10 +136,6 @@ export function ToolCallView({ tool, startTime = Date.now(), focused = false, ex
   const isError = Boolean(tool.error) || resultSummary?.isError === true;
   const isRunFinished = tool.result !== undefined || Boolean(tool.error);
 
-  // Focus/expand styling
-  const focusBorderColor = focused ? '#FF00AA' : (isError ? theme.error : isRunFinished ? theme.success : theme.warning);
-  const borderStyle = focused ? 'double' : 'single';
-
   const isEditFile = tool.toolName === 'edit_file';
   const editArgs = isEditFile ? (tool.args as any) : null;
   const fileInfo = getFileInfo(tool);
@@ -155,122 +151,73 @@ export function ToolCallView({ tool, startTime = Date.now(), focused = false, ex
     return () => clearInterval(interval);
   }, [isRunFinished, startTime]);
 
-  const borderColor = isError ? theme.error : isRunFinished ? theme.success : theme.warning;
   const duration = isRunFinished ? elapsed : Date.now() - startTime;
+  const statusColor = isError ? theme.error : isRunFinished ? theme.success : theme.warning;
 
   return (
     <Box
       marginY={0}
-      paddingLeft={2}
-      borderLeft
-      borderStyle={borderStyle}
-      borderColor={focusBorderColor}
+      paddingLeft={1}
       flexDirection="column"
-      backgroundColor={isRunFinished ? 'transparent' : '#1A1A1A'}
-
     >
-      {/* Status row - Claude Code style */}
+      {/* Header Row */}
       <Box flexDirection="row" alignItems="center">
-        <Box marginRight={1}>
-          {!isRunFinished ? (
-            <MinecraftSpinner />
-          ) : isError ? (
-            <Text color={theme.error} bold>⎿</Text>
-          ) : (
-            <Text color={theme.success} bold>●</Text>
-          )}
-        </Box>
-        <Box flexShrink={0} marginRight={1}>
-          {!isRunFinished ? (
-            <Text color={theme.warning} bold> ✶ Working… </Text>
-          ) : isError ? (
-            <Text color={theme.error} bold> ❌ </Text>
-          ) : (
-            <Text color={theme.success} bold> ✔ </Text>
-          )}
-          <Text color={isRunFinished && !isError ? theme.toolName : isError ? theme.error : theme.assistantLabel} bold>
-            {tool.toolName}
-          </Text>
-        </Box>
+        <Text color={statusColor} bold>{isRunFinished ? (isError ? '✖' : '✔') : '⠶'} </Text>
+        <Text color={theme.toolName} bold>{tool.toolName.toUpperCase()}</Text>
+        <Text color={theme.dim}> {formatDuration(duration)}</Text>
         
-        {/* Duration */}
-        <Box paddingLeft={1}>
-          <Text color={theme.dim}>
-            {isRunFinished ? `(${formatDuration(duration)})` : `${formatDuration(duration)}`}
-          </Text>
-        </Box>
+        {focused && <Text color="#FF00AA" bold> ◀</Text>}
         
-        {/* Target info */}
         {!isRunFinished && tool.args && (
           <Box paddingLeft={1}>
             <Text color={theme.muted}>
-              {JSON.stringify(tool.args).substring(0, 60)}
-              {JSON.stringify(tool.args).length > 60 ? '…' : ''}
+              {JSON.stringify(tool.args).substring(0, 40)}...
             </Text>
           </Box>
         )}
       </Box>
 
       {/* File info row for read/write operations */}
-      {fileInfo && isRunFinished && (
-        <Box paddingLeft={4} marginTop={0}>
+      {fileInfo && (
+        <Box paddingLeft={2}>
           <Text color={theme.dim}>⎿ </Text>
-          <Text color={theme.primary}>
+          <Text color={theme.primary} dimColor={isRunFinished}>
             {fileInfo.path}
-            {fileInfo.lineCount && ` (${fileInfo.lineCount} lines)`}
+            {fileInfo.lineCount && ` [${fileInfo.lineCount}L]`}
           </Text>
         </Box>
       )}
 
-       {/* Focus/expand/collapse row */}
-       {isRunFinished && !isEditFile && (
-         <Box paddingLeft={3} alignItems="center">
-           {focused && (
-             <Text color="#FF00AA" bold>❯ </Text>
-           )}
-           <Text color={theme.primary} bold>
-             {expanded ? '▼ Collapse' : '▶ Expand'}
-           </Text>
-           {onToggleExpand && focused && (
-             <Text color={theme.dim}> (Press ENTER/TAB)</Text>
-           )}
-         </Box>
-       )}
-
-       {/* Result output row */}
-       {isRunFinished && resultSummary !== null && resultSummary.text && !isEditFile && (
-         expanded ? (
-           <Box paddingLeft={5}>
-             <Text color={resultSummary.isError ? theme.error : theme.text} wrap="wrap">
-               {typeof tool.result === 'string' ? tool.result : JSON.stringify(tool.result, null, 2)}
-             </Text>
-           </Box>
-         ) : (
-           <Box paddingLeft={5}>
-             <Text color={theme.dim}>⎿ </Text>
-             <Text color={resultSummary.isError ? theme.error : theme.dim} wrap="wrap">
-               {resultSummary.text}
-             </Text>
-             {resultSummary.lineCount && resultSummary.lineCount > 1 && (
-               <Text color={theme.muted}> ({resultSummary.lineCount} lines)</Text>
-             )}
-           </Box>
-         )
-       )}
+      {/* Result output - simplified */}
+      {isRunFinished && resultSummary !== null && !isEditFile && (
+        <Box paddingLeft={2} flexDirection="column">
+          <Box flexDirection="row">
+            <Text color={theme.dim}>⎿ </Text>
+            <Text color={isError ? theme.error : theme.dim} wrap="wrap">
+              {expanded ? (typeof tool.result === 'string' ? tool.result : JSON.stringify(tool.result, null, 2)) : resultSummary.text}
+            </Text>
+            {isRunFinished && !expanded && (
+               <Text color={theme.primary} bold>
+                 {focused ? ' (ENTER to expand)' : ''}
+               </Text>
+            )}
+          </Box>
+        </Box>
+      )}
 
       {/* Special rendering for edits */}
       {isEditFile && editArgs && (
-        <Box paddingLeft={4}>
+        <Box paddingLeft={2}>
           <PatchView path={editArgs.path} oldText={editArgs.oldText} newText={editArgs.newText} />
         </Box>
       )}
       
       {/* Error display */}
-      {isError && tool.error && (
-        <Box paddingLeft={4} marginTop={0}>
+      {isError && tool.error && !expanded && (
+        <Box paddingLeft={2} marginTop={0}>
           <Text color={theme.dim}>⎿ </Text>
-          <Text color={theme.error} wrap="wrap">
-            {typeof tool.error === 'string' ? tool.error : JSON.stringify(tool.error)}
+          <Text color={theme.error} wrap="wrap" bold>
+            ERROR: {typeof tool.error === 'string' ? tool.error.slice(0, 100) : 'Operation failed'}
           </Text>
         </Box>
       )}

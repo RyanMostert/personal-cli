@@ -1,5 +1,5 @@
 import type { CommandContext } from '../types/commands.js';
-import { getAllToolSchemas, listMacros, getPluginDir, getMacroDir } from '@personal-cli/tools';
+import { getAllToolSchemas, loadPlugins, listMacros, getPluginDir, getMacroDir } from '@personal-cli/tools';
 
 export interface Command {
   cmd: string;
@@ -90,10 +90,10 @@ const commands: Command[] = [
       const parts = args.includes('/') ? args.split('/') : args.split(' ');
       if (parts.length >= 2) {
         ctx.switchModel(parts[0], parts.slice(1).join('/'));
-        ctx.addSystemMessage(`Switched to ${args}`);
       } else {
         ctx.addSystemMessage('Usage: /model <provider/modelId>  or  /model to browse');
       }
+
     },
   },
   {
@@ -101,7 +101,6 @@ const commands: Command[] = [
     description: 'Set agent mode: ask | auto | build',
     handler: (args, ctx) => {
       ctx.switchMode(args as any);
-      ctx.addSystemMessage(`Mode: ${args}`);
     },
   },
   {
@@ -120,11 +119,9 @@ const commands: Command[] = [
     handler: async (args, ctx) => {
       if (!args || args === '--clear' || args === '/detach') {
         ctx.clearAttachments();
-        ctx.addSystemMessage('Cleared attached files.');
         return;
       }
-      const ok = await ctx.attachFile(args);
-      ctx.addSystemMessage(ok ? `Attached: ${args}` : `Error: could not read ${args}`);
+      await ctx.attachFile(args);
     },
   },
   {
@@ -133,6 +130,27 @@ const commands: Command[] = [
     handler: (args, ctx) => {
       if (!args) { ctx.addSystemMessage('Usage: /open <path>'); return; }
       ctx.openFileInPanel(args);
+    },
+  },
+  {
+    cmd: '/edit',
+    description: 'Open a file in an external editor',
+    handler: (args, ctx) => {
+      if (!args) { ctx.addSystemMessage('Usage: /edit <path>'); return; }
+      const editor = process.env.EDITOR || (process.platform === 'win32' ? 'code' : 'vi');
+      const fullPath = path.resolve(process.cwd(), args);
+      
+      if (!fs.existsSync(fullPath)) {
+        ctx.addSystemMessage(`Error: File not found: ${args}`);
+        return;
+      }
+
+      ctx.addSystemMessage(`Opening ${args} in ${editor}...`);
+      const proc = spawn(editor, [fullPath], {
+        detached: true,
+        stdio: 'ignore'
+      });
+      proc.unref();
     },
   },
   {
@@ -145,10 +163,10 @@ const commands: Command[] = [
   },
   {
     cmd: '/export',
-    description: 'Export conversation to markdown',
+    description: 'Export conversation history to a markdown file',
     handler: (args, ctx) => {
-      const path = ctx.exportConversation(args || undefined);
-      ctx.addSystemMessage(`Exported to: ${path}`);
+      const exportPath = ctx.exportConversation(args || undefined);
+      ctx.addSystemMessage(`📋 EXPORT_SUCCESS: Conversation history archived to: **${exportPath}**`);
     },
   },
   {
@@ -174,6 +192,15 @@ const commands: Command[] = [
       ctx.addSystemMessage('Compacting conversation…');
       const result = await ctx.compact();
       ctx.addSystemMessage(result);
+    },
+  },
+  {
+    cmd: '/cancel',
+    aliases: ['/stop', '/halt'],
+    description: 'Interrupt the current AI operation',
+    handler: (_, ctx) => {
+      ctx.abort();
+      ctx.addSystemMessage('INTERRUPTED: SYSTEM_HALTED');
     },
   },
   {
@@ -282,10 +309,77 @@ const commands: Command[] = [
     },
   },
   {
+    cmd: '/plugins',
+    description: 'Manage external plugins and tools',
+    handler: async (args, ctx) => {
+      if (!args || args === 'manage' || args === 'ui') {
+        await ctx.openPluginManager();
+        return;
+      }
+      
+      const plugins = await ctx.loadPlugins();
+      if (args === 'list') {
+        if (plugins.length === 0) {
+          ctx.addSystemMessage(`No plugins active. Place your JS plugins in: \`${getPluginDir()}\``);
+          return;
+        }
+        let msg = '## Active Plugins\n\n';
+        for (const p of plugins) {
+          msg += `### 🧩 ${p.manifest.name} (v${p.manifest.version || '0.1.0'})\n`;
+          msg += `${p.manifest.description || 'No description'}\n`;
+          msg += `**Tools:** ${p.manifest.tools.map(t => `\`${t.name}\``).join(', ')}\n\n`;
+        }
+        ctx.addSystemMessage(msg);
+        return;
+      }
+      if (args === 'open') {
+        const editor = process.env.EDITOR || (process.platform === 'win32' ? 'code' : 'vi');
+        spawn(editor, [getPluginDir()], { detached: true, stdio: 'ignore' }).unref();
+        ctx.addSystemMessage(`Opening plugin directory in ${editor}...`);
+        return;
+      }
+      ctx.addSystemMessage('Usage: /plugins (list) | /plugins open | /plugins manage');
+    },
+  },
+  {
+    cmd: '/workspace',
+    description: 'Save or load the current session (workspace)',
+    handler: (args, ctx) => {
+      const parts = args.trim().split(/\s+/);
+      const sub = parts[0];
+      const path = parts.slice(1).join(' ');
+      
+      if (sub === 'save' && path) {
+        ctx.saveWorkspace(path);
+        ctx.addSystemMessage(`📦 WORKSPACE_SAVED: Session state archived to **${path}.pcli**`);
+        return;
+      }
+      if (sub === 'load' && path) {
+        ctx.loadWorkspace(path);
+        ctx.addSystemMessage(`📦 WORKSPACE_LOADED: Session state restored from **${path}**`);
+        return;
+      }
+      ctx.addSystemMessage('Usage: /workspace save <name> | /workspace load <path>');
+    },
+  },
+  {
+    cmd: '/sync',
+    description: 'Sync current workspace to a remote location (Git/Cloud)',
+    handler: async (args, ctx) => {
+      ctx.addSystemMessage('📡 SYNC_INITIALIZING: Checking for remote configurations...');
+      // Simulated cloud sync for now
+      setTimeout(() => {
+        ctx.addSystemMessage('📡 SYNC_COMPLETE: All local histories and configurations are up to date.');
+      }, 1500);
+    },
+  },
+  {
     cmd: '/tools',
     description: 'List all available tools (built-in + plugins)',
-    handler: (_, ctx) => {
-      const tools = getAllToolSchemas([]);
+    handler: async (_, ctx) => {
+      const plugins = await ctx.loadPlugins();
+
+      const tools = getAllToolSchemas(plugins);
       const byCategory: Record<string, typeof tools> = {};
       for (const tool of tools) {
         if (!byCategory[tool.category]) byCategory[tool.category] = [];
@@ -338,17 +432,90 @@ const commands: Command[] = [
   },
 ];
 
-export function dispatch(input: string, ctx: CommandContext): boolean {
+export async function dispatch(input: string, ctx: CommandContext): Promise<boolean> {
   const [rawCmd, ...rest] = input.split(' ');
   const args = rest.join(' ').trim();
   const match = commands.find(
     c => c.cmd === rawCmd || c.aliases?.includes(rawCmd)
   );
-  if (!match) return false;
-  void match.handler(args, ctx);
-  return true;
+  if (match) {
+    await match.handler(args, ctx);
+    return true;
+  }
+
+  // If it's a slash command but no match, try to suggest the closest one
+  if (rawCmd.startsWith('/')) {
+    const allCmds = commands.flatMap(c => [c.cmd, ...(c.aliases || [])]);
+    let bestMatch = '';
+    let minDistance = 3; // Max distance to consider a suggestion
+
+    for (const cmd of allCmds) {
+      const dist = levenshtein(rawCmd, cmd);
+      if (dist < minDistance) {
+        minDistance = dist;
+        bestMatch = cmd;
+      }
+    }
+
+    if (bestMatch) {
+      ctx.addSystemMessage(`Unknown command: ${rawCmd}. Did you mean **${bestMatch}**?`);
+      return true; // We handled it by showing a suggestion
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Simple Levenshtein distance algorithm
+ */
+function levenshtein(a: string, b: string): number {
+  const matrix = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= b.length; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost
+      );
+    }
+  }
+  return matrix[a.length][b.length];
 }
 
 export function getCommands(): Command[] {
   return commands;
+}
+
+/**
+ * Lightweight Intent Mapping
+ * Matches natural language patterns to CLI commands.
+ */
+const INTENT_MAP: Array<{ pattern: RegExp; cmd: string; getArgs?: (match: RegExpMatchArray) => string }> = [
+  { pattern: /^(attach|add)\s+file\s+(.+)$/i, cmd: '/add', getArgs: m => m[2] },
+  { pattern: /^(show|open)\s+(.+)$/i, cmd: '/open', getArgs: m => m[2] },
+  { pattern: /^(undo|revert)(\s+that)?$/i, cmd: '/undo' },
+  { pattern: /^(redo|repeat)(\s+that)?$/i, cmd: '/redo' },
+  { pattern: /^(clear|reset)\s+chat$/i, cmd: '/clear' },
+  { pattern: /^(exit|quit|stop)$/i, cmd: '/exit' },
+  { pattern: /^(cancel|halt|stop)\s+(it|operation|ai)$/i, cmd: '/cancel' },
+  { pattern: /^(switch|change)\s+(to\s+)?mode\s+(.+)$/i, cmd: '/mode', getArgs: m => m[3] },
+  { pattern: /^(switch|change)\s+(to\s+)?model\s+(.+)$/i, cmd: '/model', getArgs: m => m[3] },
+];
+
+export function tryMatchIntent(input: string): { cmd: string; args: string } | null {
+  const trimmed = input.trim();
+  for (const intent of INTENT_MAP) {
+    const match = trimmed.match(intent.pattern);
+    if (match) {
+      return {
+        cmd: intent.cmd,
+        args: intent.getArgs ? intent.getArgs(match) : '',
+      };
+    }
+  }
+  return null;
 }

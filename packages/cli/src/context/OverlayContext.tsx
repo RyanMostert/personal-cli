@@ -10,6 +10,8 @@ type OverlayType =
   | 'keybind-manager'
   | 'mcp-manager'
   | 'mcp-wizard'
+  | 'plugin-manager'
+  | 'plugin-wizard'
   | null;
 
 interface OverlayState {

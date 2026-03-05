@@ -159,27 +159,59 @@ export function CommandAutocomplete({ filtered, selectedIndex, visible, input, s
   if (!visible) return null;
   
   const suggestions = showSuggestions && input ? getSuggestions(input) : [];
+  const selected = filtered[selectedIndex];
 
   return (
     <Box flexDirection="column" marginBottom={1} paddingX={1}>
-      {filtered.length > 0 && (
-        <Box borderStyle="single" borderColor="#58A6FF" flexDirection="column" paddingX={1}>
-          {filtered.map((cmd, index) => (
-            <Box key={cmd.cmd}>
-              <Text color={index === selectedIndex ? '#58A6FF' : '#8C959F'}>
-                {index === selectedIndex ? '▶ ' : '  '}
-              </Text>
-              <Text
-                color={index === selectedIndex ? '#C9D1D9' : '#8C959F'}
-                bold={index === selectedIndex}
-              >
-                {cmd.hint.padEnd(28)}
-              </Text>
-              <Text color="#484F58">{cmd.description}</Text>
+      <Box flexDirection="row">
+        {/* Command List */}
+        {filtered.length > 0 && (
+          <Box borderStyle="single" borderColor="#58A6FF" flexDirection="column" paddingX={1} minWidth={40}>
+            {filtered.map((cmd, index) => (
+              <Box key={cmd.cmd}>
+                <Text color={index === selectedIndex ? '#58A6FF' : '#8C959F'}>
+                  {index === selectedIndex ? '▶ ' : '  '}
+                </Text>
+                <Text
+                  color={index === selectedIndex ? '#C9D1D9' : '#8C959F'}
+                  bold={index === selectedIndex}
+                >
+                  {cmd.cmd.padEnd(12)}
+                </Text>
+                <Text color={index === selectedIndex ? "#C9D1D9" : "#484F58"}>{cmd.description.slice(0, 30)}...</Text>
+              </Box>
+            ))}
+          </Box>
+        )}
+
+        {/* Intelligence Hint Preview */}
+        {selected && (
+          <Box 
+            flexDirection="column" 
+            borderStyle="single" 
+            borderColor="#D29922" 
+            paddingX={1} 
+            marginLeft={1}
+            flexGrow={1}
+          >
+            <Box position="absolute" marginTop={-1} marginLeft={1} backgroundColor="black" paddingX={1}>
+              <Text color="#D29922" bold> 💡 INTELLIGENCE:HINT </Text>
             </Box>
-          ))}
-        </Box>
-      )}
+            <Box marginTop={0} flexDirection="column">
+              <Text color="white" bold>{selected.hint}</Text>
+              <Text color="#8C959F" italic>{selected.description}</Text>
+              {selected.examples && selected.examples.length > 0 && (
+                <Box flexDirection="column" marginTop={1}>
+                  <Text color="#00E5FF">Examples:</Text>
+                  {selected.examples.map((ex, i) => (
+                    <Text key={i} color="#484F58"> • {ex}</Text>
+                  ))}
+                </Box>
+              )}
+            </Box>
+          </Box>
+        )}
+      </Box>
       
       {suggestions.length > 0 && (
         <Box marginTop={filtered.length > 0 ? 1 : 0} flexDirection="column">

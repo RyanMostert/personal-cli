@@ -25,6 +25,7 @@ export function InputBox({ value, onChange, onSubmit, isDisabled = false, isStre
 
   return (
     <Box
+      flexDirection="column"
       borderStyle="single"
       borderTop
       borderBottom={false}
@@ -34,26 +35,30 @@ export function InputBox({ value, onChange, onSubmit, isDisabled = false, isStre
       paddingX={1}
       paddingY={0}
       flexShrink={0}
-      flexDirection="column"
     >
-      {/* Show attachments above input */}
+      {/* Attachment Inventory Preview */}
       {hasAttachments && (
-        <Box flexDirection="column" marginBottom={0}>
-          {attachedFiles.map((att) => (
-            <Box key={att.id} flexDirection="row">
-              <Text color={theme.dim}>├─</Text>
-              <Text color={att.type === 'image' ? theme.primary : theme.success}>
-                {att.type === 'image' ? '🖼️' : '📄'} {att.name}
-              </Text>
-              {att.size && (
-                <Text color={theme.muted}> ({formatFileSize(att.size)})</Text>
-              )}
-            </Box>
-          ))}
+        <Box flexDirection="column" marginBottom={0} borderBottom borderStyle="single" borderColor={theme.dim} paddingY={0}>
+          <Box marginBottom={0}>
+            <Text color={theme.primary} bold>📦 INVENTORY:ATTACHMENTS </Text>
+            <Text color={theme.dim}>[{attachedFiles.length} items]</Text>
+          </Box>
+          <Box flexDirection="row" flexWrap="wrap">
+            {attachedFiles.map((att) => (
+              <Box key={att.id} marginRight={2}>
+                <Text color={att.type === 'image' ? theme.primary : theme.success}>
+                  {att.type === 'image' ? '🖼️' : '📄'} {att.name.slice(0, 15)}{att.name.length > 15 ? '…' : ''}
+                </Text>
+                {att.size && (
+                  <Text color={theme.dim}> ({formatFileSize(att.size)})</Text>
+                )}
+              </Box>
+            ))}
+          </Box>
         </Box>
       )}
       
-      <Box>
+      <Box marginTop={hasAttachments ? 0 : 0}>
         <Box marginRight={1} flexShrink={0}>
           <Text color={isDisabled ? theme.dim : theme.primary} bold>❯</Text>
         </Box>

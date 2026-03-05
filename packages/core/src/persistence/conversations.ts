@@ -90,6 +90,26 @@ export function renameConversation(id: string, title: string): boolean {
   } catch { return false; }
 }
 
+export interface SavedWorkspace extends SavedConversation {
+  attachments: any[];
+  tokensUsed: number;
+  cost: number;
+}
+
+export function saveWorkspace(path: string, data: SavedWorkspace): void {
+  const fullPath = path.endsWith('.pcli') ? path : `${path}.pcli`;
+  writeFileSync(fullPath, JSON.stringify(data, null, 2));
+}
+
+export function loadWorkspace(path: string): SavedWorkspace | null {
+  if (!existsSync(path)) return null;
+  try {
+    return JSON.parse(readFileSync(path, 'utf-8'));
+  } catch {
+    return null;
+  }
+}
+
 export function exportConversation(
   messages: Message[],
   model: ActiveModel,

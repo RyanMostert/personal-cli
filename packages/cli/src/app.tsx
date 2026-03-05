@@ -16,8 +16,10 @@ import { ProviderWizard } from './components/ProviderWizard.js';
 import { HistoryPicker } from './components/HistoryPicker.js';
 import { MCPManager } from './components/MCPManager.js';
 import { MCPWizard } from './components/MCPWizard.js';
+import { PluginManager } from './components/PluginManager.js';
+import { PluginWizard } from './components/PluginWizard.js';
 import { CommandAutocomplete, filterCommands } from './components/CommandAutocomplete.js';
-import { dispatch, getCommands } from './commands/registry.js';
+import { dispatch, getCommands, tryMatchIntent } from './commands/registry.js';
 import type { CommandContext } from './types/commands.js';
 import { FileAutocomplete } from './components/FileAutocomplete.js';
 import { SidePanel } from './components/SidePanel.js';
@@ -37,7 +39,8 @@ import {
   loadMCPConfig, saveMCPConfig, removeMCPConfig,
 } from '@personal-cli/core';
 import { MCPClientManager } from '@personal-cli/mcp-client';
-import { promises as fs } from 'fs';
+import { promises as fs, existsSync } from 'fs';
+import { join } from 'path';
 import clipboardy from 'clipboardy';
 
 
@@ -55,7 +58,8 @@ export function App({ initialAttachments = [] }: AppProps) {
     sendMessage, abort, addSystemMessage, clearMessages, switchModel, switchMode,
     isPickingModel, openModelPicker, closeModelPicker,
     attachFile, clearAttachments, loadHistory, compact, renameConversation,
-    undo, redo, initProject, getTools,
+    undo, redo, initProject, getTools, loadPlugins, saveWorkspace, loadWorkspace,
+    synthesizeAnswer,
   } = useAgent();
 
   const allVisibleToolCalls = useMemo(() => {
@@ -109,6 +113,11 @@ export function App({ initialAttachments = [] }: AppProps) {
   const mcpWizardMode = overlay.type === 'mcp-wizard' ? (overlay.props?.mode as 'add' | 'edit') : null;
   const mcpWizardServer = overlay.type === 'mcp-wizard' ? (overlay.props?.serverName as string) : null;
 
+  const isManagingPlugins = overlay.type === 'plugin-manager';
+  const pluginWizardMode = overlay.type === 'plugin-wizard' ? (overlay.props?.mode as 'add' | 'edit') : null;
+  const pluginWizardName = overlay.type === 'plugin-wizard' ? (overlay.props?.pluginName as string) : null;
+  const [activePlugins, setActivePlugins] = useState<import('@personal-cli/tools').LoadedPlugin[]>([]);
+
   useEffect(() => { setInputHistory(loadPromptHistory()); }, []);
 
   // Load initial attachments from CLI arguments
@@ -152,6 +161,65 @@ export function App({ initialAttachments = [] }: AppProps) {
     }
   }, [streamingThought, isStreaming, sidePanel?.type]);
 
+  const handleCreatePlugin = useCallback(async (data: { name: string; version: string; description: string; createTemplate: boolean }) => {
+    try {
+      const { getPluginDir } = await import('@personal-cli/tools');
+      const pluginDir = getPluginDir();
+      const dir = join(pluginDir, data.name.toLowerCase().replace(/\s+/g, '-'));
+      
+      if (!existsSync(dir)) await fs.mkdir(dir, { recursive: true });
+      
+      const manifest: any = {
+        name: data.name,
+        version: data.version,
+        description: data.description,
+        tools: []
+      };
+      
+      await fs.writeFile(join(dir, 'plugin.json'), JSON.stringify(manifest, null, 2));
+      
+      if (data.createTemplate) {
+        const template = `// Personal CLI Plugin: ${data.name}
+export const helloWorld = async ({ name = 'World' }) => {
+  return { output: \`Hello, \${name}! from ${data.name}\` };
+};
+`;
+        await fs.writeFile(join(dir, 'index.js'), template);
+        
+        // Update manifest with the helloWorld tool
+        manifest.tools = [{
+          name: 'helloWorld',
+          description: 'A sample tool from the plugin',
+          category: 'custom',
+          args: { name: { type: 'string', required: false } }
+        } as any];
+        await fs.writeFile(join(dir, 'plugin.json'), JSON.stringify(manifest, null, 2));
+      }
+      
+      const plugins = await loadPlugins();
+      setActivePlugins(plugins);
+      close();
+    } catch (err) {
+      addSystemMessage(`✗ Failed to create plugin: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [addSystemMessage, close, loadPlugins]);
+
+  const handleDeletePlugin = useCallback(async (name: string) => {
+    try {
+      const { getPluginDir } = await import('@personal-cli/tools');
+      const pluginDir = getPluginDir();
+      const dir = join(pluginDir, name.toLowerCase().replace(/\s+/g, '-'));
+      
+      if (existsSync(dir)) {
+        await fs.rm(dir, { recursive: true, force: true });
+        const plugins = await loadPlugins();
+        setActivePlugins(plugins);
+      }
+    } catch (err) {
+      addSystemMessage(`✗ Failed to delete plugin: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [addSystemMessage, loadPlugins]);
+
   const openFileInPanel = useCallback(async (fp: string) => {
     try {
       const content = await fs.readFile(fp, 'utf-8');
@@ -171,6 +239,26 @@ export function App({ initialAttachments = [] }: AppProps) {
       addSystemMessage(`✗ Failed to save ${path}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }, [addSystemMessage]);
+
+  const handleExplainChange = useCallback(async () => {
+    if (!pendingPermission) return;
+    const { toolName, args } = pendingPermission;
+    if (toolName !== 'edit_file' && toolName !== 'patch') return;
+
+    setSidePanel({ type: 'thoughts', thought: 'Analysing proposed changes...' });
+    
+    const diffText = toolName === 'edit_file' 
+      ? `File: ${args?.path}\nSearch: ${args?.search}\nReplace: ${args?.replace}`
+      : `Patch: ${args?.patch}`;
+
+    try {
+      const topic = `Explain what these code changes do in plain English. Focus on the impact and intent:\n\n${diffText}`;
+      const explanation = await synthesizeAnswer(topic);
+      setSidePanel({ type: 'thoughts', thought: explanation });
+    } catch (err) {
+      setSidePanel({ type: 'thoughts', thought: 'Error generating explanation.' });
+    }
+  }, [pendingPermission, synthesizeAnswer]);
 
   const showCommandAutocomplete =
     inputValue.startsWith('/') && !inputValue.includes(' ') &&
@@ -206,21 +294,56 @@ export function App({ initialAttachments = [] }: AppProps) {
     }
   }, [toolCalls]);
 
-  const anyOverlay = isPickingModel || isPickingProvider || !!pendingProviderAdd || showHistory || showCommandAutocomplete || showFileAutocomplete || showFileExplorer || showKeyHelp || showKeybindManager || isManagingMCP || !!mcpWizardMode;
+  const anyOverlay = isPickingModel || isPickingProvider || !!pendingProviderAdd || showHistory || showCommandAutocomplete || showFileAutocomplete || showFileExplorer || showKeyHelp || showKeybindManager || isManagingMCP || !!mcpWizardMode || isManagingPlugins || !!pluginWizardMode;
+
+  const [leaderKeyActive, setLeaderKeyActive] = useState(false);
 
   useInput((input, key) => {
-    // Focused tool call navigation using Ctrl+T
-    if (allVisibleToolCalls.length > 0 && !anyOverlay && !isSidePanelFocused) {
-      if (key.ctrl && input === 't') {
-        setFocusedToolCallId(currentId => {
-          if (!currentId) return allVisibleToolCalls[0].toolCallId;
-          const idx = allVisibleToolCalls.findIndex(tc => tc.toolCallId === currentId);
-          const nextIdx = (idx + 1) % allVisibleToolCalls.length;
-          return allVisibleToolCalls[nextIdx].toolCallId;
-        });
+    // 1. Leader Key Detection (Ctrl+X)
+    if (key.ctrl && input === 'x') {
+      setLeaderKeyActive(true);
+      return;
+    }
+
+    // 2. Handling Leader Key Sequences
+    if (leaderKeyActive) {
+      setLeaderKeyActive(false); // Reset after any key
+
+      // Ctrl+X + E: Explain Change (Context: pendingPermission)
+      if (input === 'e' && pendingPermission && (pendingPermission.toolName === 'edit_file' || pendingPermission.toolName === 'patch')) {
+        handleExplainChange();
         return;
       }
 
+      // Ctrl+X + R: Toggle Reasoning (Context: always)
+      if (input === 'r') {
+        if (sidePanel?.type === 'thoughts') setSidePanel(null);
+        else {
+          const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant');
+          const thoughtContent = isStreaming ? streamingThought : (lastAssistantMsg?.thought || 'No active reasoning captured.');
+          setSidePanel({ type: 'thoughts', thought: thoughtContent });
+        }
+        return;
+      }
+
+      // Ctrl+X + P: Patch History
+      if (input === 'p') {
+        if (sidePanel?.type === 'patches') setSidePanel(null);
+        else setSidePanel({ type: 'patches' });
+        return;
+      }
+
+      // Ctrl+X + L: Toggle SidePanel Focus
+      if (input === 'l' && sidePanel && !anyOverlay && !isStreaming) {
+        setIsSidePanelFocused(!isSidePanelFocused);
+        return;
+      }
+      
+      return; // Leader sequence handled or invalid, don't fall through
+    }
+
+    // 3. Global Hotkeys (Standard)
+    if (allVisibleToolCalls.length > 0 && !anyOverlay && !isSidePanelFocused) {
       if (focusedToolCallId) {
         // Toggle expand/collapse
         if (key.return) {
@@ -239,50 +362,27 @@ export function App({ initialAttachments = [] }: AppProps) {
         }
       }
     }
-    if ((key.ctrl && input === 'c') || (key.ctrl && input === 'd')) { setIsGameOver(true); return; }
-    if (key.escape && isStreaming) { abort(); return; }
+    // Contextual Ctrl+C: Interruption vs Exit
+    if (key.ctrl && input === 'c') {
+      const activeToolCount = toolCalls.filter(tc => !tc.result && !tc.error).length;
+      if (isStreaming || activeToolCount > 0) {
+        abort();
+        addSystemMessage('INTERRUPTED: SYSTEM_HALTED');
+        return;
+      }
+      setIsGameOver(true);
+      return;
+    }
     if (key.escape && sidePanel && isSidePanelFocused) { setSidePanel(null); return; }
 
     const isInputEmpty = inputValue.length === 0;
 
     if (!anyOverlay && !isStreaming) {
-      // Single character hotkeys only work if input is empty
       if (input === '?' && isInputEmpty) { open('key-help'); return; }
-      
-      // Ctrl hotkeys
       if (key.ctrl && (input === 'k' || input === '\u000b')) { open('keybind-manager'); return; }
       if (key.ctrl && (input === 'p' || input === '\u0010')) { open('provider-manager'); return; }
       if (key.ctrl && (input === 'h' || input === '\u0008')) { open('history'); return; }
-      
-      // Ctrl+R for Reasoning/Thoughts
-      if (key.ctrl && (input === 'r' || input === '\u0012')) {
-        if (sidePanel?.type === 'thoughts') {
-          setSidePanel(null);
-        } else {
-          const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant');
-          const thoughtContent = isStreaming ? streamingThought : (lastAssistantMsg?.thought || 'No active reasoning captured.');
-          setSidePanel({ 
-            type: 'thoughts', 
-            thought: thoughtContent 
-          });
-        }
-        return;
-      }
-
-      // Ctrl+Shift+P (P) for Patch History
-      if (key.ctrl && input === 'P') {
-        if (sidePanel?.type === 'patches') setSidePanel(null);
-        else setSidePanel({ type: 'patches' });
-        return;
-      }
-
-      // Ctrl+/ often sends \u001f or ?
       if (key.ctrl && (input === '/' || input === '\u001f')) { open('key-help'); return; }
-    }
-
-    if (sidePanel && key.ctrl && (input === 'l' || input === '\u000c') && !anyOverlay && !isStreaming) {
-      setIsSidePanelFocused(!isSidePanelFocused);
-      return;
     }
 
     if (isSidePanelFocused && sidePanel && !anyOverlay) {
@@ -343,12 +443,13 @@ export function App({ initialAttachments = [] }: AppProps) {
         openModelPicker(); return; 
       }
       if (key.ctrl && (input === 'o' || input === '\u000f')) { open('file-explorer'); return; }
-      // Only cycle modes with TAB if no tool calls are being navigated
+      
+      // Cycle modes with CTRL+TAB (or regular TAB as fallback) if no tool calls are being navigated
       if (key.tab && focusedToolCallId === null) {
-        const cycle: AgentMode[] = ['ask', 'build', 'plan'];
+        // We'll allow both Tab and Ctrl+Tab for now as some terminals swallow Ctrl+Tab
+        const cycle: AgentMode[] = ['ask', 'plan', 'build', 'auto'];
         const next = cycle[(cycle.indexOf(mode as AgentMode) + 1) % cycle.length];
         switchMode(next);
-        addSystemMessage(`Mode: ${next}`);
         return;
       }
       if (key.upArrow && inputHistory.length > 0 && !inputValue.includes('\n')) {
@@ -381,6 +482,11 @@ export function App({ initialAttachments = [] }: AppProps) {
       switchMode: (m) => switchMode(m),
       openModelPicker,
       openProviderManager: () => open('provider-manager'),
+      openPluginManager: async () => {
+        const plugins = await loadPlugins();
+        setActivePlugins(plugins);
+        open('plugin-manager');
+      },
       openHistory: () => open('history'),
       openMCPManager: () => open('mcp-manager'),
       attachFile,
@@ -393,11 +499,26 @@ export function App({ initialAttachments = [] }: AppProps) {
       redo,
       initProject,
       exit: () => setIsGameOver(true),
+      abort,
+      loadPlugins,
+      saveWorkspace,
+      loadWorkspace,
     };
 
     // Try dispatching to the command registry first
     if (trimmed.startsWith('/')) {
-      const handled = dispatch(trimmed, ctx);
+      const handled = await dispatch(trimmed, ctx);
+      if (handled) {
+        setInputValue('');
+        return;
+      }
+    }
+
+    // Try intent mapping for natural language commands
+    const intentMatch = tryMatchIntent(trimmed);
+    if (intentMatch) {
+      const fullCmd = `${intentMatch.cmd} ${intentMatch.args}`.trim();
+      const handled = await dispatch(fullCmd, ctx);
       if (handled) {
         setInputValue('');
         return;
@@ -583,15 +704,27 @@ export function App({ initialAttachments = [] }: AppProps) {
       await openFileInPanel(fp);
       setInputValue(''); return;
     }
-    if (trimmed.startsWith('/provider')) { open('provider-manager'); setInputValue(''); return; }
+    if (trimmed === '/provider') { open('provider-manager'); setInputValue(''); return; }
+    if (trimmed === '/plugins') {
+      await ctx.openPluginManager();
+      setInputValue('');
+      return;
+    }
+    if (trimmed.startsWith('/plugins ')) {
+      const sub = trimmed.split(' ')[1];
+      if (sub === 'ui' || sub === 'manage') {
+        await ctx.openPluginManager();
+        setInputValue('');
+        return;
+      }
+    }
     if (trimmed.startsWith('/add ')) {
       const fp = trimmed.slice(5).trim();
-      const ok = await attachFile(fp);
-      addSystemMessage(ok ? `Attached: ${fp}` : `Error: could not read ${fp}`);
+      await attachFile(fp);
       setInputValue(''); return;
     }
     if (trimmed === '/add --clear' || trimmed === '/detach') {
-      clearAttachments(); addSystemMessage('Cleared attached files.'); setInputValue(''); return;
+      clearAttachments(); setInputValue(''); return;
     }
     if (trimmed === '/history') { open('history'); setInputValue(''); return; }
     if (trimmed === '/compact') {
@@ -658,10 +791,21 @@ export function App({ initialAttachments = [] }: AppProps) {
     );
   }
 
-  const showFullscreenOverlay = isPickingModel || isPickingProvider || !!pendingProviderAdd || showHistory || showFileExplorer || showKeyHelp || showKeybindManager || isManagingMCP || !!mcpWizardMode;
+  const showFullscreenOverlay = isPickingModel || isPickingProvider || !!pendingProviderAdd || showHistory || showFileExplorer || showKeyHelp || showKeybindManager || isManagingMCP || !!mcpWizardMode || isManagingPlugins || !!pluginWizardMode;
 
   return (
     <>
+      <PasteHandler 
+        onAttach={async (attachment) => {
+          if (attachment.type === 'path') {
+            const ok = await attachFile(attachment.path);
+            addSystemMessage(ok ? `Attached (Paste/Drop): ${attachment.path}` : `Error: could not attach ${attachment.path}`);
+          } else {
+            const ok = await attachFile(attachment.path);
+            addSystemMessage(ok ? `Attached Image (Clipboard): ${attachment.name}` : `Error: could not attach clipboard image`);
+          }
+        }} 
+      />
       <Static items={messages}>
         {(message) => (
           <MessageView 
@@ -688,7 +832,7 @@ export function App({ initialAttachments = [] }: AppProps) {
             {isPickingModel && (
               <ModelPicker
                 tick={tick}
-                onSelect={(provider, modelId) => { switchModel(provider, modelId); closeModelPicker(); addSystemMessage(`Switched to ${provider}/${modelId}`); }}
+                onSelect={(provider, modelId) => { switchModel(provider, modelId); closeModelPicker(); }}
                 onClose={closeModelPicker}
               />
             )}
@@ -697,20 +841,20 @@ export function App({ initialAttachments = [] }: AppProps) {
                 tick={tick}
                 configuredProviders={Object.keys(readAuth())}
                 onAdd={(id) => { open('provider-wizard', { providerId: id }); }}
-                onRemove={(id) => { removeProviderKey(id); addSystemMessage(`Removed key for ${id}.`); }}
+                onRemove={(id) => { removeProviderKey(id); }}
                 onClose={() => close()}
               />
             )}
             {pendingProviderAdd && (
               <ProviderWizard
                 providerName={pendingProviderAdd}
-                onSave={(key) => { if (key !== 'oauth') { setProviderKey(pendingProviderAdd, key); } addSystemMessage(`Configured ${pendingProviderAdd}.`); close(); }}
+                onSave={(key) => { if (key !== 'oauth') { setProviderKey(pendingProviderAdd, key); } close(); }}
                 onClose={() => close()}
               />
             )}
             {showHistory && (
               <HistoryPicker
-                onSelect={(id) => { loadHistory(id); close(); addSystemMessage('Conversation loaded.'); }}
+                onSelect={(id) => { loadHistory(id); close(); }}
                 onClose={() => close()}
               />
             )}
@@ -762,6 +906,24 @@ export function App({ initialAttachments = [] }: AppProps) {
                 onClose={() => close()}
               />
             )}
+            {isManagingPlugins && (
+              <PluginManager
+                tick={tick}
+                plugins={activePlugins}
+                onAdd={() => open('plugin-wizard', { mode: 'add' })}
+                onEdit={(name) => open('plugin-wizard', { mode: 'edit', pluginName: name })}
+                onRemove={handleDeletePlugin}
+                onClose={() => close()}
+              />
+            )}
+            {pluginWizardMode && (
+              <PluginWizard
+                mode={pluginWizardMode}
+                pluginName={pluginWizardName || undefined}
+                onSave={handleCreatePlugin}
+                onClose={() => close()}
+              />
+            )}
             {mcpWizardMode && (
               <MCPWizard
                 mode={mcpWizardMode}
@@ -810,7 +972,16 @@ export function App({ initialAttachments = [] }: AppProps) {
                   />
                 ))}
                 {isStreaming && <StreamingMessage text={streamingText} thought={streamingThought} />}
-                {pendingPermission && <PermissionPrompt permission={pendingPermission} />}
+                {pendingPermission && (
+                  <PermissionPrompt 
+                    permission={pendingPermission} 
+                    onExplain={
+                      (pendingPermission.toolName === 'edit_file' || pendingPermission.toolName === 'patch')
+                        ? handleExplainChange
+                        : undefined
+                    }
+                  />
+                )}
                 {pendingQuestion && <QuestionPrompt question={pendingQuestion} />}
                 {error && (
                   <Box marginBottom={1} flexDirection="column">
@@ -825,9 +996,10 @@ export function App({ initialAttachments = [] }: AppProps) {
                     currentProvider={activeModel.provider}
                     currentModelId={activeModel.modelId}
                     currentCost={cost}
-                    onSelect={(provider, modelId) => { switchModel(provider, modelId); addSystemMessage(`Switched to ${provider}/${modelId} for cost savings`); }}
+                    onSelect={(provider, modelId) => { switchModel(provider, modelId); }}
                   />
                 )}
+
               </Box>
             </Box>
 
@@ -858,6 +1030,8 @@ export function App({ initialAttachments = [] }: AppProps) {
           tick={tick}
           cost={cost}
           mcpServerCount={mcpServerCount}
+          activeToolCount={toolCalls.filter(tc => !tc.result && !tc.error).length}
+          leaderKeyActive={leaderKeyActive}
         />
 
         <CommandAutocomplete filtered={cmdFiltered} selectedIndex={cmdSelectedIdx} visible={showCommandAutocomplete} />
