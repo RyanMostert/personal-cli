@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { readFile } from './tools/read-file.js';
+import { readFile, setReadFilePermission } from './tools/read-file.js';
 import { createWriteFile } from './tools/write-file.js';
 import { createEditFile } from './tools/edit-file.js';
 import { listDir } from './tools/list-dir.js';
@@ -48,13 +48,10 @@ export function createTools(
   // Wrap permissionFn with rule pre-check
   const resolvedPermission = makePermissionResolver(rules, permissionFn);
 
-  const { onWrite, questionFn, plugins } = options ?? {};
+  // Hook resolvedPermission into readFile synchronously
+  setReadFilePermission(resolvedPermission);
 
-  // Hook resolvedPermission into tools that need it
-  // Lazy hook to inject resolvedPermission into read-file tool without making createTools async
-  import('./tools/read-file.js')
-    .then(mod => { if (mod && typeof mod.setReadFilePermission === 'function') mod.setReadFilePermission(resolvedPermission); })
-    .catch(() => { /* ignore */ });
+  const { onWrite, questionFn, plugins } = options ?? {};
 
   const baseTools: Record<string, any> = {
     readFile,

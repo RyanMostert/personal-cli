@@ -12,7 +12,7 @@ The default toolkit for Personal CLI. This package contains over 20+ specialized
 - **`searchFiles`**: Full-text regex search through the project.
 
 ### Information & Search
-- **`webSearch`**: Google Search integration via Brave, Tavily, or Serper.
+- **`webSearch`**: Web search via Google Custom Search, Tavily, Jina Search, or DuckDuckGo (auto-selected by available API keys).
 - **`webFetch`**: High-quality markdown extraction from any URL (using Jina Reader).
 - **`semanticSearch`**: Vector-based code search (requires embedding provider).
 
