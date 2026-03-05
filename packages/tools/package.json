@@ -14,7 +14,7 @@
     "dev": "tsup src/index.ts --format esm --dts --watch --platform node --external fast-glob",
     "clean": "rm -rf dist"
   },
-"dependencies": {
+  "dependencies": {
     "@personal-cli/mcp-client": "workspace:*",
     "@personal-cli/shared": "workspace:*",
     "ai": "^6.0.104",

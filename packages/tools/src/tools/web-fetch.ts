@@ -30,7 +30,7 @@ export function createWebFetch(permissionFn?: PermissionCallback) {
     }),
     execute: async ({ url, useRaw }) => {
       if (permissionFn) {
-        const ok = await permissionFn('web_fetch', { url });
+        const ok = await permissionFn('webFetch', { url });
         if (!ok) return { error: 'Permission denied by user.' };
       }
 

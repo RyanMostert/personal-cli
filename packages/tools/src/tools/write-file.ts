@@ -13,7 +13,7 @@ export function createWriteFile(permissionFn?: PermissionCallback, onWrite?: Wri
     }),
     execute: async ({ path, content }) => {
       if (permissionFn) {
-        const ok = await permissionFn('write_file', { path, contentLength: content.length });
+        const ok = await permissionFn('writeFile', { path, contentLength: content.length });
         if (!ok) return { error: 'Permission denied by user.' };
       }
 
