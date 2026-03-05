@@ -61,3 +61,34 @@ export interface ToolResult {
   output?: string;
   error?: string;
 }
+
+export type ToolCategory = 'file' | 'search' | 'git' | 'web' | 'system' | 'utility' | 'custom';
+
+export interface ToolSchema {
+  name: string;
+  description: string;
+  args?: Record<string, ToolArgSchema>;
+  category: ToolCategory;
+  example?: string;
+  docstring?: string;
+}
+
+export interface ToolArgSchema {
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  description?: string;
+  required?: boolean;
+  default?: unknown;
+}
+
+export interface PluginManifest {
+  name: string;
+  version?: string;
+  description?: string;
+  tools: ToolSchema[];
+}
+
+export interface LoadedPlugin {
+  manifest: PluginManifest;
+  module: unknown;
+  tools: Record<string, unknown>;
+}

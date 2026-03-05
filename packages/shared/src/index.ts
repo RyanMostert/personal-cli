@@ -6,3 +6,4 @@ export * from './models/registry.js';
 export type { ModelTag } from './models/registry.js';
 export * from './providers/registry.js';
 export * from './themes/index.js';
+export * from './attachments.js';
