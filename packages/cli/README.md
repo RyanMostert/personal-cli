@@ -13,19 +13,19 @@ The React/Ink terminal interface for Personal CLI.
 
 ## ⌨️ Keybindings
 
-| Key | Action |
-|-----|--------|
-| `Tab` | Cycle Agent Mode (`ask` → `plan` → `build`) |
-| `Ctrl+M` | Open Model Picker |
-| `Ctrl+P` | Open Provider Manager |
-| `Ctrl+H` | Open Conversation History |
-| `Ctrl+K` | Open Keybinding Manager |
-| `Ctrl+O` | Open File Explorer |
-| `Ctrl+T` | Cycle focus through tool calls |
-| `Ctrl+R` | Toggle Reasoning/Thoughts panel |
-| `Ctrl+L` | Toggle focus between Input and Side Panel |
-| `Ctrl+C` | Exit application |
-| `?` | Show Quick Help overlay |
+| Key      | Action                                      |
+| -------- | ------------------------------------------- |
+| `Tab`    | Cycle Agent Mode (`ask` → `plan` → `build`) |
+| `Ctrl+M` | Open Model Picker                           |
+| `Ctrl+P` | Open Provider Manager                       |
+| `Ctrl+H` | Open Conversation History                   |
+| `Ctrl+K` | Open Keybinding Manager                     |
+| `Ctrl+O` | Open File Explorer                          |
+| `Ctrl+T` | Cycle focus through tool calls              |
+| `Ctrl+R` | Toggle Reasoning/Thoughts panel             |
+| `Ctrl+L` | Toggle focus between Input and Side Panel   |
+| `Ctrl+C` | Exit application                            |
+| `?`      | Show Quick Help overlay                     |
 
 ## 🛠️ Components
 

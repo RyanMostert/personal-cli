@@ -11,11 +11,11 @@ export interface Command {
 }
 
 const EXAMPLE_TASKS = [
-  { task: 'Explain a concept', example: "Explain how async/await works in JavaScript" },
-  { task: 'Search code', example: "Find all uses of the useEffect hook" },
-  { task: 'Refactor', example: "Refactor this function to use TypeScript" },
+  { task: 'Explain a concept', example: 'Explain how async/await works in JavaScript' },
+  { task: 'Search code', example: 'Find all uses of the useEffect hook' },
+  { task: 'Refactor', example: 'Refactor this function to use TypeScript' },
   { task: 'Debug', example: "Why am I getting 'undefined is not a function'?" },
-  { task: 'Documentation', example: "Generate JSDoc for this file" },
+  { task: 'Documentation', example: 'Generate JSDoc for this file' },
 ];
 
 const FALLBACK_EXAMPLES = [
@@ -49,9 +49,9 @@ const commands: Command[] = [
           const proc = spawn(python, [scriptPath, outPath]);
           let stdout = '';
           let stderr = '';
-          proc.stdout.on('data', data => stdout += data.toString());
-          proc.stderr.on('data', data => stderr += data.toString());
-          proc.on('close', code => {
+          proc.stdout.on('data', (data) => (stdout += data.toString()));
+          proc.stderr.on('data', (data) => (stderr += data.toString()));
+          proc.on('close', (code) => {
             if (code === 0 && fs.existsSync(outPath)) {
               resolve(outPath);
             } else {
@@ -66,7 +66,9 @@ const commands: Command[] = [
           ctx.addSystemMessage('Failed to attach clipboard image.');
         }
       } catch (err) {
-        ctx.addSystemMessage(typeof err === 'string' ? err : (err instanceof Error ? err.message : 'Clipboard image not found.'));
+        ctx.addSystemMessage(
+          typeof err === 'string' ? err : err instanceof Error ? err.message : 'Clipboard image not found.',
+        );
       }
     },
   },
@@ -80,20 +82,24 @@ const commands: Command[] = [
   {
     cmd: '/clear',
     description: 'Clear conversation history',
-    handler: (_, ctx) => { ctx.clearMessages(); },
+    handler: (_, ctx) => {
+      ctx.clearMessages();
+    },
   },
   {
     cmd: '/model',
     description: 'Browse or switch models',
     handler: (args, ctx) => {
-      if (!args) { ctx.openModelPicker(); return; }
+      if (!args) {
+        ctx.openModelPicker();
+        return;
+      }
       const parts = args.includes('/') ? args.split('/') : args.split(' ');
       if (parts.length >= 2) {
         ctx.switchModel(parts[0], parts.slice(1).join('/'));
       } else {
         ctx.addSystemMessage('Usage: /model <provider/modelId>  or  /model to browse');
       }
-
     },
   },
   {
@@ -128,7 +134,10 @@ const commands: Command[] = [
     cmd: '/open',
     description: 'Open a file in the side panel',
     handler: (args, ctx) => {
-      if (!args) { ctx.addSystemMessage('Usage: /open <path>'); return; }
+      if (!args) {
+        ctx.addSystemMessage('Usage: /open <path>');
+        return;
+      }
       ctx.openFileInPanel(args);
     },
   },
@@ -136,10 +145,13 @@ const commands: Command[] = [
     cmd: '/edit',
     description: 'Open a file in an external editor',
     handler: (args, ctx) => {
-      if (!args) { ctx.addSystemMessage('Usage: /edit <path>'); return; }
+      if (!args) {
+        ctx.addSystemMessage('Usage: /edit <path>');
+        return;
+      }
       const editor = process.env.EDITOR || (process.platform === 'win32' ? 'code' : 'vi');
       const fullPath = path.resolve(process.cwd(), args);
-      
+
       if (!fs.existsSync(fullPath)) {
         ctx.addSystemMessage(`Error: File not found: ${args}`);
         return;
@@ -148,7 +160,7 @@ const commands: Command[] = [
       ctx.addSystemMessage(`Opening ${args} in ${editor}...`);
       const proc = spawn(editor, [fullPath], {
         detached: true,
-        stdio: 'ignore'
+        stdio: 'ignore',
       });
       proc.unref();
     },
@@ -173,7 +185,10 @@ const commands: Command[] = [
     cmd: '/rename',
     description: 'Rename the current conversation',
     handler: (args, ctx) => {
-      if (!args) { ctx.addSystemMessage('Usage: /rename <title>'); return; }
+      if (!args) {
+        ctx.addSystemMessage('Usage: /rename <title>');
+        return;
+      }
       ctx.addSystemMessage(`Renamed to: ${args}`);
     },
   },
@@ -181,7 +196,7 @@ const commands: Command[] = [
     cmd: '/copy',
     description: 'Copy last assistant response to clipboard',
     handler: (_, ctx) => {
-      const last = ctx.messages.filter(m => m.role === 'assistant').pop();
+      const last = ctx.messages.filter((m) => m.role === 'assistant').pop();
       ctx.addSystemMessage(last ? 'Copied last response.' : 'No assistant response to copy.');
     },
   },
@@ -304,7 +319,10 @@ const commands: Command[] = [
     cmd: '/mcp',
     description: 'Manage MCP servers and external tools',
     handler: (args, ctx) => {
-      if (!args) { ctx.openMCPManager(); return; }
+      if (!args) {
+        ctx.openMCPManager();
+        return;
+      }
       // Subcommands handled in app.tsx
     },
   },
@@ -316,7 +334,7 @@ const commands: Command[] = [
         await ctx.openPluginManager();
         return;
       }
-      
+
       const plugins = await ctx.loadPlugins();
       if (args === 'list') {
         if (plugins.length === 0) {
@@ -327,7 +345,7 @@ const commands: Command[] = [
         for (const p of plugins) {
           msg += `### 🧩 ${p.manifest.name} (v${p.manifest.version || '0.1.0'})\n`;
           msg += `${p.manifest.description || 'No description'}\n`;
-          msg += `**Tools:** ${p.manifest.tools.map(t => `\`${t.name}\``).join(', ')}\n\n`;
+          msg += `**Tools:** ${p.manifest.tools.map((t) => `\`${t.name}\``).join(', ')}\n\n`;
         }
         ctx.addSystemMessage(msg);
         return;
@@ -348,7 +366,7 @@ const commands: Command[] = [
       const parts = args.trim().split(/\s+/);
       const sub = parts[0];
       const path = parts.slice(1).join(' ');
-      
+
       if (sub === 'save' && path) {
         ctx.saveWorkspace(path);
         ctx.addSystemMessage(`📦 WORKSPACE_SAVED: Session state archived to **${path}.pcli**`);
@@ -430,14 +448,86 @@ const commands: Command[] = [
       ctx.addSystemMessage(`Theme: ${args}`);
     },
   },
+  {
+    cmd: '/zen',
+    description: 'Manage Zen Gateway MCP server',
+    category: 'mcp',
+    examples: ['/zen status', '/zen models', '/zen add'],
+    handler: async (args, ctx) => {
+      const parts = args.trim().split(/\s+/);
+      const subcommand = parts[0];
+
+      switch (subcommand) {
+        case 'status': {
+          ctx.addSystemMessage('Checking Zen Gateway status...');
+          const status = await ctx.getZenGatewayStatus?.();
+          if (status) {
+            const msg = status.connected
+              ? `✅ **Zen Gateway Connected**\n📍 Endpoint: ${status.endpoint}\n📊 Models available: ${status.modelsAvailable}`
+              : `❌ **Zen Gateway Not Connected**\n📍 Endpoint: ${status.endpoint}\n⚠️ Error: ${status.lastError}`;
+            ctx.addSystemMessage(msg);
+          } else {
+            ctx.addSystemMessage('❌ Zen Gateway is not configured. Run `/zen add` to set it up.');
+          }
+          break;
+        }
+
+        case 'models': {
+          ctx.addSystemMessage('Fetching available models from Zen Gateway...');
+          const models = await ctx.listZenModels?.();
+          if (models && models.length > 0) {
+            let msg = '## Available Zen Gateway Models\n\n';
+            for (const model of models) {
+              msg += `- **${model.id}** (${model.provider})\n`;
+              if (model.description) msg += `  ${model.description}\n`;
+              if (model.maxTokens) msg += `  Max tokens: ${model.maxTokens.toLocaleString()}\n`;
+              msg += '\n';
+            }
+            ctx.addSystemMessage(msg);
+          } else if (models) {
+            ctx.addSystemMessage('No models available. Make sure Zen Gateway is properly configured.');
+          } else {
+            ctx.addSystemMessage('❌ Zen Gateway is not configured. Run `/zen add` to set it up.');
+          }
+          break;
+        }
+
+        case 'add':
+        case 'configure': {
+          await ctx.configureZenGateway?.();
+          break;
+        }
+
+        case 'remove':
+        case 'delete': {
+          await ctx.removeZenGateway?.();
+          ctx.addSystemMessage('🗑️ Zen Gateway configuration removed.');
+          break;
+        }
+
+        default: {
+          const msg = `## Zen Gateway Commands
+
+**Usage:** /zen <command>
+
+**Commands:**
+- "/zen status" — Check connection status
+- "/zen models" — List available AI models
+- "/zen add" or "/zen configure" — Configure Zen Gateway
+- "/zen remove" — Remove Zen Gateway configuration
+
+Zen Gateway provides unified access to multiple AI models through a single API.`;
+          ctx.addSystemMessage(msg);
+        }
+      }
+    },
+  },
 ];
 
 export async function dispatch(input: string, ctx: CommandContext): Promise<boolean> {
   const [rawCmd, ...rest] = input.split(' ');
   const args = rest.join(' ').trim();
-  const match = commands.find(
-    c => c.cmd === rawCmd || c.aliases?.includes(rawCmd)
-  );
+  const match = commands.find((c) => c.cmd === rawCmd || c.aliases?.includes(rawCmd));
   if (match) {
     await match.handler(args, ctx);
     return true;
@@ -445,7 +535,7 @@ export async function dispatch(input: string, ctx: CommandContext): Promise<bool
 
   // If it's a slash command but no match, try to suggest the closest one
   if (rawCmd.startsWith('/')) {
-    const allCmds = commands.flatMap(c => [c.cmd, ...(c.aliases || [])]);
+    const allCmds = commands.flatMap((c) => [c.cmd, ...(c.aliases || [])]);
     let bestMatch = '';
     let minDistance = 3; // Max distance to consider a suggestion
 
@@ -476,11 +566,7 @@ function levenshtein(a: string, b: string): number {
   for (let i = 1; i <= a.length; i++) {
     for (let j = 1; j <= b.length; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1,
-        matrix[i][j - 1] + 1,
-        matrix[i - 1][j - 1] + cost
-      );
+      matrix[i][j] = Math.min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + cost);
     }
   }
   return matrix[a.length][b.length];
@@ -495,15 +581,15 @@ export function getCommands(): Command[] {
  * Matches natural language patterns to CLI commands.
  */
 const INTENT_MAP: Array<{ pattern: RegExp; cmd: string; getArgs?: (match: RegExpMatchArray) => string }> = [
-  { pattern: /^(attach|add)\s+file\s+(.+)$/i, cmd: '/add', getArgs: m => m[2] },
-  { pattern: /^(show|open)\s+(.+)$/i, cmd: '/open', getArgs: m => m[2] },
+  { pattern: /^(attach|add)\s+file\s+(.+)$/i, cmd: '/add', getArgs: (m) => m[2] },
+  { pattern: /^(show|open)\s+(.+)$/i, cmd: '/open', getArgs: (m) => m[2] },
   { pattern: /^(undo|revert)(\s+that)?$/i, cmd: '/undo' },
   { pattern: /^(redo|repeat)(\s+that)?$/i, cmd: '/redo' },
   { pattern: /^(clear|reset)\s+chat$/i, cmd: '/clear' },
   { pattern: /^(exit|quit|stop)$/i, cmd: '/exit' },
   { pattern: /^(cancel|halt|stop)\s+(it|operation|ai)$/i, cmd: '/cancel' },
-  { pattern: /^(switch|change)\s+(to\s+)?mode\s+(.+)$/i, cmd: '/mode', getArgs: m => m[3] },
-  { pattern: /^(switch|change)\s+(to\s+)?model\s+(.+)$/i, cmd: '/model', getArgs: m => m[3] },
+  { pattern: /^(switch|change)\s+(to\s+)?mode\s+(.+)$/i, cmd: '/mode', getArgs: (m) => m[3] },
+  { pattern: /^(switch|change)\s+(to\s+)?model\s+(.+)$/i, cmd: '/model', getArgs: (m) => m[3] },
 ];
 
 export function tryMatchIntent(input: string): { cmd: string; args: string } | null {

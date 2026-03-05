@@ -26,18 +26,18 @@ export const webSearch = tool({
     if (tavilyKey) {
       return searchTavily(query, maxResults ?? 5, tavilyKey);
     }
-    
+
     // 3. Try Jina Search (Excellent no-key fallback)
     try {
       const jinaUrl = `https://s.jina.ai/${encodeURIComponent(query)}`;
       const jinaRes = await fetch(jinaUrl, {
-        headers: { 'User-Agent': userAgent }
+        headers: { 'User-Agent': userAgent },
       });
       if (jinaRes.ok) {
         const content = await jinaRes.text();
-        return { 
-          output: content.slice(0, 15000), 
-          metadata: { source: 'jina-search', query }
+        return {
+          output: content.slice(0, 15000),
+          metadata: { source: 'jina-search', query },
         };
       }
     } catch (e) {
@@ -54,8 +54,8 @@ async function searchGoogle(query: string, maxResults: number, apiKey: string, c
     const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(query)}&num=${maxResults}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Google HTTP ${res.status}`);
-    const data = await res.json() as any;
-    
+    const data = (await res.json()) as any;
+
     const results = (data.items ?? []).map((r: any) => `### ${r.title}\n${r.link}\n${r.snippet}`);
     return { output: results.length > 0 ? results.join('\n\n') : `No results found for "${query}" on Google.` };
   } catch (err) {
@@ -71,11 +71,11 @@ async function searchTavily(query: string, maxResults: number, apiKey: string) {
       body: JSON.stringify({ api_key: apiKey, query, max_results: maxResults }),
     });
     if (!res.ok) throw new Error(`Tavily HTTP ${res.status}`);
-    const data = await res.json() as {
+    const data = (await res.json()) as {
       results?: Array<{ title: string; url: string; content: string }>;
       answer?: string;
     };
-    const results = (data.results ?? []).map(r => `### ${r.title}\n${r.url}\n${r.content}`);
+    const results = (data.results ?? []).map((r) => `### ${r.title}\n${r.url}\n${r.content}`);
     const answer = data.answer ? `**Summary:** ${data.answer}\n\n` : '';
     return { output: answer + results.join('\n\n') };
   } catch (err) {
@@ -88,11 +88,16 @@ async function searchDuckDuckGo(query: string) {
     const url = `${DDG_URL}?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
     const res = await fetch(url, { headers: { 'User-Agent': 'personal-cli/1.0' } });
     if (!res.ok) throw new Error(`DDG HTTP ${res.status}`);
-    const data = await res.json() as {
+    const data = (await res.json()) as {
       AbstractText?: string;
       AbstractURL?: string;
       AbstractSource?: string;
-      RelatedTopics?: Array<{ Text?: string; FirstURL?: string; Name?: string; Topics?: Array<{ Text?: string; FirstURL?: string }> }>;
+      RelatedTopics?: Array<{
+        Text?: string;
+        FirstURL?: string;
+        Name?: string;
+        Topics?: Array<{ Text?: string; FirstURL?: string }>;
+      }>;
       Answer?: string;
     };
 

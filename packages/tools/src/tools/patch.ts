@@ -23,7 +23,7 @@ export function createPatch(permissionFn?: PermissionCallback, onWrite?: WriteCa
       try {
         const originalContent = readFileSync(abs, 'utf-8');
         const lines = originalContent.split(/\r?\n/);
-        
+
         const hunks = parseUnifiedDiff(patch);
         if (hunks.length === 0) return { error: 'No valid hunks found in patch' };
 
@@ -33,7 +33,9 @@ export function createPatch(permissionFn?: PermissionCallback, onWrite?: WriteCa
         for (const hunk of hunks) {
           const applied = applyHunk(resultLines, hunk, lineOffset);
           if (!applied.success) {
-            return { error: `FAILED: Could not apply hunk at line ${hunk.oldStart} in ${path}. \nReason: ${applied.error}` };
+            return {
+              error: `FAILED: Could not apply hunk at line ${hunk.oldStart} in ${path}. \nReason: ${applied.error}`,
+            };
           }
           resultLines = applied.newLines;
           lineOffset += applied.offsetChange;
@@ -86,9 +88,13 @@ function parseUnifiedDiff(patch: string): Hunk[] {
   return hunks;
 }
 
-function applyHunk(lines: string[], hunk: Hunk, globalOffset: number): { success: boolean; newLines: string[]; offsetChange: number; error?: string } {
+function applyHunk(
+  lines: string[],
+  hunk: Hunk,
+  globalOffset: number,
+): { success: boolean; newLines: string[]; offsetChange: number; error?: string } {
   const expectedStart = hunk.oldStart - 1 + globalOffset;
-  
+
   // 1. Try exact match at expected location
   if (checkMatch(lines, expectedStart, hunk.lines, false)) {
     return doApply(lines, expectedStart, hunk);
@@ -125,7 +131,7 @@ function checkMatch(fileLines: string[], startIdx: number, hunkLines: string[], 
 
   for (const hLine of hunkLines) {
     if (hLine.startsWith('+')) continue; // Skip additions when matching context
-    
+
     const context = hLine.slice(1);
     const target = fileLines[filePtr];
 
@@ -143,7 +149,11 @@ function checkMatch(fileLines: string[], startIdx: number, hunkLines: string[], 
   return true;
 }
 
-function doApply(lines: string[], startIdx: number, hunk: Hunk): { success: boolean; newLines: string[]; offsetChange: number } {
+function doApply(
+  lines: string[],
+  startIdx: number,
+  hunk: Hunk,
+): { success: boolean; newLines: string[]; offsetChange: number } {
   const result = [...lines];
   const toRemove: number[] = [];
   const toAdd: string[] = [];
@@ -164,20 +174,20 @@ function doApply(lines: string[], startIdx: number, hunk: Hunk): { success: bool
   for (let i = toRemove.length - 1; i >= 0; i--) {
     result.splice(toRemove[i], 1);
   }
-  
+
   // Insert new lines at the start position (plus adjustment for removed lines before this point)
   // Actually, it's easier to just use the original start index and insert all at once
   // since we already know exactly what we are replacing.
-  
+
   const finalResult = [...lines];
-  const oldLength = hunk.lines.filter(l => !l.startsWith('+')).length;
-  const newLines = hunk.lines.filter(l => !l.startsWith('-')).map(l => l.slice(1));
-  
+  const oldLength = hunk.lines.filter((l) => !l.startsWith('+')).length;
+  const newLines = hunk.lines.filter((l) => !l.startsWith('-')).map((l) => l.slice(1));
+
   finalResult.splice(startIdx, oldLength, ...newLines);
 
-  return { 
-    success: true, 
-    newLines: finalResult, 
-    offsetChange: newLines.length - oldLength 
+  return {
+    success: true,
+    newLines: finalResult,
+    offsetChange: newLines.length - oldLength,
   };
 }

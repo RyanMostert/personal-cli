@@ -15,7 +15,7 @@ interface Props {
 export function PermissionPrompt({ permission, onExplain }: Props) {
   useInput((input, key) => {
     if (!permission) return;
-    
+
     const char = input.toLowerCase();
     if (char === 'y') {
       permission.resolve(true);
@@ -29,7 +29,9 @@ export function PermissionPrompt({ permission, onExplain }: Props) {
   return (
     <Box marginY={1} padding={1} borderStyle="round" borderColor="#D29922" flexDirection="column">
       <Box marginBottom={1}>
-        <Text bold color="#D29922">⚠️ Permission Required</Text>
+        <Text bold color="#D29922">
+          ⚠️ Permission Required
+        </Text>
       </Box>
       <Box marginBottom={1}>
         <Text>
@@ -37,22 +39,26 @@ export function PermissionPrompt({ permission, onExplain }: Props) {
         </Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#8C959F">
-          {permission.args ? JSON.stringify(permission.args, null, 2) : 'No arguments'}
-        </Text>
+        <Text color="#8C959F">{permission.args ? JSON.stringify(permission.args, null, 2) : 'No arguments'}</Text>
       </Box>
       <Box justifyContent="space-between">
         <Box>
           <Text color="#484F58">Press </Text>
-          <Text bold color="#3FB950">Y</Text>
+          <Text bold color="#3FB950">
+            Y
+          </Text>
           <Text color="#484F58">es or </Text>
-          <Text bold color="#F85149">N</Text>
+          <Text bold color="#F85149">
+            N
+          </Text>
           <Text color="#484F58">o</Text>
         </Box>
         {onExplain && (
           <Box>
             <Text color="#484F58"> │ </Text>
-            <Text bold color="#00E5FF">CTRL+X + E</Text>
+            <Text bold color="#00E5FF">
+              CTRL+X + E
+            </Text>
             <Text color="#484F58">:Explain Change</Text>
           </Box>
         )}

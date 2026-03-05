@@ -3,7 +3,7 @@ import { join } from 'path';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 
 const FRECENCY_FILE = join(homedir(), '.personal-cli', 'file-frecency.json');
-const FRECENCY_DIR  = join(homedir(), '.personal-cli');
+const FRECENCY_DIR = join(homedir(), '.personal-cli');
 
 interface FrecencyEntry {
   score: number;
@@ -62,7 +62,10 @@ export function getBatchFrecency(paths: string[]): Map<string, number> {
   const out = new Map<string, number>();
   for (const p of paths) {
     const entry = store[p];
-    if (!entry) { out.set(p, 0); continue; }
+    if (!entry) {
+      out.set(p, 0);
+      continue;
+    }
     const days = (now - entry.lastUsed) / (1000 * 60 * 60 * 24);
     out.set(p, entry.score + Math.max(0, 10 - days));
   }
@@ -80,7 +83,7 @@ export function getTopRecentFiles(n: number): string[] {
     })
     .sort((a, b) => b.score - a.score)
     .slice(0, n)
-    .map(e => e.path);
+    .map((e) => e.path);
 }
 
 export function recordAccess(path: string): void {

@@ -21,10 +21,10 @@ export function createRunCommand(permissionFn?: PermissionCallback) {
 
       try {
         // Set a timeout to prevent hanging processes
-        const { stdout, stderr } = await execAsync(command, { 
+        const { stdout, stderr } = await execAsync(command, {
           cwd: cwd || process.cwd(),
           timeout: 60000, // 60s limit
-          maxBuffer: 10 * 1024 * 1024 // 10MB
+          maxBuffer: 10 * 1024 * 1024, // 10MB
         });
 
         let output = '';
@@ -33,20 +33,19 @@ export function createRunCommand(permissionFn?: PermissionCallback) {
 
         // Truncate if output is massive to avoid token budget issues
         const limit = 20000;
-        const finalOutput = output.length > limit
-          ? output.slice(0, limit) + "\n\n[OUTPUT_TRUNCATED_DUE_TO_SIZE]"
-          : output;
+        const finalOutput =
+          output.length > limit ? output.slice(0, limit) + '\n\n[OUTPUT_TRUNCATED_DUE_TO_SIZE]' : output;
 
-        return { 
+        return {
           output: finalOutput || '(Command completed with no output)',
-          exitCode: 0 
+          exitCode: 0,
         };
       } catch (err: any) {
-        return { 
+        return {
           error: `COMMAND_FAILED: ${err.message}`,
           stdout: err.stdout,
           stderr: err.stderr,
-          exitCode: err.code || 1
+          exitCode: err.code || 1,
         };
       }
     },

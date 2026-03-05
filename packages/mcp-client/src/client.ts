@@ -48,30 +48,25 @@ export class MCPClient {
     try {
       // Create transport based on config
       const { config } = this.options;
-      
+
       switch (config.transport) {
         case 'stdio':
           if (!config.command) {
             throw new Error('command is required for stdio transport');
           }
-          this.transport = new StdioTransport(
-            config.command,
-            config.args,
-            config.env,
-            config.cwd
-          );
+          this.transport = new StdioTransport(config.command, config.args, config.env, config.cwd);
           break;
-          
+
         case 'sse':
           if (!config.url) {
             throw new Error('url is required for sse transport');
           }
           this.transport = new SSETransport(config.url, config.headers);
           break;
-          
+
         case 'http':
           throw new Error('HTTP transport not yet implemented');
-          
+
         default:
           throw new Error(`Unknown transport: ${config.transport}`);
       }
@@ -98,7 +93,7 @@ export class MCPClient {
 
       // List available tools
       const toolsResult = await this.sendRequest('tools/list', {});
-      this.tools = ((toolsResult as { tools: ToolSchema[] }).tools || []);
+      this.tools = (toolsResult as { tools: ToolSchema[] }).tools || [];
 
       this.connectedAt = new Date();
       this.setStatus(MCPClientStatus.CONNECTED);
@@ -189,7 +184,7 @@ export class MCPClient {
 
   private handleMessage(message: unknown): void {
     const response = message as JSONRPCResponse;
-    
+
     if (response.jsonrpc !== '2.0') {
       console.error('Invalid JSON-RPC message:', message);
       return;
@@ -200,7 +195,7 @@ export class MCPClient {
       const pending = this.pendingRequests.get(response.id);
       if (pending) {
         this.pendingRequests.delete(response.id);
-        
+
         if (response.error) {
           pending.reject(new Error(`MCP Error ${response.error.code}: ${response.error.message}`));
         } else {
@@ -212,11 +207,11 @@ export class MCPClient {
 
   private handleError(error: Error): void {
     console.error(`MCP Client error (${this.options.serverName}):`, error);
-    
+
     if (this.options.onError) {
       this.options.onError(error);
     }
-    
+
     this.setStatus(MCPClientStatus.ERROR);
   }
 
@@ -226,7 +221,7 @@ export class MCPClient {
 
   private setStatus(status: MCPClientStatus): void {
     this.status = status;
-    
+
     if (this.options.onStatusChange) {
       this.options.onStatusChange(status);
     }

@@ -25,15 +25,15 @@ export const PasteHandler: React.FC<Props> = ({ onAttach }) => {
         const text = (await clipboardy.read()).trim();
         // Remove quotes if any (common in some terminals when dropping)
         const cleanPath = text.replace(/^["'](.*)["']$/, '$1');
-        
+
         if (fs.existsSync(cleanPath)) {
           const stats = fs.statSync(cleanPath);
           if (stats.isFile()) {
-            onAttach({ 
-              path: cleanPath, 
-              name: path.basename(cleanPath), 
-              type: 'path', 
-              mimeType: 'application/octet-stream' 
+            onAttach({
+              path: cleanPath,
+              name: path.basename(cleanPath),
+              type: 'path',
+              mimeType: 'application/octet-stream',
             });
           }
         }

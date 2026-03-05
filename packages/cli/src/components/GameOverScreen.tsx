@@ -9,19 +9,19 @@ interface Props {
 }
 
 const GAME_OVER_ASCII = [
-  "  ██████╗  █████╗ ███╗   ███╗███████╗",
-  " ██╔════╝ ██╔══██╗████╗ ████║██╔════╝",
-  " ██║  ███╗███████║██╔████╔██║█████╗  ",
-  " ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  ",
-  " ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗",
-  "  ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝",
-  "                                     ",
-  "  ██████╗ ██╗   ██╗███████╗██████╗ ",
-  " ██╔═══██╗██║   ██║██╔════╝██╔══██╗",
-  " ██║   ██║██║   ██║█████╗  ██████╔╝",
-  " ██║   ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗",
-  " ╚██████╔╝ ╚████╔╝ ███████╗██║  ██║",
-  "  ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝"
+  '  ██████╗  █████╗ ███╗   ███╗███████╗',
+  ' ██╔════╝ ██╔══██╗████╗ ████║██╔════╝',
+  ' ██║  ███╗███████║██╔████╔██║█████╗  ',
+  ' ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  ',
+  ' ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗',
+  '  ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝',
+  '                                     ',
+  '  ██████╗ ██╗   ██╗███████╗██████╗ ',
+  ' ██╔═══██╗██║   ██║██╔════╝██╔══██╗',
+  ' ██║   ██║██║   ██║█████╗  ██████╔╝',
+  ' ██║   ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗',
+  ' ╚██████╔╝ ╚████╔╝ ███████╗██║  ██║',
+  '  ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝',
 ];
 
 export function GameOverScreen({ tokensUsed, cost, messageCount, onComplete }: Props) {
@@ -46,8 +46,19 @@ export function GameOverScreen({ tokensUsed, cost, messageCount, onComplete }: P
           {line}
         </Text>
       ))}
-      <Box marginTop={2} flexDirection="column" alignItems="center" borderStyle="double" borderColor="#484F58" paddingX={4} paddingY={1}>
-        <Text color="#00E5FF" bold> --- FINAL STATS --- </Text>
+      <Box
+        marginTop={2}
+        flexDirection="column"
+        alignItems="center"
+        borderStyle="double"
+        borderColor="#484F58"
+        paddingX={4}
+        paddingY={1}
+      >
+        <Text color="#00E5FF" bold>
+          {' '}
+          --- FINAL STATS ---{' '}
+        </Text>
         <Box width={30} justifyContent="space-between" marginTop={1}>
           <Text color="#FF00AA">TOTAL_TOKENS</Text>
           <Text color="white">{tokensUsed.toLocaleString()}</Text>

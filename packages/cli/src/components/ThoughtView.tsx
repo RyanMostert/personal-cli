@@ -19,7 +19,7 @@ export function ThoughtView({ text, isStreaming }: Props) {
 
   const lines = text.split('\n');
   const isLong = lines.length > 4 || text.length > 400;
-  
+
   // Always show full text while streaming; collapse long thoughts otherwise
   const showFull = isStreaming || !isLong;
   const displayedText = showFull ? text : lines.slice(0, 3).join('\n') + '...';
@@ -27,10 +27,18 @@ export function ThoughtView({ text, isStreaming }: Props) {
   return (
     <Box flexDirection="column" marginY={1} paddingLeft={2} borderLeft borderStyle="round" borderColor={theme.dim}>
       <Box flexDirection="row" alignItems="center">
-        <Text color={theme.dim} bold italic> 💭 INTERNAL_MONOLOGUE </Text>
-        {isStreaming && <Text color={theme.dim} italic> (streaming...) </Text>}
+        <Text color={theme.dim} bold italic>
+          {' '}
+          💭 INTERNAL_MONOLOGUE{' '}
+        </Text>
+        {isStreaming && (
+          <Text color={theme.dim} italic>
+            {' '}
+            (streaming...){' '}
+          </Text>
+        )}
       </Box>
-      
+
       <Box marginTop={1}>
         <Text color={theme.dim} italic wrap="wrap">
           {displayedText}
@@ -38,7 +46,10 @@ export function ThoughtView({ text, isStreaming }: Props) {
       </Box>
 
       {isLong && !showFull && (
-        <Text color={theme.dim} dimColor> [+{lines.length - 3} lines hidden] </Text>
+        <Text color={theme.dim} dimColor>
+          {' '}
+          [+{lines.length - 3} lines hidden]{' '}
+        </Text>
       )}
     </Box>
   );

@@ -60,7 +60,7 @@ export class SSETransport implements MCPTransport {
     if (this.eventSource) {
       this.eventSource.close();
       this.eventSource = null;
-      
+
       if (this.closeHandler) {
         this.closeHandler();
       }

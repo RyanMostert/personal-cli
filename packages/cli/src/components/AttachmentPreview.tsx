@@ -22,17 +22,17 @@ interface Props {
 
 // Helper to preview text file's first N lines
 function TextFilePreview({ path, lines = 5 }: { path: string; lines?: number }) {
-  const [preview, setPreview] = useState<string>("");
+  const [preview, setPreview] = useState<string>('');
   useEffect(() => {
     if (!fs.existsSync(path)) {
-      setPreview("[File not found]");
+      setPreview('[File not found]');
       return;
     }
     try {
-      const all = fs.readFileSync(path, "utf-8");
-      setPreview(all.split("\n").slice(0, lines).join("\n"));
+      const all = fs.readFileSync(path, 'utf-8');
+      setPreview(all.split('\n').slice(0, lines).join('\n'));
     } catch (err) {
-      setPreview("[Unable to preview file]");
+      setPreview('[Unable to preview file]');
     }
   }, [path, lines]);
   return <Text dimColor>{preview}</Text>;
@@ -52,16 +52,15 @@ export function AttachmentPreview({ attachments, onRemove }: Props) {
             {formatAttachmentForDisplay(att)}
             {onRemove && (
               <Text color="red" bold>
-                {' '}[x]
+                {' '}
+                [x]
               </Text>
             )}
           </Text>
           {/* Text file preview */}
-          {att.path && isTextFile(att.mimeType, att.name) && (
-            <TextFilePreview path={att.path} lines={5} />
-          )}
+          {att.path && isTextFile(att.mimeType, att.name) && <TextFilePreview path={att.path} lines={5} />}
           {/* Image stub/metadata */}
-          {att.type === "image" && (
+          {att.type === 'image' && (
             <Text dimColor>
               Image (no dimensions/exif available) – type: {att.mimeType || 'unknown'}, size: {att.size || 'unknown'}
             </Text>

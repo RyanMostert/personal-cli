@@ -25,10 +25,10 @@ export function KeybindingManager({ onClose }: Props) {
     }
 
     if (key.upArrow) {
-      setSelectedIndex(i => Math.max(0, i - 1));
+      setSelectedIndex((i) => Math.max(0, i - 1));
     }
     if (key.downArrow) {
-      setSelectedIndex(i => Math.min(bindings.length - 1, i + 1));
+      setSelectedIndex((i) => Math.min(bindings.length - 1, i + 1));
     }
     if (key.return) {
       setIsListening(true);
@@ -46,7 +46,10 @@ export function KeybindingManager({ onClose }: Props) {
       alignSelf="center"
     >
       <Box position="absolute" marginTop={-1} marginLeft={2} backgroundColor="black" paddingX={1}>
-        <Text color="#00E5FF" bold> 🔧 KEY_REMAPPING_CORE </Text>
+        <Text color="#00E5FF" bold>
+          {' '}
+          🔧 KEY_REMAPPING_CORE{' '}
+        </Text>
       </Box>
 
       <Box flexDirection="column" marginTop={1}>
@@ -56,10 +59,14 @@ export function KeybindingManager({ onClose }: Props) {
             <Box key={bind.id} paddingLeft={2} backgroundColor={isSelected ? '#161B22' : undefined}>
               <Text color={isSelected ? '#FF00AA' : '#484F58'}>{isSelected ? '❯ ' : '  '}</Text>
               <Box width={20}>
-                <Text color="white" bold>{bind.id.toUpperCase()}</Text>
+                <Text color="white" bold>
+                  {bind.id.toUpperCase()}
+                </Text>
               </Box>
               <Box width={15}>
-                <Text color="#00E5FF" bold>{formatKeyCombo(bind.combo)}</Text>
+                <Text color="#00E5FF" bold>
+                  {formatKeyCombo(bind.combo)}
+                </Text>
               </Box>
               <Text color={isSelected ? 'white' : '#8C959F'}>{bind.description}</Text>
             </Box>
@@ -78,12 +85,22 @@ export function KeybindingManager({ onClose }: Props) {
           borderStyle="double"
           borderColor="#FF00AA"
         >
-          <Text color="#FF00AA" bold> LISTENING_FOR_COMBO... [PRESS_KEY] </Text>
+          <Text color="#FF00AA" bold>
+            {' '}
+            LISTENING_FOR_COMBO... [PRESS_KEY]{' '}
+          </Text>
         </Box>
       )}
 
-      <Box marginTop={1} borderTop borderStyle="single" borderColor="#484F58" paddingTop={0} justifyContent="space-between">
-        <Text color="#484F58"> ESC:EXIT  ↑↓:NAVIGATE  ENTER:REMAP </Text>
+      <Box
+        marginTop={1}
+        borderTop
+        borderStyle="single"
+        borderColor="#484F58"
+        paddingTop={0}
+        justifyContent="space-between"
+      >
+        <Text color="#484F58"> ESC:EXIT ↑↓:NAVIGATE ENTER:REMAP </Text>
         <Text color="#D29922"> [DEV_NOTE: PERSISTENCE_PENDING] </Text>
       </Box>
     </Box>

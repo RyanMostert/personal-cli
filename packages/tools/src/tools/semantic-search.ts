@@ -27,7 +27,7 @@ async function extractOutline(filePath: string, content: string): Promise<string
   lines.forEach((line, index) => {
     const trimmed = line.trim();
     if (!trimmed) return;
-    
+
     // Class / function / interface matching
     if (ext.startsWith('ts') || ext.startsWith('js')) {
       if (/^(?:export\s+)?(?:default\s+)?class\s+\w+/.test(trimmed)) {
@@ -44,10 +44,14 @@ async function extractOutline(filePath: string, content: string): Promise<string
         items.push({ line: index + 1, type: 'interface', signature: trimmed });
       } else if (trimmed.startsWith('//') || trimmed.startsWith('/*')) {
         // Ignore standalone comments
-      } else if (/^(?:public|private|protected)?\s*(?:async\s+)?\w+\s*\(/.test(trimmed) && !trimmed.includes('function') && !trimmed.includes('=')) {
+      } else if (
+        /^(?:public|private|protected)?\s*(?:async\s+)?\w+\s*\(/.test(trimmed) &&
+        !trimmed.includes('function') &&
+        !trimmed.includes('=')
+      ) {
         // Basic method guess
         if (trimmed.endsWith('{') || trimmed.endsWith(';') || trimmed.includes(':')) {
-             items.push({ line: index + 1, type: 'method', signature: '  ' + trimmed });
+          items.push({ line: index + 1, type: 'method', signature: '  ' + trimmed });
         }
       }
     } else if (ext === 'py') {
@@ -61,12 +65,13 @@ async function extractOutline(filePath: string, content: string): Promise<string
     return `<file name="${filePath}">\nNo distinct semantic structures found.\n</file>`;
   }
 
-  const formattedItems = items.map(i => `${i.line.toString().padStart(4, ' ')}: ${i.signature}`).join('\n');
+  const formattedItems = items.map((i) => `${i.line.toString().padStart(4, ' ')}: ${i.signature}`).join('\n');
   return `<file name="${filePath}">\n${formattedItems}\n</file>`;
 }
 
 export const semanticSearch = tool({
-  description: 'AST-aware semantic outline search (mgrep style). Efficiently extracts definitions, classes, functions, and interfaces from files without reading their full contents. Perfect for understanding large codebases using up to 4x fewer tokens.',
+  description:
+    'AST-aware semantic outline search (mgrep style). Efficiently extracts definitions, classes, functions, and interfaces from files without reading their full contents. Perfect for understanding large codebases using up to 4x fewer tokens.',
   inputSchema: z.object({
     patterns: z.array(z.string().describe('Exact file path or glob pattern to analyze (e.g., "src/**/*.ts")')),
   }),

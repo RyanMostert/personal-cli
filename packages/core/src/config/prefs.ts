@@ -45,17 +45,17 @@ export function getRecentModels(): Array<{ provider: string; modelId: string }> 
 export function addRecentModel(provider: string, modelId: string): void {
   const prefs = readPrefs();
   if (!prefs.recentModels) prefs.recentModels = [];
-  
+
   // Remove if already exists
-  prefs.recentModels = prefs.recentModels.filter(m => !(m.provider === provider && m.modelId === modelId));
-  
+  prefs.recentModels = prefs.recentModels.filter((m) => !(m.provider === provider && m.modelId === modelId));
+
   // Add to front
   prefs.recentModels.unshift({ provider, modelId });
-  
+
   // Keep only last 5
   if (prefs.recentModels.length > 5) {
     prefs.recentModels = prefs.recentModels.slice(0, 5);
   }
-  
+
   writePrefs(prefs);
 }

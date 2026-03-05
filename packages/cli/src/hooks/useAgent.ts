@@ -103,124 +103,145 @@ export function useAgent() {
     modelId: 'kimi-k2.5-free',
   };
 
-  const sendMessage = useCallback(async (content: string) => {
-    const agent = getAgent();
-    // Read from ref — avoids stale closure since useCallback deps don't include state
-    const currentAttachedFiles = attachedFilesRef.current;
-    attachedFilesRef.current = [];
+  const sendMessage = useCallback(
+    async (content: string) => {
+      const agent = getAgent();
+      // Read from ref — avoids stale closure since useCallback deps don't include state
+      const currentAttachedFiles = attachedFilesRef.current;
+      attachedFilesRef.current = [];
 
-    setStreamingText('');
-    setStreamingThought('');
-    setState((prev) => ({
-      ...prev,
-      isStreaming: true,
-      error: null,
-      toolCalls: [],
-      attachedFiles: [],
-    }));
-
-    // Buffer streaming text and flush at most every 80ms to reduce Ink repaints
-    let textBuf = '';
-    let thoughtBuf = '';
-    let flushTimer: ReturnType<typeof setTimeout> | null = null;
-    const flush = () => {
-      if (textBuf) { setStreamingText(prev => prev + textBuf); textBuf = ''; }
-      if (thoughtBuf) { setStreamingThought(prev => prev + thoughtBuf); thoughtBuf = ''; }
-      flushTimer = null;
-    };
-
-    try {
-      const stream = agent.sendMessage(content, currentAttachedFiles);
-      
-      // Update state immediately so the user message (and any context messages) are visible
-      setState((prev) => ({
-        ...prev,
-        messages: [...agent.getMessages()],
-      }));
-
-      for await (const event of stream) {
-        switch (event.type) {
-          case 'text-delta':
-            if (event.delta) {
-              textBuf += event.delta;
-              if (!flushTimer) flushTimer = setTimeout(flush, 80);
-            }
-            break;
-          case 'thought-delta':
-            if (event.delta) {
-              thoughtBuf += event.delta;
-              if (!flushTimer) flushTimer = setTimeout(flush, 80);
-            }
-            break;
-          case 'tool-call-start': {
-            const toolCall = event.toolCall!;
-            const isEditFile = toolCall.toolName === 'edit_file';
-            
-            setState((prev) => ({
-              ...prev,
-              toolCalls: [...prev.toolCalls, {
-                toolCallId: toolCall.toolCallId,
-                toolName: toolCall.toolName,
-                args: toolCall.args,
-                // Capture oldText/newText for edit_file to show diff
-                ...(isEditFile && {
-                  path: toolCall.args?.path as string,
-                  oldText: toolCall.args?.oldText as string,
-                  newText: toolCall.args?.newText as string,
-                }),
-              }],
-            }));
-            break;
-          }
-          case 'tool-call-result':
-            setState((prev) => ({
-              ...prev,
-              toolCalls: prev.toolCalls.map(tc =>
-                tc.toolCallId === event.toolCall!.toolCallId
-                  ? { ...tc, result: event.toolCall!.result }
-                  : tc
-              ),
-            }));
-            break;
-          case 'system':
-            if (event.message) {
-              agent.addSystemMessage(event.message);
-              setState((prev) => ({ ...prev, messages: [...agent.getMessages()] }));
-            }
-            break;
-          case 'error':
-            throw event.error;
-        }
-      }
-
-      // Flush any remaining buffered text before clearing streaming state
-      if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
-      if (textBuf) { setStreamingText(prev => prev + textBuf); textBuf = ''; }
-      if (thoughtBuf) { setStreamingThought(prev => prev + thoughtBuf); thoughtBuf = ''; }
-
-      // Stream completed (normal finish or after abort) — always runs
-      setState((prev) => ({
-        ...prev,
-        isStreaming: false,
-        messages: [...agent.getMessages()],
-        tokensUsed: agent.getTokensUsed(),
-        cost: agent.getCost(),
-        toolCalls: [],
-      }));
       setStreamingText('');
       setStreamingThought('');
-
-    } catch (err) {
-      if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
-      setStreamingText('');
       setState((prev) => ({
         ...prev,
-        isStreaming: false,
+        isStreaming: true,
+        error: null,
         toolCalls: [],
-        error: err instanceof Error ? err.message : String(err),
+        attachedFiles: [],
       }));
-    }
-  }, [getAgent]);
+
+      // Buffer streaming text and flush at most every 80ms to reduce Ink repaints
+      let textBuf = '';
+      let thoughtBuf = '';
+      let flushTimer: ReturnType<typeof setTimeout> | null = null;
+      const flush = () => {
+        if (textBuf) {
+          setStreamingText((prev) => prev + textBuf);
+          textBuf = '';
+        }
+        if (thoughtBuf) {
+          setStreamingThought((prev) => prev + thoughtBuf);
+          thoughtBuf = '';
+        }
+        flushTimer = null;
+      };
+
+      try {
+        const stream = agent.sendMessage(content, currentAttachedFiles);
+
+        // Update state immediately so the user message (and any context messages) are visible
+        setState((prev) => ({
+          ...prev,
+          messages: [...agent.getMessages()],
+        }));
+
+        for await (const event of stream) {
+          switch (event.type) {
+            case 'text-delta':
+              if (event.delta) {
+                textBuf += event.delta;
+                if (!flushTimer) flushTimer = setTimeout(flush, 80);
+              }
+              break;
+            case 'thought-delta':
+              if (event.delta) {
+                thoughtBuf += event.delta;
+                if (!flushTimer) flushTimer = setTimeout(flush, 80);
+              }
+              break;
+            case 'tool-call-start': {
+              const toolCall = event.toolCall!;
+              const isEditFile = toolCall.toolName === 'edit_file';
+
+              setState((prev) => ({
+                ...prev,
+                toolCalls: [
+                  ...prev.toolCalls,
+                  {
+                    toolCallId: toolCall.toolCallId,
+                    toolName: toolCall.toolName,
+                    args: toolCall.args,
+                    // Capture oldText/newText for edit_file to show diff
+                    ...(isEditFile && {
+                      path: toolCall.args?.path as string,
+                      oldText: toolCall.args?.oldText as string,
+                      newText: toolCall.args?.newText as string,
+                    }),
+                  },
+                ],
+              }));
+              break;
+            }
+            case 'tool-call-result':
+              setState((prev) => ({
+                ...prev,
+                toolCalls: prev.toolCalls.map((tc) =>
+                  tc.toolCallId === event.toolCall!.toolCallId ? { ...tc, result: event.toolCall!.result } : tc,
+                ),
+              }));
+              break;
+            case 'system':
+              if (event.message) {
+                agent.addSystemMessage(event.message);
+                setState((prev) => ({ ...prev, messages: [...agent.getMessages()] }));
+              }
+              break;
+            case 'error':
+              throw event.error;
+          }
+        }
+
+        // Flush any remaining buffered text before clearing streaming state
+        if (flushTimer) {
+          clearTimeout(flushTimer);
+          flushTimer = null;
+        }
+        if (textBuf) {
+          setStreamingText((prev) => prev + textBuf);
+          textBuf = '';
+        }
+        if (thoughtBuf) {
+          setStreamingThought((prev) => prev + thoughtBuf);
+          thoughtBuf = '';
+        }
+
+        // Stream completed (normal finish or after abort) — always runs
+        setState((prev) => ({
+          ...prev,
+          isStreaming: false,
+          messages: [...agent.getMessages()],
+          tokensUsed: agent.getTokensUsed(),
+          cost: agent.getCost(),
+          toolCalls: [],
+        }));
+        setStreamingText('');
+        setStreamingThought('');
+      } catch (err) {
+        if (flushTimer) {
+          clearTimeout(flushTimer);
+          flushTimer = null;
+        }
+        setStreamingText('');
+        setState((prev) => ({
+          ...prev,
+          isStreaming: false,
+          toolCalls: [],
+          error: err instanceof Error ? err.message : String(err),
+        }));
+      }
+    },
+    [getAgent],
+  );
 
   const abort = useCallback(() => {
     agentRef.current?.abort();
@@ -233,26 +254,35 @@ export function useAgent() {
     activeModel,
     sendMessage,
     abort,
-    addSystemMessage: useCallback((msg: string) => {
-      const agent = getAgent();
-      agent.addSystemMessage(msg);
-      setState((prev) => ({ ...prev, messages: [...agent.getMessages()] }));
-    }, [getAgent]),
+    addSystemMessage: useCallback(
+      (msg: string) => {
+        const agent = getAgent();
+        agent.addSystemMessage(msg);
+        setState((prev) => ({ ...prev, messages: [...agent.getMessages()] }));
+      },
+      [getAgent],
+    ),
     clearMessages: useCallback(() => {
       const agent = getAgent();
       agent.clearHistory();
       setState((prev) => ({ ...prev, messages: [...agent.getMessages()], tokensUsed: 0 }));
     }, [getAgent]),
-    switchModel: useCallback((provider: ProviderName, modelId: string) => {
-      const agent = getAgent();
-      agent.switchModel(provider, modelId);
-      setState((prev) => ({ ...prev }));
-    }, [getAgent]),
-    switchMode: useCallback((mode: AgentMode) => {
-      const agent = getAgent();
-      agent.switchMode(mode);
-      setState((prev) => ({ ...prev, mode }));
-    }, [getAgent]),
+    switchModel: useCallback(
+      (provider: ProviderName, modelId: string) => {
+        const agent = getAgent();
+        agent.switchModel(provider, modelId);
+        setState((prev) => ({ ...prev }));
+      },
+      [getAgent],
+    ),
+    switchMode: useCallback(
+      (mode: AgentMode) => {
+        const agent = getAgent();
+        agent.switchMode(mode);
+        setState((prev) => ({ ...prev, mode }));
+      },
+      [getAgent],
+    ),
     getMode: useCallback(() => {
       const agent = getAgent();
       return agent.getMode();
@@ -267,34 +297,40 @@ export function useAgent() {
       const attachment = loadAttachment(filePath);
       if (attachment) {
         attachedFilesRef.current = [...attachedFilesRef.current, attachment];
-        setState(prev => ({ ...prev, attachedFiles: attachedFilesRef.current }));
+        setState((prev) => ({ ...prev, attachedFiles: attachedFilesRef.current }));
         return true;
       }
       return false;
     }, []),
     clearAttachments: useCallback(() => {
       attachedFilesRef.current = [];
-      setState(prev => ({ ...prev, attachedFiles: [] }));
+      setState((prev) => ({ ...prev, attachedFiles: [] }));
     }, []),
-    loadHistory: useCallback((id: string) => {
-      const agent = getAgent();
-      const success = agent.loadHistory(id);
-      if (success) {
-        setState(prev => ({
-          ...prev,
-          messages: [...agent.getMessages()],
-          tokensUsed: agent.getTokensUsed(),
-        }));
-      }
-      return success;
-    }, [getAgent]),
-    renameConversation: useCallback((newTitle: string) => {
-      return getAgent().renameConversation(newTitle);
-    }, [getAgent]),
+    loadHistory: useCallback(
+      (id: string) => {
+        const agent = getAgent();
+        const success = agent.loadHistory(id);
+        if (success) {
+          setState((prev) => ({
+            ...prev,
+            messages: [...agent.getMessages()],
+            tokensUsed: agent.getTokensUsed(),
+          }));
+        }
+        return success;
+      },
+      [getAgent],
+    ),
+    renameConversation: useCallback(
+      (newTitle: string) => {
+        return getAgent().renameConversation(newTitle);
+      },
+      [getAgent],
+    ),
     compact: useCallback(async () => {
       const agent = getAgent();
       const result = await agent.compact();
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         messages: [...agent.getMessages()],
         tokensUsed: agent.getTokensUsed(),
@@ -310,31 +346,40 @@ export function useAgent() {
     initProject: useCallback(async () => {
       return getAgent().initProject();
     }, [getAgent]),
-    synthesizeAnswer: useCallback(async (topic: string) => {
-      return getAgent().synthesizeAnswer(topic);
-    }, [getAgent]),
+    synthesizeAnswer: useCallback(
+      async (topic: string) => {
+        return getAgent().synthesizeAnswer(topic);
+      },
+      [getAgent],
+    ),
     getTools: useCallback(() => {
       return getAgent().getTools();
     }, [getAgent]),
     loadPlugins: useCallback(async () => {
       return getAgent().getLoadedPlugins();
     }, [getAgent]),
-    saveWorkspace: useCallback((path: string) => {
-      getAgent().saveWorkspace(path, state.attachedFiles);
-    }, [getAgent, state.attachedFiles]),
-    loadWorkspace: useCallback((path: string) => {
-      const agent = getAgent();
-      const attachments = agent.loadWorkspace(path);
-      if (attachments) {
-        attachedFilesRef.current = attachments;
-        setState(prev => ({
-          ...prev,
-          messages: [...agent.getMessages()],
-          tokensUsed: agent.getTokensUsed(),
-          cost: agent.getCost(),
-          attachedFiles: attachments,
-        }));
-      }
-    }, [getAgent]),
+    saveWorkspace: useCallback(
+      (path: string) => {
+        getAgent().saveWorkspace(path, state.attachedFiles);
+      },
+      [getAgent, state.attachedFiles],
+    ),
+    loadWorkspace: useCallback(
+      (path: string) => {
+        const agent = getAgent();
+        const attachments = agent.loadWorkspace(path);
+        if (attachments) {
+          attachedFilesRef.current = attachments;
+          setState((prev) => ({
+            ...prev,
+            messages: [...agent.getMessages()],
+            tokensUsed: agent.getTokensUsed(),
+            cost: agent.getCost(),
+            attachedFiles: attachments,
+          }));
+        }
+      },
+      [getAgent],
+    ),
   };
 }

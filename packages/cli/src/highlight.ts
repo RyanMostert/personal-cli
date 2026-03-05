@@ -2,10 +2,31 @@ import { codeToANSI } from '@shikijs/cli';
 import type { BundledLanguage } from 'shiki';
 
 const SUPPORTED_LANGS = new Set([
-  'typescript', 'ts', 'javascript', 'js', 'tsx', 'jsx',
-  'python', 'py', 'bash', 'sh', 'json', 'yaml', 'yml',
-  'markdown', 'md', 'html', 'css', 'rust', 'go', 'java',
-  'c', 'cpp', 'sql', 'text', 'txt',
+  'typescript',
+  'ts',
+  'javascript',
+  'js',
+  'tsx',
+  'jsx',
+  'python',
+  'py',
+  'bash',
+  'sh',
+  'json',
+  'yaml',
+  'yml',
+  'markdown',
+  'md',
+  'html',
+  'css',
+  'rust',
+  'go',
+  'java',
+  'c',
+  'cpp',
+  'sql',
+  'text',
+  'txt',
 ]);
 
 // Cache highlighted blocks to avoid redundant async work

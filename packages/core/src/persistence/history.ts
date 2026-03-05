@@ -62,9 +62,7 @@ export function loadHistory(): string[] {
     }
 
     // Return most recent first
-    return entries
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .map(e => e.text);
+    return entries.sort((a, b) => b.timestamp - a.timestamp).map((e) => e.text);
   } catch {
     return [];
   }

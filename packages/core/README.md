@@ -35,5 +35,6 @@ pnpm run dev
 ## ⚙️ Configuration
 
 Persistence data (histories, auth keys) is stored in the user's home directory:
+
 - **Windows**: `%APPDATA%/personal-cli/`
 - **Linux/macOS**: `~/.config/personal-cli/`

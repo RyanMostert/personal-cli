@@ -24,20 +24,22 @@ export function FileExplorer({ onSelect, onClose, tick }: Props) {
       ignore: ['**/node_modules/**', '**/dist/**', '**/.git/**', '**/build/**', '**/.turbo/**', '**/node_modules'],
       nodir: true,
       dot: false,
-    }).then(found => {
-      // Normalize paths to forward slashes for consistency
-      const normalized = (found as string[]).map(f => f.replace(/\\/g, '/'));
-      setFiles(normalized.sort());
-      setIsLoading(false);
-    }).catch(err => {
-      console.error('Glob error:', err);
-      setIsLoading(false);
-    });
+    })
+      .then((found) => {
+        // Normalize paths to forward slashes for consistency
+        const normalized = (found as string[]).map((f) => f.replace(/\\/g, '/'));
+        setFiles(normalized.sort());
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.error('Glob error:', err);
+        setIsLoading(false);
+      });
   }, []);
 
   const filtered = useMemo(() => {
     const query = filter.toLowerCase();
-    return files.filter(f => f.toLowerCase().includes(query));
+    return files.filter((f) => f.toLowerCase().includes(query));
   }, [files, filter]);
 
   useEffect(() => {
@@ -57,29 +59,29 @@ export function FileExplorer({ onSelect, onClose, tick }: Props) {
     }
 
     if (key.upArrow) {
-      setSelectedIndex(i => (i > 0 ? i - 1 : Math.max(0, filtered.length - 1)));
+      setSelectedIndex((i) => (i > 0 ? i - 1 : Math.max(0, filtered.length - 1)));
       return;
     }
     if (key.downArrow) {
-      setSelectedIndex(i => (i < filtered.length - 1 ? i + 1 : 0));
+      setSelectedIndex((i) => (i < filtered.length - 1 ? i + 1 : 0));
       return;
     }
 
     if (key.backspace || key.delete) {
-      setFilter(f => f.slice(0, -1));
+      setFilter((f) => f.slice(0, -1));
       return;
     }
 
     if (input && !key.ctrl && !key.meta) {
-      setFilter(f => f + input);
+      setFilter((f) => f + input);
     }
   });
 
-  const scrollOffset = Math.max(0, Math.min(
-    selectedIndex - Math.floor(VISIBLE_COUNT / 2),
-    Math.max(0, filtered.length - VISIBLE_COUNT)
-  ));
-  
+  const scrollOffset = Math.max(
+    0,
+    Math.min(selectedIndex - Math.floor(VISIBLE_COUNT / 2), Math.max(0, filtered.length - VISIBLE_COUNT)),
+  );
+
   const visibleItems = filtered.slice(scrollOffset, scrollOffset + VISIBLE_COUNT);
 
   return (
@@ -93,12 +95,19 @@ export function FileExplorer({ onSelect, onClose, tick }: Props) {
       alignSelf="center"
     >
       <Box position="absolute" marginTop={-1} marginLeft={2} backgroundColor="black" paddingX={1}>
-        <Text color="#00E5FF" bold> 📂 PROJECT_FILESYSTEM </Text>
+        <Text color="#00E5FF" bold>
+          {' '}
+          📂 PROJECT_FILESYSTEM{' '}
+        </Text>
       </Box>
 
       <Box marginBottom={1} paddingX={1} borderStyle="round" borderColor="#484F58">
-        <Text color="#FF00AA" bold>❯ </Text>
-        <Text color="#00E5FF" bold>FILTER: </Text>
+        <Text color="#FF00AA" bold>
+          ❯{' '}
+        </Text>
+        <Text color="#00E5FF" bold>
+          FILTER:{' '}
+        </Text>
         <Text color="white">{filter}</Text>
         <Text color="#FF00AA">{tick % 2 === 0 ? '▌' : ' '}</Text>
       </Box>
@@ -109,7 +118,10 @@ export function FileExplorer({ onSelect, onClose, tick }: Props) {
         </Box>
       ) : filtered.length === 0 ? (
         <Box paddingY={2} alignItems="center">
-          <Text color="#FF5555" bold> [!] NO_MATCHES_FOUND </Text>
+          <Text color="#FF5555" bold>
+            {' '}
+            [!] NO_MATCHES_FOUND{' '}
+          </Text>
         </Box>
       ) : (
         <Box flexDirection="column">
@@ -122,8 +134,12 @@ export function FileExplorer({ onSelect, onClose, tick }: Props) {
             return (
               <Box key={f} paddingLeft={1} backgroundColor={isSelected ? '#161B22' : undefined}>
                 <Text color={isSelected ? '#FF00AA' : '#484F58'}>{isSelected ? '❯ ' : '  '}</Text>
-                <Text color="#484F58" dimColor>{dir === '.' ? '' : dir + '/'}</Text>
-                <Text color={isSelected ? 'white' : '#8C959F'} bold={isSelected}>{name}</Text>
+                <Text color="#484F58" dimColor>
+                  {dir === '.' ? '' : dir + '/'}
+                </Text>
+                <Text color={isSelected ? 'white' : '#8C959F'} bold={isSelected}>
+                  {name}
+                </Text>
               </Box>
             );
           })}
@@ -131,7 +147,7 @@ export function FileExplorer({ onSelect, onClose, tick }: Props) {
       )}
 
       <Box marginTop={1} borderTop borderStyle="single" borderColor="#484F58" paddingTop={0}>
-        <Text color="#484F58"> ESC:ABORT  ↑↓:NAVIGATE  ENTER:OPEN </Text>
+        <Text color="#484F58"> ESC:ABORT ↑↓:NAVIGATE ENTER:OPEN </Text>
       </Box>
     </Box>
   );

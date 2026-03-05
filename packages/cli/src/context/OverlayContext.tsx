@@ -36,11 +36,7 @@ export function OverlayProvider({ children }: { children: React.ReactNode }) {
 
   const close = useCallback(() => setOverlay({ type: null }), []);
 
-  return (
-    <OverlayContext.Provider value={{ overlay, open, close }}>
-      {children}
-    </OverlayContext.Provider>
-  );
+  return <OverlayContext.Provider value={{ overlay, open, close }}>{children}</OverlayContext.Provider>;
 }
 
 export function useOverlay() {

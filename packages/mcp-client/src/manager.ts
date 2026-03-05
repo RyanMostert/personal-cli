@@ -1,10 +1,4 @@
-import { 
-  MCPServerConfig, 
-  MCPClientStatus, 
-  MCPServerInfo, 
-  MCPTool,
-  ToolResult,
-} from './types.js';
+import { MCPServerConfig, MCPClientStatus, MCPServerInfo, MCPTool, ToolResult } from './types.js';
 import { MCPClient } from './client.js';
 
 export class MCPClientManager {
@@ -26,7 +20,7 @@ export class MCPClientManager {
     });
 
     await client.connect();
-    
+
     this.clients.set(name, client);
     this.configs.set(name, config);
   }
@@ -40,9 +34,7 @@ export class MCPClientManager {
   }
 
   async disconnectAll(): Promise<void> {
-    const disconnects = Array.from(this.clients.keys()).map(name => 
-      this.disconnectServer(name)
-    );
+    const disconnects = Array.from(this.clients.keys()).map((name) => this.disconnectServer(name));
     await Promise.all(disconnects);
   }
 
@@ -57,9 +49,7 @@ export class MCPClientManager {
   }
 
   async reloadAll(): Promise<void> {
-    const reloads = Array.from(this.configs.entries()).map(([name, config]) =>
-      this.connectServer(name, config)
-    );
+    const reloads = Array.from(this.configs.entries()).map(([name, config]) => this.connectServer(name, config));
     await Promise.all(reloads);
   }
 
@@ -69,7 +59,7 @@ export class MCPClientManager {
   }
 
   getAllServerInfo(): MCPServerInfo[] {
-    return Array.from(this.clients.values()).map(client => client.getServerInfo());
+    return Array.from(this.clients.values()).map((client) => client.getServerInfo());
   }
 
   getConnectedServers(): string[] {
@@ -82,12 +72,12 @@ export class MCPClientManager {
     if (serverName) {
       const client = this.clients.get(serverName);
       if (client) {
-        const serverTools = client.getTools().map(tool => this.wrapTool(serverName, tool, client));
+        const serverTools = client.getTools().map((tool) => this.wrapTool(serverName, tool, client));
         tools.push(...serverTools);
       }
     } else {
       for (const [name, client] of this.clients) {
-        const serverTools = client.getTools().map(tool => this.wrapTool(name, tool, client));
+        const serverTools = client.getTools().map((tool) => this.wrapTool(name, tool, client));
         tools.push(...serverTools);
       }
     }
@@ -103,7 +93,7 @@ export class MCPClientManager {
     // Parse qualified name: server__tool
     const separator = '__';
     const separatorIndex = qualifiedName.indexOf(separator);
-    
+
     if (separatorIndex === -1) {
       throw new Error(`Invalid tool name format. Expected "server__tool", got: ${qualifiedName}`);
     }
@@ -125,9 +115,9 @@ export class MCPClientManager {
   }
 
   private wrapTool(
-    serverName: string, 
+    serverName: string,
     toolSchema: { name: string; description: string; inputSchema: Record<string, unknown> },
-    client: MCPClient
+    client: MCPClient,
   ): MCPTool {
     return {
       name: `${serverName}__${toolSchema.name}`,

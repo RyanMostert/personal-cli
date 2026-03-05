@@ -15,9 +15,13 @@ export function StreamingMessage({ text, thought }: Props) {
   return (
     <Box flexDirection="column" marginBottom={1} paddingLeft={1}>
       <Box marginBottom={0}>
-        <Text color={theme.assistantLabel} bold>CPU </Text>
+        <Text color={theme.assistantLabel} bold>
+          CPU{' '}
+        </Text>
         <Text color={theme.dim}>❯ </Text>
-        <Text color={theme.warning} bold>{thought && !text ? 'THINKING...' : 'LINKING...'}</Text>
+        <Text color={theme.warning} bold>
+          {thought && !text ? 'THINKING...' : 'LINKING...'}
+        </Text>
       </Box>
 
       {thought && <ThoughtView text={thought} isStreaming={true} />}
@@ -26,7 +30,9 @@ export function StreamingMessage({ text, thought }: Props) {
         {text ? (
           <MarkdownRenderer text={text} />
         ) : !thought ? (
-          <Text color={theme.dim} italic>accessing matrix...</Text>
+          <Text color={theme.dim} italic>
+            accessing matrix...
+          </Text>
         ) : null}
       </Box>
     </Box>

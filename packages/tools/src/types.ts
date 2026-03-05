@@ -1,8 +1,8 @@
 export type PermissionAction = 'allow' | 'deny' | 'ask';
 
 export interface PermissionRule {
-  tool: string;           // e.g. 'writeFile', 'runCommand', '*'
-  pattern?: string;       // glob pattern on the path/command arg (optional)
+  tool: string; // e.g. 'writeFile', 'runCommand', '*'
+  pattern?: string; // glob pattern on the path/command arg (optional)
   action: PermissionAction;
 }
 
@@ -46,10 +46,7 @@ export const MODE_RULES: Record<string, PermissionRule[]> = {
   ],
 };
 
-export type PermissionCallback = (
-  toolName: string,
-  args: Record<string, unknown>,
-) => Promise<boolean>;
+export type PermissionCallback = (toolName: string, args: Record<string, unknown>) => Promise<boolean>;
 
 /** Called after a successful file write with the absolute path and before/after content. */
 export type WriteCallback = (path: string, before: string | null, after: string) => void;

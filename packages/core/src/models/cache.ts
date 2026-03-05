@@ -31,9 +31,9 @@ export interface CacheStats {
 }
 
 const DEFAULT_STALE_AFTER_HOURS: Record<string, number> = {
-  'openrouter': 24,
+  openrouter: 24,
   'github-copilot': 168, // 1 week - Copilot doesn't change often
-  'opencode': 24,
+  opencode: 24,
   'opencode-zen': 24,
 };
 
@@ -58,7 +58,7 @@ export async function saveModelCache(cache: ModelCache): Promise<void> {
     const { promises: fs } = await import('fs');
     const { dirname } = await import('path');
     const cachePath = getCachePath();
-    
+
     // Ensure directory exists
     await fs.mkdir(dirname(cachePath), { recursive: true });
     await fs.writeFile(cachePath, JSON.stringify(cache, null, 2));
@@ -67,10 +67,7 @@ export async function saveModelCache(cache: ModelCache): Promise<void> {
   }
 }
 
-export async function cacheModels(
-  provider: ProviderName,
-  models: FetchedModelEntry[]
-): Promise<void> {
+export async function cacheModels(provider: ProviderName, models: FetchedModelEntry[]): Promise<void> {
   const cache = await loadModelCache();
   cache[provider] = {
     models,
@@ -80,9 +77,7 @@ export async function cacheModels(
   await saveModelCache(cache);
 }
 
-export async function getCachedModels(
-  provider: ProviderName
-): Promise<FetchedModelEntry[] | null> {
+export async function getCachedModels(provider: ProviderName): Promise<FetchedModelEntry[] | null> {
   const cache = await loadModelCache();
   const entry = cache[provider];
   if (!entry) return null;
@@ -103,7 +98,7 @@ export async function getCacheStats(provider: ProviderName): Promise<CacheStats>
   const cache = await loadModelCache();
   const entry = cache[provider];
   const staleAfterHours = DEFAULT_STALE_AFTER_HOURS[provider] || 24;
-  
+
   if (!entry) {
     return {
       provider,

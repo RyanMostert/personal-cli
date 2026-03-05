@@ -22,7 +22,10 @@ export function PluginWizard({ mode, pluginName: initialName, onSave, onClose }:
   const fields: FormField[] = ['name', 'version', 'description', 'template'];
 
   useInput((input, key) => {
-    if (key.escape) { onClose(); return; }
+    if (key.escape) {
+      onClose();
+      return;
+    }
 
     if (key.return) {
       const currentIndex = fields.indexOf(focusField);
@@ -61,17 +64,17 @@ export function PluginWizard({ mode, pluginName: initialName, onSave, onClose }:
     switch (focusField) {
       case 'name':
         if (!isEditing) {
-          if (key.backspace || key.delete) setName(n => n.slice(0, -1));
-          else if (input && !key.ctrl && !key.meta) setName(n => n + input);
+          if (key.backspace || key.delete) setName((n) => n.slice(0, -1));
+          else if (input && !key.ctrl && !key.meta) setName((n) => n + input);
         }
         break;
       case 'version':
-        if (key.backspace || key.delete) setVersion(v => v.slice(0, -1));
-        else if (input && !key.ctrl && !key.meta) setVersion(v => v + input);
+        if (key.backspace || key.delete) setVersion((v) => v.slice(0, -1));
+        else if (input && !key.ctrl && !key.meta) setVersion((v) => v + input);
         break;
       case 'description':
-        if (key.backspace || key.delete) setDescription(d => d.slice(0, -1));
-        else if (input && !key.ctrl && !key.meta) setDescription(d => d + input);
+        if (key.backspace || key.delete) setDescription((d) => d.slice(0, -1));
+        else if (input && !key.ctrl && !key.meta) setDescription((d) => d + input);
         break;
       case 'template':
         if (input === 'y' || input === 'n') setCreateTemplate(input === 'y');
@@ -82,37 +85,29 @@ export function PluginWizard({ mode, pluginName: initialName, onSave, onClose }:
   });
 
   const renderField = (field: FormField, label: string, value: string, isFocused: boolean) => (
-    <Box 
-      flexDirection="column" 
+    <Box
+      flexDirection="column"
       marginBottom={1}
       borderStyle={isFocused ? 'double' : undefined}
       borderColor={isFocused ? '#AA00FF' : undefined}
       paddingX={isFocused ? 1 : 0}
     >
       <Text color={isFocused ? '#AA00FF' : '#484F58'} bold>
-        {isFocused ? '❯ ' : '  '}{label}
+        {isFocused ? '❯ ' : '  '}
+        {label}
       </Text>
       <Box>
-        <Text color={isFocused ? 'white' : '#8C959F'}>
-          {value || (isFocused ? '_' : '<empty>')}
-        </Text>
+        <Text color={isFocused ? 'white' : '#8C959F'}>{value || (isFocused ? '_' : '<empty>')}</Text>
         {isFocused && value && <Text color="#AA00FF">_</Text>}
       </Box>
     </Box>
   );
 
   return (
-    <Box
-      flexDirection="column"
-      paddingX={2}
-      paddingY={1}
-      marginY={1}
-      borderStyle="single"
-      borderColor="#AA00FF"
-    >
+    <Box flexDirection="column" paddingX={2} paddingY={1} marginY={1} borderStyle="single" borderColor="#AA00FF">
       <Box position="absolute" marginTop={-1} marginLeft={2} backgroundColor="black" paddingX={1}>
-        <Text color="#AA00FF" bold> 
-          {isEditing ? 'RECONFIGURING_MODULE' : 'INITIALIZING_NEW_MODULE'} 
+        <Text color="#AA00FF" bold>
+          {isEditing ? 'RECONFIGURING_MODULE' : 'INITIALIZING_NEW_MODULE'}
         </Text>
       </Box>
 
@@ -121,8 +116,8 @@ export function PluginWizard({ mode, pluginName: initialName, onSave, onClose }:
         {renderField('version', 'VERSION_TAG', version, focusField === 'version')}
         {renderField('description', 'FUNCTIONAL_PURPOSE', description, focusField === 'description')}
 
-        <Box 
-          flexDirection="column" 
+        <Box
+          flexDirection="column"
           marginBottom={1}
           borderStyle={focusField === 'template' ? 'double' : undefined}
           borderColor={focusField === 'template' ? '#AA00FF' : undefined}
@@ -140,14 +135,19 @@ export function PluginWizard({ mode, pluginName: initialName, onSave, onClose }:
 
         {error && (
           <Box marginTop={1} paddingX={1} borderStyle="single" borderColor="#FF5555">
-            <Text color="#FF5555" bold>⚠ {error}</Text>
+            <Text color="#FF5555" bold>
+              ⚠ {error}
+            </Text>
           </Box>
         )}
       </Box>
 
       <Box marginTop={1} justifyContent="space-between">
         <Text color="#484F58"> ESC:ABORT │ TAB:NEXT FIELD </Text>
-        <Text color="#AA00FF" bold> ENTER:{focusField === 'template' ? 'EXECUTE_INIT' : 'NEXT_FIELD'} </Text>
+        <Text color="#AA00FF" bold>
+          {' '}
+          ENTER:{focusField === 'template' ? 'EXECUTE_INIT' : 'NEXT_FIELD'}{' '}
+        </Text>
       </Box>
     </Box>
   );

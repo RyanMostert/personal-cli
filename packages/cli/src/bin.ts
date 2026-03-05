@@ -3,11 +3,10 @@
 if (!process.env.__PCLI_HEAPED__) {
   const { spawnSync } = await import('child_process');
   process.env.__PCLI_HEAPED__ = '1';
-  const result = spawnSync(
-    process.execPath,
-    ['--max-old-space-size=8192', ...process.argv.slice(1)],
-    { stdio: 'inherit', env: process.env },
-  );
+  const result = spawnSync(process.execPath, ['--max-old-space-size=8192', ...process.argv.slice(1)], {
+    stdio: 'inherit',
+    env: process.env,
+  });
   process.exit(result.status ?? 0);
 }
 
@@ -37,26 +36,26 @@ program
   .action(async (options) => {
     // Process attached files from CLI arguments
     const attachments: Array<{ path: string; type: 'file' | 'image' }> = [];
-    
+
     for (const filePath of options.file) {
       attachments.push({ path: filePath, type: 'file' });
     }
-    
+
     for (const imagePath of options.image) {
       attachments.push({ path: imagePath, type: 'image' });
     }
-    
+
     const { unmount, waitUntilExit } = render(
       React.createElement(ErrorBoundary, {
-        children: React.createElement(ThemeProvider, { 
-          children: React.createElement(OverlayProvider, { 
-            children: React.createElement(App, { initialAttachments: attachments })
-          }) 
+        children: React.createElement(ThemeProvider, {
+          children: React.createElement(OverlayProvider, {
+            children: React.createElement(App, { initialAttachments: attachments }),
+          }),
         }),
       }),
       {
         exitOnCtrlC: false,
-      }
+      },
     );
 
     await waitUntilExit();

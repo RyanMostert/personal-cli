@@ -1,9 +1,31 @@
 import { streamText, type ModelMessage } from 'ai';
-import { generateId, type Message, type StreamEvent, type ActiveModel, type AgentMode, type ProviderName, getModelEntry, type Attachment } from '@personal-cli/shared';
+import {
+  generateId,
+  type Message,
+  type StreamEvent,
+  type ActiveModel,
+  type AgentMode,
+  type ProviderName,
+  getModelEntry,
+  type Attachment,
+} from '@personal-cli/shared';
 import { DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
 import { ProviderManager } from './providers/manager.js';
-import { saveConversation, loadConversation, renameConversation as persistRename, saveWorkspace, loadWorkspace, type SavedWorkspace } from './persistence/conversations.js';
-import { createTools, type PermissionCallback, type QuestionCallback, loadPlugins, type LoadedPlugin } from '@personal-cli/tools';
+import {
+  saveConversation,
+  loadConversation,
+  renameConversation as persistRename,
+  saveWorkspace,
+  loadWorkspace,
+  type SavedWorkspace,
+} from './persistence/conversations.js';
+import {
+  createTools,
+  type PermissionCallback,
+  type QuestionCallback,
+  loadPlugins,
+  type LoadedPlugin,
+} from '@personal-cli/tools';
 import { DEFAULT_SYSTEM_PROMPT } from './prompts/default.js';
 import { generateTitle } from './agent/title.js';
 import { COMPACTION_PROMPT } from './prompts/compaction.js';
@@ -58,14 +80,14 @@ export class Agent {
     let base = options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
     const projectHints: string[] = [];
     const hintFiles = ['.pcli-hints', 'AGENTS.md', 'CONTEXT.md', 'INSTRUCTIONS.md', '.goosehints', '.cursorrules'];
-    
+
     for (const file of hintFiles) {
       const p = join(process.cwd(), file);
       if (existsSync(p)) {
         try {
           const content = readFileSync(p, 'utf-8').trim();
           projectHints.push(`### Source: ${file}\n${content}`);
-        } catch { }
+        } catch {}
       }
     }
 
@@ -173,7 +195,7 @@ export class Agent {
     try {
       const model = await this.providerManager.getModel();
       const prompt = `The user is asking about "${topic}". Please provide a clear, concise explanation with examples if relevant. Format your response in markdown.`;
-      
+
       const result = streamText({
         model,
         messages: [{ role: 'user', content: prompt }],
@@ -221,13 +243,13 @@ export class Agent {
     let listing = '';
     try {
       listing = readdirSync(cwd).slice(0, 30).join(', ');
-    } catch { }
+    } catch {}
 
     let pkgJson = '';
     try {
       const p = join(cwd, 'package.json');
       if (existsSync(p)) pkgJson = readFileSync(p, 'utf-8').slice(0, 1000);
-    } catch { }
+    } catch {}
 
     const prompt = `Analyze the following project and write a concise AGENTS.md file. This file will be prepended to the AI assistant's system prompt on every session, so make it useful: include what the project is, its tech stack, key directories/files, important conventions, and anything an AI coding assistant should know before touching the code.\n\nProject files: ${listing}\n\n${pkgJson ? `package.json (truncated):\n${pkgJson}` : ''}\n\nWrite AGENTS.md content only — no markdown code fences, no preamble. Start directly with a heading.`;
 
@@ -270,7 +292,7 @@ export class Agent {
   async *sendMessage(userContent: string, attachedFiles?: Attachment[]): AsyncGenerator<StreamEvent> {
     // Build context block if files are attached
     const contextBlock = attachedFiles?.length
-      ? `<context>\n${attachedFiles.map(f => `<file path="${f.path}">\n${f.content || ''}\n</file>`).join('\n')}\n</context>\n\n`
+      ? `<context>\n${attachedFiles.map((f) => `<file path="${f.path}">\n${f.content || ''}\n</file>`).join('\n')}\n</context>\n\n`
       : '';
     const fullContent = contextBlock + userContent;
 
@@ -318,9 +340,12 @@ export class Agent {
       let inThought = false;
 
       // Stream timeout to prevent stalling
-      const streamTimeout = setTimeout(() => {
-        this.currentAbortController?.abort();
-      }, 5 * 60 * 1000);
+      const streamTimeout = setTimeout(
+        () => {
+          this.currentAbortController?.abort();
+        },
+        5 * 60 * 1000,
+      );
 
       try {
         for await (const part of result.fullStream) {
@@ -328,7 +353,7 @@ export class Agent {
             case 'text-delta': {
               const text = part.text;
               buffer += text;
-              
+
               while (buffer.length > 0) {
                 if (inThought) {
                   const closeIdx = buffer.indexOf('</thought>');
@@ -360,7 +385,7 @@ export class Agent {
                   // Check for both <thought> and <multi_tool_use.parallel>
                   const thoughtOpenIdx = buffer.indexOf('<thought>');
                   const multiToolOpenIdx = buffer.indexOf('<multi_tool_use.parallel>');
-                  
+
                   // Handle <thought>
                   if (thoughtOpenIdx !== -1 && (multiToolOpenIdx === -1 || thoughtOpenIdx < multiToolOpenIdx)) {
                     const beforeText = buffer.slice(0, thoughtOpenIdx);
@@ -372,7 +397,7 @@ export class Agent {
                     inThought = true;
                     continue;
                   }
-                  
+
                   // Handle <multi_tool_use.parallel> - just strip it from rawText/UI
                   if (multiToolOpenIdx !== -1) {
                     const beforeText = buffer.slice(0, multiToolOpenIdx);
@@ -392,7 +417,11 @@ export class Agent {
 
                   // Partial tag check
                   const partialThoughtIdx = buffer.lastIndexOf('<');
-                  if (partialThoughtIdx !== -1 && ('<thought>'.startsWith(buffer.slice(partialThoughtIdx)) || '<multi_tool_use.parallel>'.startsWith(buffer.slice(partialThoughtIdx)))) {
+                  if (
+                    partialThoughtIdx !== -1 &&
+                    ('<thought>'.startsWith(buffer.slice(partialThoughtIdx)) ||
+                      '<multi_tool_use.parallel>'.startsWith(buffer.slice(partialThoughtIdx)))
+                  ) {
                     const beforeText = buffer.slice(0, partialThoughtIdx);
                     if (beforeText) {
                       rawText += beforeText;
@@ -426,10 +455,10 @@ export class Agent {
                 toolName: toolName,
                 args: args,
               };
-              
+
               // Track tool call start
               this.eventTracker.trackToolCall(toolName, args);
-              
+
               yield {
                 type: 'tool-call-start',
                 toolCall: allToolCalls[part.toolCallId],
@@ -439,12 +468,12 @@ export class Agent {
 
             case 'tool-result': {
               const toolName = part.toolName;
-              const rawToolResult = ('result' in part ? part.result : (part as any).output);
-              
+              const rawToolResult = 'result' in part ? part.result : (part as any).output;
+
               // Normalize tool result - extract output string if it's an object
               let toolResult: unknown = rawToolResult;
               let resultForCheck: unknown = rawToolResult;
-              
+
               if (typeof rawToolResult === 'object' && rawToolResult !== null) {
                 const resultObj = rawToolResult as Record<string, unknown>;
                 // If it has an output field, use that for checking
@@ -456,43 +485,49 @@ export class Agent {
                   resultForCheck = { error: resultObj.error, ...resultObj };
                 }
               }
-              
+
               if (allToolCalls[part.toolCallId]) {
                 allToolCalls[part.toolCallId].result = toolResult;
               }
-              
+
               // Track the tool result
               this.eventTracker.trackToolSuccess(toolName, toolResult, 0);
-              
+
               // Check if we need fallback - use the normalized result
               const needsFallback = this.fallbackManager.shouldAttemptFallback(toolName, resultForCheck);
-              
+
               if (needsFallback && allToolCalls[part.toolCallId]) {
                 const args = allToolCalls[part.toolCallId].args || {};
-                
+
                 // Yield fallback attempt event
                 yield {
                   type: 'system' as const,
                   message: `Tool "${toolName}" returned no results. Attempting fallback strategies...`,
                 };
-                
+
                 // Try fallback asynchronously - use normalized result
-                const fallbackResult = await this.fallbackManager.attemptFallback(
-                  toolName,
-                  args,
-                  resultForCheck
-                );
-                
+                const fallbackResult = await this.fallbackManager.attemptFallback(toolName, args, resultForCheck);
+
                 if (fallbackResult) {
                   // Track fallback success
-                  fallbackResult.attempts.forEach(attempt => {
+                  fallbackResult.attempts.forEach((attempt) => {
                     if (attempt.success) {
-                      this.eventTracker.trackFallbackSuccess(toolName, attempt.strategy, fallbackResult.output, attempt.duration);
+                      this.eventTracker.trackFallbackSuccess(
+                        toolName,
+                        attempt.strategy,
+                        fallbackResult.output,
+                        attempt.duration,
+                      );
                     } else {
-                      this.eventTracker.trackFallbackFailure(toolName, attempt.strategy, attempt.error || 'Unknown error', attempt.duration);
+                      this.eventTracker.trackFallbackFailure(
+                        toolName,
+                        attempt.strategy,
+                        attempt.error || 'Unknown error',
+                        attempt.duration,
+                      );
                     }
                   });
-                  
+
                   // If it's LLM synthesis needed, generate answer immediately
                   if (fallbackResult.output.includes('[LLM_SYNTHESIS_NEEDED]')) {
                     const query = fallbackResult.output.replace('[LLM_SYNTHESIS_NEEDED]', '').trim();
@@ -500,11 +535,11 @@ export class Agent {
                       type: 'system' as const,
                       message: `No instant results found. Generating explanation for: "${query}"...`,
                     };
-                    
+
                     // Synthesize answer
                     const synthesizedAnswer = await this.synthesizeAnswer(query);
                     allToolCalls[part.toolCallId].result = synthesizedAnswer;
-                    
+
                     yield {
                       type: 'system' as const,
                       message: `✓ Generated explanation based on AI knowledge`,
@@ -536,7 +571,7 @@ export class Agent {
                   };
                 }
               }
-              
+
               yield {
                 type: 'tool-call-result',
                 toolCall: {
@@ -574,7 +609,10 @@ export class Agent {
         this.coreMessages.push(msg);
       }
 
-      const entry = getModelEntry(this.providerManager.getActiveModel().provider, this.providerManager.getActiveModel().modelId);
+      const entry = getModelEntry(
+        this.providerManager.getActiveModel().provider,
+        this.providerManager.getActiveModel().modelId,
+      );
       if (entry?.inputCostPer1M != null) {
         this.totalCost += (totalPromptTokens / 1_000_000) * entry.inputCostPer1M;
       }
@@ -593,19 +631,19 @@ export class Agent {
           const arrayContent = multiToolMatch[1];
           // Split by },{ to get individual tool objects
           const toolObjects = arrayContent.split(/},\s*{/);
-          
+
           for (const toolObj of toolObjects) {
             // Clean up the object string
             const cleanObj = toolObj.replace(/^\{/, '').replace(/\}$/, '');
-            
+
             // Extract recipient_name and parameters using regex
             const recipientMatch = cleanObj.match(/recipient_name:\s*"([^"]+)"/);
             const paramsMatch = cleanObj.match(/parameters:\s*\{([^}]*)\}/);
-            
+
             if (recipientMatch) {
               const toolCallId = generateId();
               const toolName = recipientMatch[1].replace(/^functions\./, '');
-              
+
               // Parse parameters
               let args: Record<string, unknown> = {};
               if (paramsMatch) {
@@ -624,7 +662,7 @@ export class Agent {
                   }
                 }
               }
-              
+
               allToolCalls[toolCallId] = {
                 toolCallId,
                 toolName,
@@ -654,13 +692,19 @@ export class Agent {
       };
       this.messages.push(assistantMessage);
 
-      if (this.messages.filter(m => m.role === 'assistant').length === 1) {
-        generateTitle(userContent, finalContent, model).then(title => {
+      if (this.messages.filter((m) => m.role === 'assistant').length === 1) {
+        generateTitle(userContent, finalContent, model).then((title) => {
           this.conversationTitle = title;
           try {
-            const id = saveConversation(this.messages, this.providerManager.getActiveModel(), userContent, this.conversationTitle, this.conversationId);
+            const id = saveConversation(
+              this.messages,
+              this.providerManager.getActiveModel(),
+              userContent,
+              this.conversationTitle,
+              this.conversationId,
+            );
             if (!this.conversationId) this.conversationId = id;
-          } catch { }
+          } catch {}
         });
       }
 
@@ -674,15 +718,21 @@ export class Agent {
       };
 
       try {
-        const id = saveConversation(this.messages, this.providerManager.getActiveModel(), userContent, this.conversationTitle, this.conversationId);
+        const id = saveConversation(
+          this.messages,
+          this.providerManager.getActiveModel(),
+          userContent,
+          this.conversationTitle,
+          this.conversationId,
+        );
         if (!this.conversationId) this.conversationId = id;
-      } catch { }
+      } catch {}
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
         yield { type: 'finish', usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 } };
         return;
       }
-      Promise.resolve(result.usage).catch(() => { });
+      Promise.resolve(result.usage).catch(() => {});
       this.messages.pop();
       this.coreMessages.pop();
       yield { type: 'error', error: err instanceof Error ? err : new Error(String(err)) };
@@ -696,8 +746,8 @@ export class Agent {
     if (!saved) return false;
     this.messages = saved.messages;
     this.coreMessages = this.messages
-      .filter(m => m.role !== 'system')
-      .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+      .filter((m) => m.role !== 'system')
+      .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
     return true;
   }
 
@@ -707,8 +757,10 @@ export class Agent {
     }
     const model = await this.providerManager.getModel();
     const apiMessages = [
-      ...this.messages.filter(m => m.role !== 'system').map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-      { role: 'user' as const, content: COMPACTION_PROMPT }
+      ...this.messages
+        .filter((m) => m.role !== 'system')
+        .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+      { role: 'user' as const, content: COMPACTION_PROMPT },
     ];
 
     const result = streamText({
@@ -725,12 +777,14 @@ export class Agent {
       }
     }
 
-    this.messages = [{
-      id: generateId(),
-      role: 'assistant',
-      content: `**Conversation Summary:**\n\n${summary}`,
-      timestamp: Date.now(),
-    }];
+    this.messages = [
+      {
+        id: generateId(),
+        role: 'assistant',
+        content: `**Conversation Summary:**\n\n${summary}`,
+        timestamp: Date.now(),
+      },
+    ];
     this.coreMessages = [{ role: 'assistant', content: `**Conversation Summary:**\n\n${summary}` }];
 
     return 'Conversation compacted successfully.';
@@ -752,17 +806,17 @@ export class Agent {
   loadWorkspace(path: string): Attachment[] | null {
     const data = loadWorkspace(path);
     if (!data) return null;
-    
+
     this.messages = data.messages;
     this.coreMessages = this.messages
-      .filter(m => m.role !== 'system')
-      .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+      .filter((m) => m.role !== 'system')
+      .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
     this.totalTokensUsed = data.tokensUsed;
     this.totalCost = data.cost;
     this.conversationId = data.id;
     this.conversationTitle = data.title;
     this.providerManager.switchModel(data.model.provider, data.model.modelId);
-    
+
     return data.attachments;
   }
 }

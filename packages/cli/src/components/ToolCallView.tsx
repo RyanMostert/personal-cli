@@ -32,7 +32,7 @@ function summarizeResult(result: unknown): { text: string; isError: boolean; lin
 
   // Helper to get first meaningful line
   const getFirstLine = (text: string): string => {
-    const lines = text.split('\n').filter(line => line.trim().length > 0);
+    const lines = text.split('\n').filter((line) => line.trim().length > 0);
     const firstLine = lines[0] || '';
     // Clean up markdown formatting
     return firstLine
@@ -46,14 +46,14 @@ function summarizeResult(result: unknown): { text: string; isError: boolean; lin
   if (typeof result === 'string') {
     const t = result.trim();
     const lines = t.split('\n');
-    const nonEmptyLines = lines.filter(line => line.trim().length > 0);
+    const nonEmptyLines = lines.filter((line) => line.trim().length > 0);
     const firstLine = getFirstLine(t);
     const preview = firstLine.slice(0, 100);
-    return { 
-      text: preview + (firstLine.length > 100 || nonEmptyLines.length > 1 ? '…' : ''), 
+    return {
+      text: preview + (firstLine.length > 100 || nonEmptyLines.length > 1 ? '…' : ''),
       isError: false,
       lineCount: nonEmptyLines.length > 1 ? nonEmptyLines.length : undefined,
-      fullLength: t.length
+      fullLength: t.length,
     };
   }
 
@@ -70,14 +70,14 @@ function summarizeResult(result: unknown): { text: string; isError: boolean; lin
       if (typeof r[key] === 'string') {
         const val = (r[key] as string).trim();
         const lines = val.split('\n');
-        const nonEmptyLines = lines.filter(line => line.trim().length > 0);
+        const nonEmptyLines = lines.filter((line) => line.trim().length > 0);
         const firstLine = getFirstLine(val);
         const preview = firstLine.slice(0, 100);
-        return { 
-          text: preview + (firstLine.length > 100 || nonEmptyLines.length > 1 ? '…' : ''), 
+        return {
+          text: preview + (firstLine.length > 100 || nonEmptyLines.length > 1 ? '…' : ''),
           isError: false,
           lineCount: nonEmptyLines.length > 1 ? nonEmptyLines.length : undefined,
-          fullLength: val.length
+          fullLength: val.length,
         };
       }
     }
@@ -101,10 +101,10 @@ function summarizeResult(result: unknown): { text: string; isError: boolean; lin
 
   const s = String(result).trim();
   const firstLine = getFirstLine(s);
-  return { 
-    text: firstLine.slice(0, 100) + (firstLine.length > 100 ? '…' : ''), 
+  return {
+    text: firstLine.slice(0, 100) + (firstLine.length > 100 ? '…' : ''),
     isError: false,
-    lineCount: s.split('\n').filter(line => line.trim().length > 0).length > 1 ? s.split('\n').length : undefined
+    lineCount: s.split('\n').filter((line) => line.trim().length > 0).length > 1 ? s.split('\n').length : undefined,
   };
 }
 
@@ -112,7 +112,7 @@ function summarizeResult(result: unknown): { text: string; isError: boolean; lin
 function getFileInfo(tool: ToolCallInfo): { path?: string; lineCount?: number } | null {
   const args = tool.args as Record<string, unknown> | undefined;
   if (!args) return null;
-  
+
   if (tool.toolName === 'readFile' && typeof args.path === 'string') {
     const result = tool.result;
     if (typeof result === 'string') {
@@ -120,16 +120,23 @@ function getFileInfo(tool: ToolCallInfo): { path?: string; lineCount?: number } 
     }
     return { path: args.path };
   }
-  
+
   if (tool.toolName === 'writeFile' && typeof args.path === 'string') {
     const content = args.content as string | undefined;
     return { path: args.path, lineCount: content?.split('\n').length };
   }
-  
+
   return null;
 }
 
-export function ToolCallView({ tool, startTime = Date.now(), focused = false, expanded = false, onToggleExpand, onFocus }: Props) {
+export function ToolCallView({
+  tool,
+  startTime = Date.now(),
+  focused = false,
+  expanded = false,
+  onToggleExpand,
+  onFocus,
+}: Props) {
   const theme = useTheme();
   const [elapsed, setElapsed] = useState(0);
   const resultSummary = tool.result !== undefined ? summarizeResult(tool.result) : null;
@@ -143,11 +150,11 @@ export function ToolCallView({ tool, startTime = Date.now(), focused = false, ex
   // Track elapsed time while running
   useEffect(() => {
     if (isRunFinished) return;
-    
+
     const interval = setInterval(() => {
       setElapsed(Date.now() - startTime);
     }, 100);
-    
+
     return () => clearInterval(interval);
   }, [isRunFinished, startTime]);
 
@@ -155,24 +162,27 @@ export function ToolCallView({ tool, startTime = Date.now(), focused = false, ex
   const statusColor = isError ? theme.error : isRunFinished ? theme.success : theme.warning;
 
   return (
-    <Box
-      marginY={0}
-      paddingLeft={1}
-      flexDirection="column"
-    >
+    <Box marginY={0} paddingLeft={1} flexDirection="column">
       {/* Header Row */}
       <Box flexDirection="row" alignItems="center">
-        <Text color={statusColor} bold>{isRunFinished ? (isError ? '✖' : '✔') : '⠶'} </Text>
-        <Text color={theme.toolName} bold>{tool.toolName.toUpperCase()}</Text>
+        <Text color={statusColor} bold>
+          {isRunFinished ? (isError ? '✖' : '✔') : '⠶'}{' '}
+        </Text>
+        <Text color={theme.toolName} bold>
+          {tool.toolName.toUpperCase()}
+        </Text>
         <Text color={theme.dim}> {formatDuration(duration)}</Text>
-        
-        {focused && <Text color="#FF00AA" bold> ◀</Text>}
-        
+
+        {focused && (
+          <Text color="#FF00AA" bold>
+            {' '}
+            ◀
+          </Text>
+        )}
+
         {!isRunFinished && tool.args && (
           <Box paddingLeft={1}>
-            <Text color={theme.muted}>
-              {JSON.stringify(tool.args).substring(0, 40)}...
-            </Text>
+            <Text color={theme.muted}>{JSON.stringify(tool.args).substring(0, 40)}...</Text>
           </Box>
         )}
       </Box>
@@ -194,12 +204,16 @@ export function ToolCallView({ tool, startTime = Date.now(), focused = false, ex
           <Box flexDirection="row">
             <Text color={theme.dim}>⎿ </Text>
             <Text color={isError ? theme.error : theme.dim} wrap="wrap">
-              {expanded ? (typeof tool.result === 'string' ? tool.result : JSON.stringify(tool.result, null, 2)) : resultSummary.text}
+              {expanded
+                ? typeof tool.result === 'string'
+                  ? tool.result
+                  : JSON.stringify(tool.result, null, 2)
+                : resultSummary.text}
             </Text>
             {isRunFinished && !expanded && (
-               <Text color={theme.primary} bold>
-                 {focused ? ' (ENTER to expand)' : ''}
-               </Text>
+              <Text color={theme.primary} bold>
+                {focused ? ' (ENTER to expand)' : ''}
+              </Text>
             )}
           </Box>
         </Box>
@@ -211,7 +225,7 @@ export function ToolCallView({ tool, startTime = Date.now(), focused = false, ex
           <PatchView path={editArgs.path} oldText={editArgs.oldText} newText={editArgs.newText} />
         </Box>
       )}
-      
+
       {/* Error display */}
       {isError && tool.error && !expanded && (
         <Box paddingLeft={2} marginTop={0}>

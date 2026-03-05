@@ -19,7 +19,7 @@ interface OpenRouterResponse {
 function extractTags(model: OpenRouterModel): ModelTag[] {
   const tags: ModelTag[] = [];
   const id = model.id.toLowerCase();
-  
+
   if (id.includes('reasoning') || id.includes('r1') || id.includes('o3') || id.includes('o1')) {
     tags.push('reasoning');
   }
@@ -35,7 +35,7 @@ function extractTags(model: OpenRouterModel): ModelTag[] {
   if (model.context_length > 100000) {
     tags.push('large');
   }
-  
+
   return tags;
 }
 
@@ -43,7 +43,7 @@ export async function fetchOpenRouterModels(apiKey?: string): Promise<FetchedMod
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  
+
   if (apiKey) {
     headers['Authorization'] = `Bearer ${apiKey}`;
   }
