@@ -1,74 +1,96 @@
-# personal-cli
+# Personal CLI 🚀
 
-personal-cli is a small command-line tool for personal automation and developer workflows.
+A high-performance, developer-focused terminal assistant built with **React**, **Ink**, and **TypeScript**. Personal CLI provides a rich, interactive TUI for AI-driven automation, code refactoring, and project management.
 
-## Overview
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Type](https://img.shields.io/badge/type-monorepo-orange.svg)
+![Engine](https://img.shields.io/badge/engine-node-%3E%3D20-green.svg)
 
-This repository contains the CLI used for common personal development tasks and integrations. It supports pluggable authentication/providers so you can add or switch providers as needed.
+## ✨ Features
 
-## GitHub Copilot Provider
+- 🖥️ **Rich TUI**: A modern, interactive terminal interface built with React and Ink.
+- 🌊 **Real-time Streaming**: Instant visual feedback for AI thoughts and responses.
+- 🛠️ **Advanced Toolset**: 20+ built-in tools for file I/O, git operations, web search, and semantic analysis.
+- 📂 **Side Panel Diffs**: Visual patch previews and code exploration without leaving the CLI.
+- 🔌 **MCP Integration**: Full support for Model Context Protocol (MCP) servers and external tools.
+- 🔐 **Provider Manager**: Seamlessly switch between GitHub Copilot, OpenRouter, and other LLM providers.
+- 📝 **Markdown Rendering**: Full terminal support for tables, code blocks, and rich text.
+- ⌨️ **Keyboard Optimized**: Extensive keybindings and autocomplete for high-speed workflows.
 
-This repository includes support for using GitHub Copilot as a provider for certain CLI features. The Copilot provider is optional and can be enabled via configuration.
+## 🏗️ Architecture
 
-Changes in the development branch `rm-dev/1-add-gh-copilot-as-provider` have introduced the Copilot provider implementation. The main branch README documents how to use and configure providers, including Copilot.
+This is a **PNPM Workspace** monorepo:
 
-## Installation
+- **`packages/cli`**: The React/Ink terminal application.
+- **`packages/core`**: Agent logic, conversation persistence, and provider management.
+- **`packages/tools`**: Built-in AI tools (Git, Web, Filesystem, Semantic Search).
+- **`packages/shared`**: Common types and utility functions.
+- **`packages/mcp-client`**: Client implementation for MCP servers.
 
-Clone the repo and install dependencies:
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Node.js**: v20 or higher.
+- **PNPM**: Installed globally (`npm install -g pnpm`).
+- **Python**: v3.x (required for some tools like clipboard image extraction).
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/RyanMostert/personal-cli.git
+   cd personal-cli
+   ```
+
+2. Install dependencies:
+   ```bash
+   pnpm install
+   ```
+
+3. Build the project:
+   ```bash
+   pnpm run build
+   ```
+
+### Running the CLI
 
 ```bash
-git clone https://github.com/RyanMostert/personal-cli.git
-cd personal-cli
-# follow language/runtime specific install below (example for Node)
-npm install
+pnpm start
 ```
 
-## Usage
-
-Run the CLI:
-
+For development with hot-reloading:
 ```bash
-# example command (replace with real commands for this project)
-./bin/personal-cli --help
+cd packages/cli
+pnpm run dev
 ```
 
-## Providers
+## ⌨️ Common Commands
 
-The CLI supports multiple providers. To use GitHub Copilot provider:
+| Command | Description |
+|---------|-------------|
+| `/model` | Browse or switch LLM models/providers |
+| `/mode` | Set agent mode: `ask` (safe) \| `plan` (research) \| `build` (writes code) |
+| `/add <path>` | Attach a file to the conversation context |
+| `/open <path>` | Open a file in the side panel for viewing |
+| `/mcp` | Manage MCP servers and tools |
+| `/help` | Show all available commands and tips |
 
-1. Ensure the provider is configured (environment variables or config file).
-2. Example environment variables:
-   - `COPILOT_CLIENT_ID`
-   - `COPILOT_CLIENT_SECRET`
-3. Example config (YAML/JSON):
-```yaml
-provider: copilot
-copilot:
-  clientId: "<COPILOT_CLIENT_ID>"
-  clientSecret: "<COPILOT_CLIENT_SECRET>"
-```
+## 🛠️ Built-in Tools
 
-If your project uses a different configuration format, adapt accordingly.
+The agent has access to a wide range of capabilities, including:
+- **Filesystem**: `readFile`, `writeFile`, `editFile`, `listDir`, `globFiles`
+- **Search**: `webSearch`, `webFetch`, `semanticSearch`
+- **Git**: `gitStatus`, `gitDiff`, `gitLog`, `gitCommit`
+- **Analysis**: `diagnostics`, `todoRead`, `todoWrite`
+- **Interactive**: `question`, `patch`
 
-## Development
+## 🤝 Contributing
 
-- Branching strategy: feature branches off `rm-dev/*` for experimental work, open PRs to `main` when ready.
-- Run tests:
+We welcome contributions! Please see our branching strategy:
+- Feature branches: `rm-dev/<feature-name>`
+- Base branch: `main`
 
-```bash
-npm test
-```
+## 📄 License
 
-## Contributing
-
-Contributions are welcome. Please follow the repository's contribution guidelines and open a PR for new features or bug fixes.
-
-## Notes / TODO
-
-- Add example config files for each provider in `examples/`
-- Add integration tests for the Copilot provider authentication flow
-- Document migration steps if switching providers
-
-## License
-
-Specify the license here (e.g., MIT).
+MIT © [Ryan Mostert](https://github.com/RyanMostert)

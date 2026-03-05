@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { PasteHandler } from './components/PasteHandler';
 import { Box, Text, useInput, useApp, Static } from 'ink';
 import { StatusBar } from './components/StatusBar.js';
 import { MessageView } from './components/MessageView.js';
@@ -16,6 +17,8 @@ import { HistoryPicker } from './components/HistoryPicker.js';
 import { MCPManager } from './components/MCPManager.js';
 import { MCPWizard } from './components/MCPWizard.js';
 import { CommandAutocomplete, filterCommands } from './components/CommandAutocomplete.js';
+import { dispatch, getCommands } from './commands/registry.js';
+import type { CommandContext } from './types/commands.js';
 import { FileAutocomplete } from './components/FileAutocomplete.js';
 import { SidePanel } from './components/SidePanel.js';
 import { FileExplorer } from './components/FileExplorer.js';
@@ -43,6 +46,23 @@ interface AppProps {
 }
 
 export function App({ initialAttachments = [] }: AppProps) {
+  const [focusedToolCallId, setFocusedToolCallId] = useState<string | null>(null);
+  const [expandedToolCalls, setExpandedToolCalls] = useState<Set<string>>(new Set());
+
+  const {
+    messages, isStreaming, streamingText, streamingThought, tokensUsed, cost, toolCalls,
+    pendingPermission, pendingQuestion, error, activeModel, attachedFiles, mode,
+    sendMessage, abort, addSystemMessage, clearMessages, switchModel, switchMode,
+    isPickingModel, openModelPicker, closeModelPicker,
+    attachFile, clearAttachments, loadHistory, compact, renameConversation,
+    undo, redo, initProject, getTools,
+  } = useAgent();
+
+  const allVisibleToolCalls = useMemo(() => {
+    const historical = messages.flatMap(m => m.toolCalls || []);
+    return [...historical, ...toolCalls];
+  }, [messages, toolCalls]);
+
   const [inputValue, setInputValue] = useState('');
   const { overlay, open, close } = useOverlay();
   const setThemeName = useSetTheme();
@@ -70,14 +90,6 @@ export function App({ initialAttachments = [] }: AppProps) {
   const [fileAutoFiles, setFileAutoFiles] = useState<string[]>([]);
   const [fileAutoSelectedIdx, setFileAutoSelectedIdx] = useState(0);
 
-  const {
-    messages, isStreaming, streamingText, streamingThought, tokensUsed, cost, toolCalls,
-    pendingPermission, pendingQuestion, error, activeModel, attachedFiles, mode,
-    sendMessage, abort, addSystemMessage, clearMessages, switchModel, switchMode,
-    isPickingModel, openModelPicker, closeModelPicker,
-    attachFile, clearAttachments, loadHistory, compact, renameConversation,
-    undo, redo, initProject, getTools,
-  } = useAgent();
   const { exit } = useApp();
 
   const [tick, setTick] = useState(0);
@@ -197,6 +209,36 @@ export function App({ initialAttachments = [] }: AppProps) {
   const anyOverlay = isPickingModel || isPickingProvider || !!pendingProviderAdd || showHistory || showCommandAutocomplete || showFileAutocomplete || showFileExplorer || showKeyHelp || showKeybindManager || isManagingMCP || !!mcpWizardMode;
 
   useInput((input, key) => {
+    // Focused tool call navigation using Ctrl+T
+    if (allVisibleToolCalls.length > 0 && !anyOverlay && !isSidePanelFocused) {
+      if (key.ctrl && input === 't') {
+        setFocusedToolCallId(currentId => {
+          if (!currentId) return allVisibleToolCalls[0].toolCallId;
+          const idx = allVisibleToolCalls.findIndex(tc => tc.toolCallId === currentId);
+          const nextIdx = (idx + 1) % allVisibleToolCalls.length;
+          return allVisibleToolCalls[nextIdx].toolCallId;
+        });
+        return;
+      }
+
+      if (focusedToolCallId) {
+        // Toggle expand/collapse
+        if (key.return) {
+          setExpandedToolCalls(prev => {
+            const next = new Set(prev);
+            if (next.has(focusedToolCallId)) next.delete(focusedToolCallId);
+            else next.add(focusedToolCallId);
+            return next;
+          });
+          return;
+        }
+        // Escape to unfocus
+        if (key.escape) {
+          setFocusedToolCallId(null);
+          return;
+        }
+      }
+    }
     if ((key.ctrl && input === 'c') || (key.ctrl && input === 'd')) { setIsGameOver(true); return; }
     if (key.escape && isStreaming) { abort(); return; }
     if (key.escape && sidePanel && isSidePanelFocused) { setSidePanel(null); return; }
@@ -301,7 +343,8 @@ export function App({ initialAttachments = [] }: AppProps) {
         openModelPicker(); return; 
       }
       if (key.ctrl && (input === 'o' || input === '\u000f')) { open('file-explorer'); return; }
-      if (key.tab) {
+      // Only cycle modes with TAB if no tool calls are being navigated
+      if (key.tab && focusedToolCallId === null) {
         const cycle: AgentMode[] = ['ask', 'build', 'plan'];
         const next = cycle[(cycle.indexOf(mode as AgentMode) + 1) % cycle.length];
         switchMode(next);
@@ -327,6 +370,41 @@ export function App({ initialAttachments = [] }: AppProps) {
     const trimmed = value.trim();
     if (!trimmed || isStreaming || showCommandAutocomplete || showFileAutocomplete) return;
 
+    // Command Context for the registry dispatcher
+    const ctx: CommandContext = {
+      messages,
+      tokensUsed,
+      cost,
+      addSystemMessage,
+      clearMessages,
+      switchModel: (p, m) => switchModel(p as ProviderName, m),
+      switchMode: (m) => switchMode(m),
+      openModelPicker,
+      openProviderManager: () => open('provider-manager'),
+      openHistory: () => open('history'),
+      openMCPManager: () => open('mcp-manager'),
+      attachFile,
+      clearAttachments,
+      openFileInPanel,
+      exportConversation: (p) => exportConversation(messages, activeModel, tokensUsed, cost, p),
+      compact,
+      renameConversation,
+      undo,
+      redo,
+      initProject,
+      exit: () => setIsGameOver(true),
+    };
+
+    // Try dispatching to the command registry first
+    if (trimmed.startsWith('/')) {
+      const handled = dispatch(trimmed, ctx);
+      if (handled) {
+        setInputValue('');
+        return;
+      }
+    }
+
+    // Original manual cases (kept for compatibility or until migrated)
     if (trimmed === '/exit' || trimmed === '/quit') { setIsGameOver(true); return; }
     if (trimmed === '/clear') { clearMessages(); setInputValue(''); return; }
     if (trimmed === '/help') {
@@ -585,7 +663,23 @@ export function App({ initialAttachments = [] }: AppProps) {
   return (
     <>
       <Static items={messages}>
-        {(message) => <MessageView key={message.id} message={message} />}
+        {(message) => (
+          <MessageView 
+            key={message.id} 
+            message={message} 
+            focusedToolCallId={focusedToolCallId}
+            expandedToolCalls={expandedToolCalls}
+            onToggleToolCall={(id: string) => {
+              setExpandedToolCalls(prev => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id);
+                else next.add(id);
+                return next;
+              });
+            }}
+            onFocusToolCall={(id: string) => setFocusedToolCallId(id)}
+          />
+        )}
       </Static>
 
       <Box flexDirection="column">
@@ -698,7 +792,23 @@ export function App({ initialAttachments = [] }: AppProps) {
             <Box flexDirection="column" flexGrow={1} width={sidePanel ? "50%" : "100%"}>
               <Box flexDirection="column" paddingX={1}>
                 {messages.length === 0 && !isStreaming && <WelcomeScreen tick={tick} />}
-                {toolCalls.map(tc => <ToolCallView key={tc.toolCallId} tool={tc} />)}
+                {toolCalls.map((tc) => (
+                  <ToolCallView
+                    key={tc.toolCallId}
+                    tool={tc}
+                    focused={focusedToolCallId === tc.toolCallId}
+                    expanded={expandedToolCalls.has(tc.toolCallId)}
+                    onToggleExpand={() => {
+                      setExpandedToolCalls(prev => {
+                        const next = new Set(prev);
+                        if (next.has(tc.toolCallId)) next.delete(tc.toolCallId);
+                        else next.add(tc.toolCallId);
+                        return next;
+                      });
+                    }}
+                    onFocus={() => setFocusedToolCallId(tc.toolCallId)}
+                  />
+                ))}
                 {isStreaming && <StreamingMessage text={streamingText} thought={streamingThought} />}
                 {pendingPermission && <PermissionPrompt permission={pendingPermission} />}
                 {pendingQuestion && <QuestionPrompt question={pendingQuestion} />}

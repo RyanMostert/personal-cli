@@ -7,12 +7,12 @@
     "pcli": "./dist/bin.js"
   },
   "scripts": {
-"build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsup src/bin.ts src/app.tsx --format esm --dts --external ink react --external @personal-cli/core --external @personal-cli/shared --external @personal-cli/tools --external fast-glob --external eventsource --platform node",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsup src/bin.ts src/app.tsx --format esm --dts --external ink react --external @personal-cli/core --external @personal-cli/shared --external @personal-cli/tools --external fast-glob --external eventsource --platform node",
     "dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsup src/bin.ts src/app.tsx --format esm --watch --external ink react --external @personal-cli/core --external @personal-cli/shared --external @personal-cli/tools --external fast-glob --external eventsource --platform node",
     "start": "node dist/bin.js",
     "clean": "rm -rf dist"
   },
-"dependencies": {
+  "dependencies": {
     "@personal-cli/core": "workspace:*",
     "@personal-cli/mcp-client": "workspace:*",
     "@personal-cli/shared": "workspace:*",
@@ -29,13 +29,14 @@
     "ink-text-input": "^6.0.0",
     "marked": "^15.0.12",
     "react": "^19.2.4",
-    "shiki": "^4.0.0"
+    "shiki": "^4.0.0",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.14",
+    "cross-env": "^7.0.3",
     "tsup": "^8.5.1",
-    "typescript": "^5.7.0",
-    "cross-env": "^7.0.3"
+    "typescript": "^5.7.0"
   }
 }

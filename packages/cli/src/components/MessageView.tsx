@@ -1,5 +1,5 @@
-import React from 'react';
-import { Box, Text } from 'ink';
+import React, { useState } from 'react';
+import { Box, Text, useInput } from 'ink';
 import type { Message } from '@personal-cli/shared';
 import { MarkdownRenderer } from './MarkdownRenderer.js';
 import { ToolCallView } from './ToolCallView.js';
@@ -8,9 +8,19 @@ import { useTheme } from '../context/ThemeContext.js';
 
 interface Props {
   message: Message;
+  focusedToolCallId?: string | null;
+  expandedToolCalls?: Set<string>;
+  onToggleToolCall?: (id: string) => void;
+  onFocusToolCall?: (id: string) => void;
 }
 
-export function MessageView({ message }: Props) {
+export function MessageView({ 
+  message, 
+  focusedToolCallId, 
+  expandedToolCalls, 
+  onToggleToolCall,
+  onFocusToolCall 
+}: Props) {
   const theme = useTheme();
 
   if (message.role === 'user') {
@@ -69,8 +79,15 @@ export function MessageView({ message }: Props) {
       {message.thought && <ThoughtView text={message.thought} />}
 
       <Box paddingLeft={2} flexDirection="column">
-        {message.toolCalls?.map(tc => (
-          <ToolCallView key={tc.toolCallId} tool={tc} />
+        {message.toolCalls?.map((tc) => (
+          <ToolCallView 
+            key={tc.toolCallId} 
+            tool={tc}
+            focused={focusedToolCallId === tc.toolCallId}
+            expanded={expandedToolCalls?.has(tc.toolCallId)}
+            onToggleExpand={() => onToggleToolCall?.(tc.toolCallId)}
+            onFocus={() => onFocusToolCall?.(tc.toolCallId)}
+          />
         ))}
         {message.content ? (
           <MarkdownRenderer text={message.content} />
