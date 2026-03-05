@@ -23,7 +23,9 @@ export function MarioHeader({ title, tick = 0 }: { title: string; tick?: number 
         <Text color="#484F58">{`${rightPad}${bolt}`}</Text>
       </Box>
       <Box>
-        <Text color="#FF00AA" bold>{titleStr}</Text>
+        <Text color="#FF00AA" bold>
+          {titleStr}
+        </Text>
         <Text color="#484F58">{'━'.repeat(Math.max(0, 60 - titleStr.length))}</Text>
       </Box>
     </Box>

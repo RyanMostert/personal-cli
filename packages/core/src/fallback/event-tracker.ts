@@ -1,4 +1,4 @@
-export type AgentEventType = 
+export type AgentEventType =
   | 'tool_call_start'
   | 'tool_call_success'
   | 'tool_call_failure'
@@ -150,15 +150,15 @@ export class AgentEventTracker {
 
   getEvents(filter?: { type?: AgentEventType; limit?: number }): AgentEvent[] {
     let result = [...this.events];
-    
+
     if (filter?.type) {
-      result = result.filter(e => e.type === filter.type);
+      result = result.filter((e) => e.type === filter.type);
     }
-    
+
     if (filter?.limit) {
       result = result.slice(-filter.limit);
     }
-    
+
     return result;
   }
 
@@ -171,19 +171,15 @@ export class AgentEventTracker {
   }
 
   getRecentToolCalls(limit: number = 10): AgentEvent[] {
-    return this.events
-      .filter(e => e.type === 'tool_call_start')
-      .slice(-limit);
+    return this.events.filter((e) => e.type === 'tool_call_start').slice(-limit);
   }
 
   getToolSuccessRate(): { total: number; success: number; rate: number } {
-    const toolCalls = this.events.filter(e => 
-      e.type === 'tool_call_success' || e.type === 'tool_call_failure'
-    );
-    
-    const success = toolCalls.filter(e => e.success).length;
+    const toolCalls = this.events.filter((e) => e.type === 'tool_call_success' || e.type === 'tool_call_failure');
+
+    const success = toolCalls.filter((e) => e.success).length;
     const total = toolCalls.length;
-    
+
     return {
       total,
       success,
@@ -196,10 +192,14 @@ export class AgentEventTracker {
   }
 
   exportToJSON(): string {
-    return JSON.stringify({
-      events: this.events,
-      exportedAt: Date.now(),
-    }, null, 2);
+    return JSON.stringify(
+      {
+        events: this.events,
+        exportedAt: Date.now(),
+      },
+      null,
+      2,
+    );
   }
 }
 

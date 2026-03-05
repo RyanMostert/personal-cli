@@ -9,7 +9,7 @@ interface Props {
 
 export function MarkdownRenderer({ text, dimmed = false }: Props) {
   if (!text || typeof text !== 'string') return null;
-  
+
   try {
     const tokens = marked.lexer(text);
     if (!tokens || tokens.length === 0) {
@@ -19,11 +19,7 @@ export function MarkdownRenderer({ text, dimmed = false }: Props) {
     return (
       <Box flexDirection="column" width="100%">
         {tokens.map((token, i) => (
-          <TokenView
-            key={`${token.type}-${i}`}
-            token={token}
-            dimmed={dimmed}
-          />
+          <TokenView key={`${token.type}-${i}`} token={token} dimmed={dimmed} />
         ))}
       </Box>
     );
@@ -90,7 +86,17 @@ function TokenView({ token, dimmed }: TokenViewProps) {
 
       case 'blockquote':
         return (
-          <Box borderStyle="single" borderLeft borderRight={false} borderTop={false} borderBottom={false} borderColor="#484F58" paddingLeft={1} marginBottom={1} width="100%">
+          <Box
+            borderStyle="single"
+            borderLeft
+            borderRight={false}
+            borderTop={false}
+            borderBottom={false}
+            borderColor="#484F58"
+            paddingLeft={1}
+            marginBottom={1}
+            width="100%"
+          >
             <Text color={dimmed ? muted : 'gray'} italic>
               {stripInlineMarkdown(token.text || '')}
             </Text>
@@ -99,7 +105,11 @@ function TokenView({ token, dimmed }: TokenViewProps) {
 
       default:
         if ('text' in token && typeof token.text === 'string') {
-          return <Text color={muted} wrap="wrap">{token.text}</Text>;
+          return (
+            <Text color={muted} wrap="wrap">
+              {token.text}
+            </Text>
+          );
         }
         return null;
     }
@@ -128,11 +138,25 @@ function renderInline(text: string, dimmed: boolean): React.ReactNode {
       }
 
       if (match[2]) {
-        parts.push(<Text key={`b-${idx++}`} bold color={dimmed ? 'gray' : undefined}>{match[2]}</Text>);
+        parts.push(
+          <Text key={`b-${idx++}`} bold color={dimmed ? 'gray' : undefined}>
+            {match[2]}
+          </Text>,
+        );
       } else if (match[3]) {
-        parts.push(<Text key={`i-${idx++}`} italic color={dimmed ? 'gray' : undefined}>{match[3]}</Text>);
+        parts.push(
+          <Text key={`i-${idx++}`} italic color={dimmed ? 'gray' : undefined}>
+            {match[3]}
+          </Text>,
+        );
       } else if (match[4]) {
-        parts.push(<Text key={`c-${idx++}`} color={dimmed ? 'gray' : '#E6EDF3'} backgroundColor={dimmed ? undefined : '#1C2128'}>{` ${match[4]} `}</Text>);
+        parts.push(
+          <Text
+            key={`c-${idx++}`}
+            color={dimmed ? 'gray' : '#E6EDF3'}
+            backgroundColor={dimmed ? undefined : '#1C2128'}
+          >{` ${match[4]} `}</Text>,
+        );
       }
 
       lastIndex = match.index + match[0].length;

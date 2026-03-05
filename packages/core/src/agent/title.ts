@@ -8,22 +8,27 @@ Return ONLY the title text, nothing else. Examples:
 - "Write Python CSV Parser"`;
 
 export async function generateTitle(
-    userMessage: string,
-    assistantResponse: string,
-    model: LanguageModel,
+  userMessage: string,
+  assistantResponse: string,
+  model: LanguageModel,
 ): Promise<string> {
-    try {
-        const { text } = await generateText({
-            model,
-            system: TITLE_PROMPT,
-            messages: [
-                { role: 'user', content: `User: ${userMessage.slice(0, 200)}\nAssistant: ${assistantResponse.slice(0, 500)}` },
-            ],
-            maxOutputTokens: 20,
-            temperature: 0.3,
-        });
-        return text.trim().replace(/[^a-zA-Z0-9 ]/g, '').trim() || 'Untitled';
-    } catch {
-        return 'Untitled';
-    }
+  try {
+    const { text } = await generateText({
+      model,
+      system: TITLE_PROMPT,
+      messages: [
+        { role: 'user', content: `User: ${userMessage.slice(0, 200)}\nAssistant: ${assistantResponse.slice(0, 500)}` },
+      ],
+      maxOutputTokens: 20,
+      temperature: 0.3,
+    });
+    return (
+      text
+        .trim()
+        .replace(/[^a-zA-Z0-9 ]/g, '')
+        .trim() || 'Untitled'
+    );
+  } catch {
+    return 'Untitled';
+  }
 }

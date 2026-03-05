@@ -22,4 +22,3 @@ export const DEFAULT_SYSTEM_PROMPT = `You are ${APP_NAME} v${APP_VERSION}, a hig
 ## Style
 - Be concise and technical.
 - Propose edits using unified diff-style patch blocks (via edit_file or patch tools).`;
-

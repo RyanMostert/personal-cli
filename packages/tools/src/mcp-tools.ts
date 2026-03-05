@@ -33,7 +33,7 @@ export class MCPToolWrapper implements Tool {
 }
 
 export function wrapMCPTools(mcpTools: MCPTool[]): Tool[] {
-  return mcpTools.map(tool => new MCPToolWrapper(tool));
+  return mcpTools.map((tool) => new MCPToolWrapper(tool));
 }
 
 export function convertMCPToolsToRegistryFormat(mcpTools: MCPTool[]): Record<string, Tool> {

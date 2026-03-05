@@ -44,12 +44,12 @@ export function loadAttachment(filePath: string, type?: 'file' | 'image'): Attac
     const stats = statSync(filePath);
     const detectedType = type || detectFileType(filePath);
     const mimeType = getMimeType(filePath);
-    
+
     // For images, read as base64
     // For text files, read as utf-8
     // For binary files, read as base64
     let content: string;
-    
+
     if (detectedType === 'image') {
       const buffer = readFileSync(filePath);
       content = buffer.toString('base64');
@@ -76,8 +76,16 @@ export function loadAttachment(filePath: string, type?: 'file' | 'image'): Attac
 }
 
 function isTextFile(mimeType: string): boolean {
-  return mimeType.startsWith('text/') || 
-    ['application/json', 'application/javascript', 'application/typescript', 'application/xml', 'application/yaml'].includes(mimeType);
+  return (
+    mimeType.startsWith('text/') ||
+    [
+      'application/json',
+      'application/javascript',
+      'application/typescript',
+      'application/xml',
+      'application/yaml',
+    ].includes(mimeType)
+  );
 }
 
 function generateId(): string {
@@ -109,9 +117,9 @@ export function attachmentToMarkdown(attachment: Attachment): string {
 
 export function createAttachmentPrompt(attachments: Attachment[]): string {
   if (attachments.length === 0) return '';
-  
+
   let prompt = '\n\n---\n\n**Attachments:**\n\n';
-  
+
   for (const att of attachments) {
     if (att.type === 'image') {
       prompt += `**Image: ${att.name}**\n`;
@@ -123,6 +131,6 @@ export function createAttachmentPrompt(attachments: Attachment[]): string {
       prompt += `\`\`\`\n${preview}${truncated}\n\`\`\`\n\n`;
     }
   }
-  
+
   return prompt;
 }

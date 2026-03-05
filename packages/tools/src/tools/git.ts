@@ -39,9 +39,7 @@ export const gitDiff = tool({
   }),
   execute: async ({ staged, file, cwd }) => {
     try {
-      const args = ['diff', staged ? '--staged' : '', file ?? '']
-        .filter(Boolean)
-        .join(' ');
+      const args = ['diff', staged ? '--staged' : '', file ?? ''].filter(Boolean).join(' ');
       let output = await git(args, cwd);
       if (!output) output = 'No differences found.';
       if (output.length > TOOL_OUTPUT_MAX_CHARS) {
@@ -62,10 +60,7 @@ export const gitLog = tool({
   }),
   execute: async ({ limit, cwd }) => {
     try {
-      const output = await git(
-        `log --oneline --decorate -${limit}`,
-        cwd,
-      );
+      const output = await git(`log --oneline --decorate -${limit}`, cwd);
       return { output: output || 'No commits found.' };
     } catch (err) {
       return { error: String(err) };

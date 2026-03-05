@@ -16,9 +16,7 @@ export interface RefreshResult {
   error?: string;
 }
 
-export async function refreshProviderModels(
-  provider: ProviderName
-): Promise<RefreshResult> {
+export async function refreshProviderModels(provider: ProviderName): Promise<RefreshResult> {
   try {
     let models: FetchedModelEntry[];
 
@@ -73,16 +71,9 @@ export async function refreshProviderModels(
 }
 
 export async function refreshAllProviders(): Promise<RefreshResult[]> {
-  const providers: ProviderName[] = [
-    'openrouter',
-    'github-copilot',
-    'opencode',
-    'opencode-zen',
-  ];
+  const providers: ProviderName[] = ['openrouter', 'github-copilot', 'opencode', 'opencode-zen'];
 
-  const results = await Promise.all(
-    providers.map((provider) => refreshProviderModels(provider))
-  );
+  const results = await Promise.all(providers.map((provider) => refreshProviderModels(provider)));
 
   return results;
 }

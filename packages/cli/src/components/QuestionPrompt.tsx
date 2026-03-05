@@ -29,9 +29,9 @@ export function QuestionPrompt({ question }: Props) {
         question.resolve(freeText || '(no answer)');
         setFreeText('');
       } else if (key.backspace || key.delete) {
-        setFreeText(prev => prev.slice(0, -1));
+        setFreeText((prev) => prev.slice(0, -1));
       } else if (input && !key.ctrl && !key.meta) {
-        setFreeText(prev => prev + input);
+        setFreeText((prev) => prev + input);
       }
     }
   });
@@ -41,7 +41,9 @@ export function QuestionPrompt({ question }: Props) {
   return (
     <Box marginY={1} padding={1} borderStyle="round" borderColor="#58A6FF" flexDirection="column">
       <Box marginBottom={1}>
-        <Text bold color="#58A6FF">? Question</Text>
+        <Text bold color="#58A6FF">
+          ? Question
+        </Text>
       </Box>
       <Box marginBottom={1}>
         <Text>{question.header}</Text>

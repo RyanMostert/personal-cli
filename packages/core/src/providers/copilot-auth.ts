@@ -43,7 +43,7 @@ export async function startDeviceFlow(): Promise<{
   const res = await fetch('https://github.com/login/device/code', {
     method: 'POST',
     headers: {
-      'Accept': 'application/json',
+      Accept: 'application/json',
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ client_id: GITHUB_CLIENT_ID, scope: 'read:user' }),
@@ -51,7 +51,7 @@ export async function startDeviceFlow(): Promise<{
 
   if (!res.ok) throw new Error(`GitHub device code request failed: ${res.status}`);
 
-  const data = await res.json() as DeviceCodeResponse;
+  const data = (await res.json()) as DeviceCodeResponse;
   return {
     userCode: data.user_code,
     verificationUri: data.verification_uri,
@@ -64,12 +64,8 @@ export async function startDeviceFlow(): Promise<{
  * Step 2: Poll until the user authorizes. Returns the GitHub OAuth token.
  * Caller should call this after displaying the user_code and verification_uri.
  */
-export async function pollForGitHubToken(
-  deviceCode: string,
-  interval: number,
-  onTick?: () => void,
-): Promise<string> {
-  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+export async function pollForGitHubToken(deviceCode: string, interval: number, onTick?: () => void): Promise<string> {
+  const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
   const pollInterval = Math.max(interval, 5) * 1000; // at least 5s
 
   for (let attempt = 0; attempt < 60; attempt++) {
@@ -78,7 +74,7 @@ export async function pollForGitHubToken(
 
     const res = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
-      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify({
         client_id: GITHUB_CLIENT_ID,
         device_code: deviceCode,
@@ -86,11 +82,14 @@ export async function pollForGitHubToken(
       }),
     });
 
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
 
     if (data.access_token) return data.access_token as string;
     if (data.error === 'authorization_pending') continue;
-    if (data.error === 'slow_down') { await delay(5000); continue; }
+    if (data.error === 'slow_down') {
+      await delay(5000);
+      continue;
+    }
     throw new Error(`GitHub auth error: ${data.error_description ?? data.error}`);
   }
 
@@ -118,15 +117,13 @@ export async function getCopilotToken(): Promise<string> {
 
   const githubToken = getProviderKey('github-copilot');
   if (!githubToken) {
-    throw new Error(
-      'GitHub Copilot is not authenticated. Run the provider wizard to authorize.',
-    );
+    throw new Error('GitHub Copilot is not authenticated. Run the provider wizard to authorize.');
   }
 
   const res = await fetch('https://api.github.com/copilot_internal/v2/token', {
     headers: {
-      'Authorization': `Bearer ${githubToken}`,
-      'Accept': 'application/json',
+      Authorization: `Bearer ${githubToken}`,
+      Accept: 'application/json',
       'Editor-Version': 'personal-cli/1.0.0',
       'Editor-Plugin-Version': 'personal-cli/1.0.0',
     },
@@ -135,12 +132,10 @@ export async function getCopilotToken(): Promise<string> {
   if (!res.ok) {
     // If 401, the GitHub token is stale — clear cached token to force re-auth
     cachedCopilotToken = null;
-    throw new Error(
-      `Failed to get Copilot token (${res.status}). Re-authenticate via the provider manager.`,
-    );
+    throw new Error(`Failed to get Copilot token (${res.status}). Re-authenticate via the provider manager.`);
   }
 
-  const data = await res.json() as CopilotToken;
+  const data = (await res.json()) as CopilotToken;
   cachedCopilotToken = data;
   return data.token;
 }

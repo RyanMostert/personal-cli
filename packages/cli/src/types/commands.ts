@@ -1,4 +1,5 @@
 import type { Message, AgentMode } from '@personal-cli/shared';
+import type { ZenGatewayStatus, ZenModel } from '@personal-cli/zen-mcp-server';
 
 export interface CommandContext {
   messages: Message[];
@@ -27,4 +28,9 @@ export interface CommandContext {
   loadPlugins: () => Promise<import('@personal-cli/tools').LoadedPlugin[]>;
   saveWorkspace: (path: string) => void;
   loadWorkspace: (path: string) => void;
+  // Zen Gateway methods
+  getZenGatewayStatus?: () => Promise<ZenGatewayStatus | null>;
+  listZenModels?: () => Promise<ZenModel[] | null>;
+  configureZenGateway?: () => Promise<void>;
+  removeZenGateway?: () => Promise<void>;
 }

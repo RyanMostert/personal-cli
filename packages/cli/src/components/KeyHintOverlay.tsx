@@ -12,15 +12,15 @@ export function KeyHintOverlay({ onClose }: Props) {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const categories: Record<string, Keybinding[]> = {
-    'GLOBAL_COMMANDS': DEFAULT_KEYBINDINGS.filter(k => k.category === 'global'),
-    'NAVIGATION': DEFAULT_KEYBINDINGS.filter(k => k.category === 'navigation'),
-    'PANEL_CONTROLS': DEFAULT_KEYBINDINGS.filter(k => k.category === 'panel'),
-    'EDITING': DEFAULT_KEYBINDINGS.filter(k => k.category === 'editing'),
+    GLOBAL_COMMANDS: DEFAULT_KEYBINDINGS.filter((k) => k.category === 'global'),
+    NAVIGATION: DEFAULT_KEYBINDINGS.filter((k) => k.category === 'navigation'),
+    PANEL_CONTROLS: DEFAULT_KEYBINDINGS.filter((k) => k.category === 'panel'),
+    EDITING: DEFAULT_KEYBINDINGS.filter((k) => k.category === 'editing'),
   };
 
   const flatList = Object.entries(categories).flatMap(([cat, binds]) => [
     { type: 'header', label: cat },
-    ...binds.map(b => ({ type: 'bind', ...b }))
+    ...binds.map((b) => ({ type: 'bind', ...b })),
   ]);
 
   useInput((input, key) => {
@@ -29,18 +29,18 @@ export function KeyHintOverlay({ onClose }: Props) {
       return;
     }
     if (key.upArrow) {
-      setSelectedIndex(i => Math.max(0, i - 1));
+      setSelectedIndex((i) => Math.max(0, i - 1));
     }
     if (key.downArrow) {
-      setSelectedIndex(i => Math.min(flatList.length - 1, i + 1));
+      setSelectedIndex((i) => Math.min(flatList.length - 1, i + 1));
     }
   });
 
-  const scrollOffset = Math.max(0, Math.min(
-    selectedIndex - Math.floor(VISIBLE_COUNT / 2),
-    Math.max(0, flatList.length - VISIBLE_COUNT)
-  ));
-  
+  const scrollOffset = Math.max(
+    0,
+    Math.min(selectedIndex - Math.floor(VISIBLE_COUNT / 2), Math.max(0, flatList.length - VISIBLE_COUNT)),
+  );
+
   const visibleItems = flatList.slice(scrollOffset, scrollOffset + VISIBLE_COUNT);
 
   return (
@@ -54,7 +54,10 @@ export function KeyHintOverlay({ onClose }: Props) {
       alignSelf="center"
     >
       <Box position="absolute" marginTop={-1} marginLeft={2} backgroundColor="black" paddingX={1}>
-        <Text color="#FF00AA" bold> ⌨ NEURAL_INTERFACE:KEYBINDS </Text>
+        <Text color="#FF00AA" bold>
+          {' '}
+          ⌨ NEURAL_INTERFACE:KEYBINDS{' '}
+        </Text>
       </Box>
 
       <Box flexDirection="column" marginTop={1}>
@@ -65,7 +68,9 @@ export function KeyHintOverlay({ onClose }: Props) {
           if ('label' in item) {
             return (
               <Box key={item.label} marginTop={1} marginBottom={0}>
-                <Text color="#00E5FF" bold>── {item.label} ──</Text>
+                <Text color="#00E5FF" bold>
+                  ── {item.label} ──
+                </Text>
               </Box>
             );
           }
@@ -75,7 +80,9 @@ export function KeyHintOverlay({ onClose }: Props) {
             <Box key={bind.id} paddingLeft={2} backgroundColor={isSelected ? '#161B22' : undefined}>
               <Text color={isSelected ? '#FF00AA' : '#484F58'}>{isSelected ? '❯ ' : '  '}</Text>
               <Box width={15}>
-                <Text color="white" bold>{formatKeyCombo(bind.combo)}</Text>
+                <Text color="white" bold>
+                  {formatKeyCombo(bind.combo)}
+                </Text>
               </Box>
               <Text color={isSelected ? 'white' : '#8C959F'}>{bind.description}</Text>
             </Box>
@@ -84,7 +91,7 @@ export function KeyHintOverlay({ onClose }: Props) {
       </Box>
 
       <Box marginTop={1} borderTop borderStyle="single" borderColor="#484F58" paddingTop={0}>
-        <Text color="#484F58"> ESC:BACK  ↑↓:NAVIGATE </Text>
+        <Text color="#484F58"> ESC:BACK ↑↓:NAVIGATE </Text>
       </Box>
     </Box>
   );

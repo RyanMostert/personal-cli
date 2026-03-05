@@ -17,17 +17,28 @@ interface Props {
   onSave?: (newContent: string) => void;
 }
 
-export function SidePanel({ type, path, content: initialContent, oldText, newText, thought, patches, isFocused, onClose, onSave }: Props) {
+export function SidePanel({
+  type,
+  path,
+  content: initialContent,
+  oldText,
+  newText,
+  thought,
+  patches,
+  isFocused,
+  onClose,
+  onSave,
+}: Props) {
   const [lines, setLines] = useState<string[]>([]);
   const [highlighted, setHighlighted] = useState<string[] | null>(null);
-  
+
   const [scrollOffset, setScrollOffset] = useState(0);
   const [cursor, setCursor] = useState({ line: 0, char: 0 });
   const [isEditing, setIsEditing] = useState(false);
-  
+
   const [filter, setFilter] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  
+
   // Autocomplete state
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [suggestionIdx, setSuggestionIdx] = useState(0);
@@ -39,7 +50,7 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
     if (type === 'file') raw = initialContent ?? '';
     else if (type === 'thoughts') raw = thought ?? '';
     else if (type === 'diff') raw = `--- ${path}\n+++ ${path}\n- ${oldText}\n+ ${newText}`;
-    
+
     const l = raw.split('\n');
     setLines(l);
     setCursor({ line: 0, char: 0 });
@@ -51,7 +62,7 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
     if (type !== 'file' || !path) return;
     const timeout = setTimeout(() => {
       const ext = path.split('.').pop() || 'txt';
-      highlightCode(lines.join('\n'), ext).then(res => {
+      highlightCode(lines.join('\n'), ext).then((res) => {
         setHighlighted(res.split('\n'));
       });
     }, 300);
@@ -61,8 +72,8 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
   // Index words for autocomplete
   const wordIndex = useMemo(() => {
     const words = new Set<string>();
-    lines.forEach(line => {
-      line.match(/\b[a-zA-Z_][a-zA-Z0-9_]*\b/g)?.forEach(w => {
+    lines.forEach((line) => {
+      line.match(/\b[a-zA-Z_][a-zA-Z0-9_]*\b/g)?.forEach((w) => {
         if (w.length > 3) words.add(w);
       });
     });
@@ -75,7 +86,7 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
     const match = textBefore.match(/\b([a-zA-Z_][a-zA-Z0-9_]*)$/);
     if (match) {
       const prefix = match[1].toLowerCase();
-      const filtered = wordIndex.filter(w => w.toLowerCase().startsWith(prefix) && w.toLowerCase() !== prefix);
+      const filtered = wordIndex.filter((w) => w.toLowerCase().startsWith(prefix) && w.toLowerCase() !== prefix);
       setSuggestions(filtered.slice(0, 5));
       setSuggestionIdx(0);
       setShowSuggestions(filtered.length > 0);
@@ -89,13 +100,22 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
 
     // View Mode Handling
     if (!isEditing && !isSearching) {
-      if (key.escape) { onClose(); return; }
-      if (input === 'i' && type === 'file') { setIsEditing(true); return; }
-      if (input === '/') { setIsSearching(true); return; }
-      if (key.upArrow) setScrollOffset(s => Math.max(0, s - 1));
-      if (key.downArrow) setScrollOffset(s => Math.min(lines.length - 1, s + 1));
-      if (key.pageUp) setScrollOffset(s => Math.max(0, s - VISIBLE_LINES));
-      if (key.pageDown) setScrollOffset(s => Math.min(lines.length - 1, s + VISIBLE_LINES));
+      if (key.escape) {
+        onClose();
+        return;
+      }
+      if (input === 'i' && type === 'file') {
+        setIsEditing(true);
+        return;
+      }
+      if (input === '/') {
+        setIsSearching(true);
+        return;
+      }
+      if (key.upArrow) setScrollOffset((s) => Math.max(0, s - 1));
+      if (key.downArrow) setScrollOffset((s) => Math.min(lines.length - 1, s + 1));
+      if (key.pageUp) setScrollOffset((s) => Math.max(0, s - VISIBLE_LINES));
+      if (key.pageDown) setScrollOffset((s) => Math.min(lines.length - 1, s + VISIBLE_LINES));
       if (input === 'g') setScrollOffset(0);
       if (input === 'G') setScrollOffset(Math.max(0, lines.length - VISIBLE_LINES));
       return;
@@ -103,18 +123,27 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
 
     // Search Mode Handling
     if (isSearching) {
-      if (key.escape || key.return) { setIsSearching(false); return; }
-      if (key.backspace || key.delete) { setFilter(f => f.slice(0, -1)); return; }
-      if (input && !key.ctrl && !key.meta) { setFilter(f => f + input); return; }
+      if (key.escape || key.return) {
+        setIsSearching(false);
+        return;
+      }
+      if (key.backspace || key.delete) {
+        setFilter((f) => f.slice(0, -1));
+        return;
+      }
+      if (input && !key.ctrl && !key.meta) {
+        setFilter((f) => f + input);
+        return;
+      }
       return;
     }
 
     // Edit Mode Handling (Only for type === 'file')
     if (isEditing && type === 'file') {
-      if (key.escape) { 
-        setIsEditing(false); 
+      if (key.escape) {
+        setIsEditing(false);
         setShowSuggestions(false);
-        return; 
+        return;
       }
 
       // Save
@@ -156,11 +185,11 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
         return;
       }
       if (key.leftArrow) {
-        setCursor(c => ({ ...c, char: Math.max(0, c.char - 1) }));
+        setCursor((c) => ({ ...c, char: Math.max(0, c.char - 1) }));
         return;
       }
       if (key.rightArrow) {
-        setCursor(c => ({ ...c, char: Math.min(lines[c.line].length, c.char + 1) }));
+        setCursor((c) => ({ ...c, char: Math.min(lines[c.line].length, c.char + 1) }));
         return;
       }
 
@@ -171,7 +200,7 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
           const newLines = [...lines];
           newLines[cursor.line] = currentLine.slice(0, cursor.char - 1) + currentLine.slice(cursor.char);
           setLines(newLines);
-          setCursor(c => ({ ...c, char: c.char - 1 }));
+          setCursor((c) => ({ ...c, char: c.char - 1 }));
           updateSuggestions(newLines[cursor.line], cursor.char - 1);
         } else if (cursor.line > 0) {
           const prevLine = lines[cursor.line - 1];
@@ -203,51 +232,78 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
         const newLines = [...lines];
         newLines[cursor.line] = currentLine.slice(0, cursor.char) + input + currentLine.slice(cursor.char);
         setLines(newLines);
-        setCursor(c => ({ ...c, char: c.char + input.length }));
+        setCursor((c) => ({ ...c, char: c.char + input.length }));
         updateSuggestions(newLines[cursor.line], cursor.char + input.length);
       }
     }
   });
 
-  const visibleLines = (isEditing || highlighted === null ? lines : highlighted).slice(scrollOffset, scrollOffset + VISIBLE_LINES);
-  const headerTitle = type === 'file' ? '🔍 NEURAL_READER' : 
-                      type === 'thoughts' ? '🧠 NEURAL_MONOLOGUE' : 
-                      type === 'patches' ? '🔧 PATCH_HISTORY' : '🔧 DELTA_SURGE';
-  const headerColor = isEditing ? "#FF00AA" : (type === 'thoughts' ? "#AA00FF" : "#00E5FF");
+  const visibleLines = (isEditing || highlighted === null ? lines : highlighted).slice(
+    scrollOffset,
+    scrollOffset + VISIBLE_LINES,
+  );
+  const headerTitle =
+    type === 'file'
+      ? '🔍 NEURAL_READER'
+      : type === 'thoughts'
+        ? '🧠 NEURAL_MONOLOGUE'
+        : type === 'patches'
+          ? '🔧 PATCH_HISTORY'
+          : '🔧 DELTA_SURGE';
+  const headerColor = isEditing ? '#FF00AA' : type === 'thoughts' ? '#AA00FF' : '#00E5FF';
 
   return (
     <Box
       flexDirection="column"
       width="50%"
       borderStyle="double"
-      borderColor={isFocused ? headerColor : "#484F58"}
+      borderColor={isFocused ? headerColor : '#484F58'}
       paddingX={1}
       marginLeft={1}
     >
       {/* Header */}
       <Box position="absolute" marginTop={-1} marginLeft={2} backgroundColor="black" paddingX={1}>
-        <Text color={isFocused ? headerColor : "#484F58"} bold> 
-          {isEditing ? '⚡ NEURAL_EDITOR' : headerTitle} 
+        <Text color={isFocused ? headerColor : '#484F58'} bold>
+          {isEditing ? '⚡ NEURAL_EDITOR' : headerTitle}
         </Text>
       </Box>
 
       {/* Info */}
-      <Box borderBottom borderStyle="single" borderColor="#484F58" marginBottom={0} paddingY={0} justifyContent="space-between">
+      <Box
+        borderBottom
+        borderStyle="single"
+        borderColor="#484F58"
+        marginBottom={0}
+        paddingY={0}
+        justifyContent="space-between"
+      >
         <Box>
-          <Text color="white" bold> {type === 'file' && path ? path.toUpperCase() : type.toUpperCase()} </Text>
+          <Text color="white" bold>
+            {' '}
+            {type === 'file' && path ? path.toUpperCase() : type.toUpperCase()}{' '}
+          </Text>
           <Text color="#484F58"> [{lines.length}L] </Text>
         </Box>
         <Box>
-          <Text color={headerColor} bold> {isEditing ? '[EDIT_MODE]' : '[VIEW_MODE]'} </Text>
+          <Text color={headerColor} bold>
+            {' '}
+            {isEditing ? '[EDIT_MODE]' : '[VIEW_MODE]'}{' '}
+          </Text>
         </Box>
       </Box>
 
       {/* Search Bar */}
       {(isSearching || filter) && (
-        <Box paddingX={1} marginBottom={0} borderStyle="round" borderColor={isSearching ? "#FF00AA" : "#484F58"}>
-          <Text color="#FF00AA" bold>FIND: </Text>
+        <Box paddingX={1} marginBottom={0} borderStyle="round" borderColor={isSearching ? '#FF00AA' : '#484F58'}>
+          <Text color="#FF00AA" bold>
+            FIND:{' '}
+          </Text>
           <Text color="white">{filter}</Text>
-          {isSearching && <Text color="#FF00AA" bold>▌</Text>}
+          {isSearching && (
+            <Text color="#FF00AA" bold>
+              ▌
+            </Text>
+          )}
         </Box>
       )}
 
@@ -257,15 +313,30 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
           <Box flexDirection="column">
             {patches.length === 0 ? (
               <Box paddingY={5} alignItems="center" justifyContent="center">
-                <Text color="#484F58" italic> NO_PATCHES_RECORDED </Text>
+                <Text color="#484F58" italic>
+                  {' '}
+                  NO_PATCHES_RECORDED{' '}
+                </Text>
               </Box>
             ) : (
               patches.map((p, idx) => (
-                <Box key={idx} flexDirection="column" marginBottom={1} borderStyle="single" borderColor="#484F58" paddingX={1}>
-                  <Text color="#00E5FF" bold> 📂 {p.path} </Text>
+                <Box
+                  key={idx}
+                  flexDirection="column"
+                  marginBottom={1}
+                  borderStyle="single"
+                  borderColor="#484F58"
+                  paddingX={1}
+                >
+                  <Text color="#00E5FF" bold>
+                    {' '}
+                    📂 {p.path}{' '}
+                  </Text>
                   <Text color="#484F58"> {new Date(p.timestamp).toLocaleTimeString()} </Text>
                   <Box marginTop={1}>
-                    <Text color="#FF5555" dimColor>- {p.oldText.slice(0, 40)}...</Text>
+                    <Text color="#FF5555" dimColor>
+                      - {p.oldText.slice(0, 40)}...
+                    </Text>
                   </Box>
                   <Box>
                     <Text color="#3FB950">+ {p.newText.slice(0, 40)}...</Text>
@@ -280,18 +351,24 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
             const isCursorLine = isEditing && lineIdx === cursor.line;
             const query = filter.toLowerCase();
             const isMatch = query && line.toLowerCase().includes(query);
-            
+
             return (
               <Box key={lineIdx} backgroundColor={isMatch ? '#302000' : undefined}>
-                <Text color={isCursorLine ? "#FF00AA" : (type === 'thoughts' ? "#8C959F" : "#484F58")}>{String(lineIdx + 1).padStart(4)} </Text>
+                <Text color={isCursorLine ? '#FF00AA' : type === 'thoughts' ? '#8C959F' : '#484F58'}>
+                  {String(lineIdx + 1).padStart(4)}{' '}
+                </Text>
                 {isCursorLine ? (
                   <Box>
                     <Text>{line.slice(0, cursor.char)}</Text>
-                    <Text backgroundColor="#FF00AA" color="black">{line[cursor.char] || ' '}</Text>
+                    <Text backgroundColor="#FF00AA" color="black">
+                      {line[cursor.char] || ' '}
+                    </Text>
                     <Text>{line.slice(cursor.char + 1)}</Text>
                   </Box>
                 ) : (
-                  <Text color={type === 'thoughts' ? "#8C959F" : undefined} wrap="truncate">{line || ' '}</Text>
+                  <Text color={type === 'thoughts' ? '#8C959F' : undefined} wrap="truncate">
+                    {line || ' '}
+                  </Text>
                 )}
               </Box>
             );
@@ -312,8 +389,9 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
           paddingX={1}
         >
           {suggestions.map((s, idx) => (
-            <Text key={s} color={idx === suggestionIdx ? "#FF00AA" : "white"}>
-              {idx === suggestionIdx ? '❯ ' : '  '}{s}
+            <Text key={s} color={idx === suggestionIdx ? '#FF00AA' : 'white'}>
+              {idx === suggestionIdx ? '❯ ' : '  '}
+              {s}
             </Text>
           ))}
           <Box borderTop borderStyle="single" borderColor="#484F58" marginTop={0}>
@@ -325,9 +403,9 @@ export function SidePanel({ type, path, content: initialContent, oldText, newTex
       {/* Footer */}
       <Box marginTop={1} borderTop borderStyle="single" borderColor="#484F58" paddingTop={0}>
         {isEditing ? (
-          <Text color="#484F58"> ESC:VIEW  CTRL+S:SAVE  ↑↓←→:MOVE  ENTER:NEWLINE </Text>
+          <Text color="#484F58"> ESC:VIEW CTRL+S:SAVE ↑↓←→:MOVE ENTER:NEWLINE </Text>
         ) : (
-          <Text color="#484F58"> ESC:CLOSE  i:EDIT  /:FIND  ↑↓:SCROLL </Text>
+          <Text color="#484F58"> ESC:CLOSE i:EDIT /:FIND ↑↓:SCROLL </Text>
         )}
       </Box>
     </Box>

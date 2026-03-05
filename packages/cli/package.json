@@ -7,8 +7,8 @@
     "pcli": "./dist/bin.js"
   },
   "scripts": {
-    "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsup src/bin.ts src/app.tsx --format esm --dts --external ink react --external @personal-cli/core --external @personal-cli/shared --external @personal-cli/tools --external fast-glob --external eventsource --platform node",
-    "dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsup src/bin.ts src/app.tsx --format esm --watch --external ink react --external @personal-cli/core --external @personal-cli/shared --external @personal-cli/tools --external fast-glob --external eventsource --platform node",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsup src/bin.ts src/app.tsx --format esm --dts --external ink react --external @personal-cli/core --external @personal-cli/shared --external @personal-cli/tools --external @personal-cli/zen-mcp-server --external fast-glob --external eventsource --platform node",
+    "dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsup src/bin.ts src/app.tsx --format esm --watch --external ink react --external @personal-cli/core --external @personal-cli/shared --external @personal-cli/tools --external @personal-cli/zen-mcp-server --external fast-glob --external eventsource --platform node",
     "start": "node dist/bin.js",
     "clean": "rm -rf dist"
   },
@@ -17,6 +17,7 @@
     "@personal-cli/mcp-client": "workspace:*",
     "@personal-cli/shared": "workspace:*",
     "@personal-cli/tools": "workspace:*",
+    "@personal-cli/zen-mcp-server": "workspace:*",
     "@shikijs/cli": "^4.0.0",
     "clipboardy": "^5.3.1",
     "commander": "^14.0.3",

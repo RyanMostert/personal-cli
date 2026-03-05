@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { PermissionCallback } from '../types.js';
 
 // Content limits for different fetching strategies
-const JINA_LIMIT = 25000;   // High-quality markdown from Jina Reader
+const JINA_LIMIT = 25000; // High-quality markdown from Jina Reader
 const FALLBACK_LIMIT = 10000; // Fallback plain text extraction
 
 /**
@@ -13,17 +13,19 @@ const FALLBACK_LIMIT = 10000; // Fallback plain text extraction
 function cleanHtml(html: string): string {
   let text = html.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '');
   text = text.replace(/<[^>]*>/g, ' ');
-  text = text.replace(/&nbsp;/g, ' ')
-             .replace(/&amp;/g, '&')
-             .replace(/&lt;/g, '<')
-             .replace(/&gt;/g, '>')
-             .replace(/&quot;/g, '"');
+  text = text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"');
   return text.replace(/\s+/g, ' ').trim();
 }
 
 export function createWebFetch(permissionFn?: PermissionCallback) {
   return tool({
-    description: 'Fetch content from a URL. Uses Jina Reader to get high-quality Markdown, falling back to a clean text-only version.',
+    description:
+      'Fetch content from a URL. Uses Jina Reader to get high-quality Markdown, falling back to a clean text-only version.',
     inputSchema: z.object({
       url: z.string().describe('The URL to fetch'),
       useRaw: z.boolean().optional().default(false).describe('If true, skips Jina Reader and attempts a direct fetch.'),
@@ -42,13 +44,13 @@ export function createWebFetch(permissionFn?: PermissionCallback) {
           try {
             const jinaUrl = `https://r.jina.ai/${url}`;
             const jinaRes = await fetch(jinaUrl, {
-              headers: { 'User-Agent': userAgent }
+              headers: { 'User-Agent': userAgent },
             });
             if (jinaRes.ok) {
               const markdown = await jinaRes.text();
-              return { 
+              return {
                 output: markdown.slice(0, JINA_LIMIT),
-                metadata: { source: 'jina-reader', url }
+                metadata: { source: 'jina-reader', url },
               };
             }
           } catch (e) {
@@ -63,11 +65,11 @@ export function createWebFetch(permissionFn?: PermissionCallback) {
         const res = await fetch(url, {
           headers: {
             'User-Agent': userAgent,
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           },
           signal: controller.signal,
         });
-        
+
         clearTimeout(timeout);
 
         if (!res.ok) {
@@ -82,13 +84,12 @@ export function createWebFetch(permissionFn?: PermissionCallback) {
 
         const html = await res.text();
         const cleaned = cleanHtml(html);
-        const finalOutput = cleaned.length > FALLBACK_LIMIT 
-          ? cleaned.slice(0, FALLBACK_LIMIT) + "\n\n[CONTENT_TRUNCATED]"
-          : cleaned;
+        const finalOutput =
+          cleaned.length > FALLBACK_LIMIT ? cleaned.slice(0, FALLBACK_LIMIT) + '\n\n[CONTENT_TRUNCATED]' : cleaned;
 
-        return { 
+        return {
           output: finalOutput,
-          metadata: { source: 'direct-fetch', url, status: res.status }
+          metadata: { source: 'direct-fetch', url, status: res.status },
         };
       } catch (err) {
         return { error: `NETWORK_FAILURE: ${String(err)}` };

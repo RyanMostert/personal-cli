@@ -1,25 +1,23 @@
-import { TransformStream } from 'stream/web';
-
 /**
  * Transforms a stream to parse <thought>...</thought> tags and emit them as
  * separate reasoning-delta events, similar to how native reasoning models work.
- * 
- * This allows non-reasoning models (like GPT-4o) to output thoughts that get
- * displayed separately from regular text.
  */
 export function createThoughtParsingTransform() {
   let buffer = '';
   let inThought = false;
 
-  return new TransformStream<{
-    type: string;
-    text?: string;
-    [key: string]: any;
-  }, {
-    type: string;
-    text?: string;
-    [key: string]: any;
-  }>({
+  return new TransformStream<
+    {
+      type: string;
+      text?: string;
+      [key: string]: any;
+    },
+    {
+      type: string;
+      text?: string;
+      [key: string]: any;
+    }
+  >({
     transform(chunk, controller) {
       // Only process text-delta chunks
       if (chunk.type !== 'text-delta' || !chunk.text) {
@@ -45,16 +43,16 @@ export function createThoughtParsingTransform() {
 
           // Emit text before thought
           if (openIdx > 0) {
-            controller.enqueue({ 
-              type: 'text-delta', 
-              text: buffer.slice(0, openIdx) 
+            controller.enqueue({
+              type: 'text-delta',
+              text: buffer.slice(0, openIdx),
             });
           }
 
           // Enter thought mode
           buffer = buffer.slice(openIdx + 9); // Remove '<thought>'
           inThought = true;
-          
+
           // Emit reasoning-start
           controller.enqueue({ type: 'reasoning-start', id: 'parsed-thought' });
         } else {
@@ -63,10 +61,10 @@ export function createThoughtParsingTransform() {
           if (closeIdx === -1) {
             // Thought continues, emit as reasoning-delta
             if (buffer) {
-              controller.enqueue({ 
-                type: 'reasoning-delta', 
+              controller.enqueue({
+                type: 'reasoning-delta',
                 text: buffer,
-                id: 'parsed-thought'
+                id: 'parsed-thought',
               });
               buffer = '';
             }
@@ -75,16 +73,16 @@ export function createThoughtParsingTransform() {
 
           // Emit thought content
           if (closeIdx > 0) {
-            controller.enqueue({ 
-              type: 'reasoning-delta', 
+            controller.enqueue({
+              type: 'reasoning-delta',
               text: buffer.slice(0, closeIdx),
-              id: 'parsed-thought'
+              id: 'parsed-thought',
             });
           }
 
           // Emit reasoning-end
           controller.enqueue({ type: 'reasoning-end', id: 'parsed-thought' });
-          
+
           // Exit thought mode
           buffer = buffer.slice(closeIdx + 10); // Remove '</thought>'
           inThought = false;
@@ -97,18 +95,38 @@ export function createThoughtParsingTransform() {
       if (buffer) {
         if (inThought) {
           // Unclosed thought - emit as reasoning
-          controller.enqueue({ 
-            type: 'reasoning-delta', 
+          controller.enqueue({
+            type: 'reasoning-delta',
             text: buffer,
-            id: 'parsed-thought'
+            id: 'parsed-thought',
           });
+          controller.enqueue({ type: 'reasoning-end', id: 'parsed-thought' });
+        } else if (buffer.includes('<thought>')) {
+          const openIdx = buffer.indexOf('<thought>');
+          if (openIdx > 0) {
+            controller.enqueue({
+              type: 'text-delta',
+              text: buffer.slice(0, openIdx),
+            });
+          }
+          controller.enqueue({ type: 'reasoning-start', id: 'parsed-thought' });
+          const content = buffer.slice(openIdx + 9);
+          if (content) {
+            controller.enqueue({
+              type: 'reasoning-delta',
+              text: content,
+              id: 'parsed-thought',
+            });
+          }
           controller.enqueue({ type: 'reasoning-end', id: 'parsed-thought' });
         } else {
           // Regular text
           controller.enqueue({ type: 'text-delta', text: buffer });
         }
         buffer = '';
+      } else if (inThought) {
+        controller.enqueue({ type: 'reasoning-end', id: 'parsed-thought' });
       }
-    }
+    },
   });
 }

@@ -7,14 +7,17 @@ import path from 'node:path';
 const execAsync = promisify(exec);
 
 export const diagnostics = tool({
-  description: 'Get TypeScript type errors and diagnostics for specific files. Runs tsc --noEmit in the background and filters exclusively for the files you request, saving context window size.',
+  description:
+    'Get TypeScript type errors and diagnostics for specific files. Runs tsc --noEmit in the background and filters exclusively for the files you request, saving context window size.',
   inputSchema: z.object({
-    paths: z.array(z.string()).describe('List of exact file paths to get diagnostics for (e.g., ["packages/cli/src/app.tsx"])'),
+    paths: z
+      .array(z.string())
+      .describe('List of exact file paths to get diagnostics for (e.g., ["packages/cli/src/app.tsx"])'),
   }),
   execute: async ({ paths }) => {
     try {
       const cwd = process.cwd();
-      
+
       let stdout = '';
       try {
         const { stdout: out } = await execAsync('npx tsc --noEmit --pretty false', { cwd });
@@ -33,12 +36,12 @@ export const diagnostics = tool({
       for (const rawPath of paths) {
         const escaped = rawPath.replace(/[/\\]/g, '[/\\\\]');
         const fileRegex = new RegExp(`^${escaped}\\(\\d+,\\d+\\):\\s+error`);
-        
+
         let foundForFile = false;
-        
+
         for (const line of lines) {
           const trimmed = line.trim();
-          if (fileRegex.test(trimmed) || (trimmed.startsWith(rawPath))) {
+          if (fileRegex.test(trimmed) || trimmed.startsWith(rawPath)) {
             relevantErrors.push(trimmed);
             foundForFile = true;
           }

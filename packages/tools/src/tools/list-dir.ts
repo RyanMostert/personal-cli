@@ -40,9 +40,7 @@ export const listDir = tool({
     try {
       const lines = recursive
         ? listRecursive(abs, abs, 0, maxDepth)
-        : readdirSync(abs, { withFileTypes: true }).map((e) =>
-            e.isDirectory() ? `${e.name}/` : e.name,
-          );
+        : readdirSync(abs, { withFileTypes: true }).map((e) => (e.isDirectory() ? `${e.name}/` : e.name));
 
       let output = lines.join('\n');
       if (output.length > TOOL_OUTPUT_MAX_CHARS) {

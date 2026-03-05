@@ -14,13 +14,13 @@ export interface ProviderManagerOptions {
 
 const OPENCODE_BASE_URL = 'https://opencode.ai/zen/v1';
 
-// opencode-zen and opencode send {"type":"ping","cost":"0"} heartbeat events 
-// that can confuse SSE parsers or be annoying. This wrapper strips those lines 
+// opencode-zen and opencode send {"type":"ping","cost":"0"} heartbeat events
+// that can confuse SSE parsers or be annoying. This wrapper strips those lines
 // from the stream using a line-buffered approach to avoid breaking at chunk boundaries.
 const filterPingsFetch: typeof globalThis.fetch = async (url, init) => {
   const res = await globalThis.fetch(url as RequestInfo, init as RequestInit);
   if (!res.body || res.status !== 200) return res;
-  
+
   const contentType = res.headers.get('content-type') ?? '';
   if (!contentType.includes('text/event-stream')) return res;
 
@@ -242,13 +242,9 @@ const PROVIDER_REGISTRY: ProviderDef[] = [
       // @ts-ignore - optional peer dep
       const { GoogleAuth } = await import('google-auth-library');
 
-      const project = process.env.GOOGLE_CLOUD_PROJECT
-        ?? process.env.GCP_PROJECT
-        ?? process.env.GCLOUD_PROJECT;
+      const project = process.env.GOOGLE_CLOUD_PROJECT ?? process.env.GCP_PROJECT ?? process.env.GCLOUD_PROJECT;
 
-      const location = process.env.GOOGLE_CLOUD_LOCATION
-        ?? process.env.VERTEX_LOCATION
-        ?? 'us-central1';
+      const location = process.env.GOOGLE_CLOUD_LOCATION ?? process.env.VERTEX_LOCATION ?? 'us-central1';
 
       const auth = new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
 
@@ -323,22 +319,32 @@ export class ProviderManager {
   async getModel(): Promise<LanguageModel> {
     const { provider, modelId, baseUrl } = this.options;
 
-    const def = PROVIDER_REGISTRY.find(p => p.id === provider);
+    const def = PROVIDER_REGISTRY.find((p) => p.id === provider);
     if (!def) {
       throw new Error(
-        `Provider "${provider}" is not yet supported. Supported: ${PROVIDER_REGISTRY.map(p => p.id).join(', ')}.`,
+        `Provider "${provider}" is not yet supported. Supported: ${PROVIDER_REGISTRY.map((p) => p.id).join(', ')}.`,
       );
     }
 
     const apiKey = this.resolveKey(provider, def.envVar ?? '');
-    
+
     // Validate API key for providers that require it
-    const noKeyProviders = ['ollama', 'github-copilot', 'google-vertex', 'amazon-bedrock', 'opencode', 'opencode-zen', 'openrouter', 'mistral', 'together'];
+    const noKeyProviders = [
+      'ollama',
+      'github-copilot',
+      'google-vertex',
+      'amazon-bedrock',
+      'opencode',
+      'opencode-zen',
+      'openrouter',
+      'mistral',
+      'together',
+    ];
     if (!apiKey && !noKeyProviders.includes(provider)) {
       throw new Error(
         `No API key found for provider "${provider}". \n` +
-        `❯ Set ${def.envVar || 'CUSTOM_API_KEY'} in your environment\n` +
-        `❯ Or run /provider to configure it now.`
+          `❯ Set ${def.envVar || 'CUSTOM_API_KEY'} in your environment\n` +
+          `❯ Or run /provider to configure it now.`,
       );
     }
 

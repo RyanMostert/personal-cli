@@ -5,9 +5,15 @@ import { Box, Text } from 'ink';
 export function MinecraftSpinner() {
   return (
     <Box>
-      <Text color="#FF00AA" bold>░</Text>
-      <Text color="#AA00FF" bold>▒</Text>
-      <Text color="#00E5FF" bold>⢆⡤</Text>
+      <Text color="#FF00AA" bold>
+        ░
+      </Text>
+      <Text color="#AA00FF" bold>
+        ▒
+      </Text>
+      <Text color="#00E5FF" bold>
+        ⢆⡤
+      </Text>
     </Box>
   );
 }

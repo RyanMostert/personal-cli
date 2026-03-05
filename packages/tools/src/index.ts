@@ -103,12 +103,23 @@ function convertArgsToZod(args?: Record<string, ToolArgSchema>) {
   for (const [key, config] of Object.entries(args)) {
     let zodType: any;
     switch (config.type) {
-      case 'string': zodType = z.string(); break;
-      case 'number': zodType = z.number(); break;
-      case 'boolean': zodType = z.boolean(); break;
-      case 'object': zodType = z.record(z.any()); break;
-      case 'array': zodType = z.array(z.any()); break;
-      default: zodType = z.any();
+      case 'string':
+        zodType = z.string();
+        break;
+      case 'number':
+        zodType = z.number();
+        break;
+      case 'boolean':
+        zodType = z.boolean();
+        break;
+      case 'object':
+        zodType = z.record(z.any());
+        break;
+      case 'array':
+        zodType = z.array(z.any());
+        break;
+      default:
+        zodType = z.any();
     }
 
     if (config.description) zodType = zodType.describe(config.description);
@@ -121,10 +132,7 @@ function convertArgsToZod(args?: Record<string, ToolArgSchema>) {
   return z.object(shape);
 }
 
-function makePermissionResolver(
-  rules: PermissionRule[],
-  userCallback?: PermissionCallback,
-): PermissionCallback {
+function makePermissionResolver(rules: PermissionRule[], userCallback?: PermissionCallback): PermissionCallback {
   return async (toolName, args) => {
     const pathArg = (args.path ?? args.command ?? args.filePath ?? '') as string;
 

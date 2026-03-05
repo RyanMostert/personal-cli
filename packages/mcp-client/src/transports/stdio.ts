@@ -12,7 +12,7 @@ export class StdioTransport implements MCPTransport {
     private command: string,
     private args: string[] = [],
     private env: Record<string, string> = {},
-    private cwd?: string
+    private cwd?: string,
   ) {}
 
   async connect(): Promise<void> {
@@ -64,14 +64,14 @@ export class StdioTransport implements MCPTransport {
   async disconnect(): Promise<void> {
     if (this.process) {
       this.process.kill('SIGTERM');
-      
+
       // Force kill after 5 seconds if still running
       setTimeout(() => {
         if (this.process && !this.process.killed) {
           this.process.kill('SIGKILL');
         }
       }, 5000);
-      
+
       this.process = null;
     }
   }
@@ -80,7 +80,7 @@ export class StdioTransport implements MCPTransport {
     if (!this.process?.stdin) {
       throw new Error('Transport not connected');
     }
-    
+
     const messageStr = JSON.stringify(message);
     this.process.stdin.write(messageStr + '\n');
   }
@@ -99,11 +99,11 @@ export class StdioTransport implements MCPTransport {
 
   private handleData(data: string): void {
     this.buffer += data;
-    
+
     // Process line-by-line (JSON-RPC messages are newline-delimited)
     const lines = this.buffer.split('\n');
     this.buffer = lines.pop() || ''; // Keep incomplete line in buffer
-    
+
     for (const line of lines) {
       if (line.trim()) {
         try {

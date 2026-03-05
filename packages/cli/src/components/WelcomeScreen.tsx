@@ -4,10 +4,10 @@ import { listConversations } from '@personal-cli/core';
 import path from 'path';
 
 const ASCII_TITLE = [
-  "   _   ___  ___   _   ___  ___ ",
-  "  /_\\ | _ \\/ __| /_\\ |   \\| __|",
-  " / _ \\|   / (__ / _ \\| |) | _| ",
-  "/_/ \\_\\_|_\\\\___/_/ \\_\\___/|___|"
+  '   _   ___  ___   _   ___  ___ ',
+  '  /_\\ | _ \\/ __| /_\\ |   \\| __|',
+  ' / _ \\|   / (__ / _ \\| |) | _| ',
+  '/_/ \\_\\_|_\\\\___/_/ \\_\\___/|___|',
 ];
 
 const TITLE_COLORS = ['#00E5FF', '#FF00AA', '#AA00FF'];
@@ -29,8 +29,8 @@ export function WelcomeScreen({ tick = 0 }: { tick?: number }) {
     const project = path.basename(process.cwd()).toLowerCase();
     return [
       { label: 'SESSIONS', value: convos.length.toString() },
-      { label: 'PROJECT',  value: project },
-      { label: 'LAST',     value: lastConvo ? formatTimeAgo(lastConvo.date) : 'none' },
+      { label: 'PROJECT', value: project },
+      { label: 'LAST', value: lastConvo ? formatTimeAgo(lastConvo.date) : 'none' },
     ];
   }, []);
 
@@ -49,17 +49,21 @@ export function WelcomeScreen({ tick = 0 }: { tick?: number }) {
       <Box marginTop={1} flexDirection="row" paddingX={2}>
         {stats.map((s, i) => (
           <React.Fragment key={s.label}>
-            {i > 0 && <Text color="#484F58">  │  </Text>}
+            {i > 0 && <Text color="#484F58"> │ </Text>}
             <Text color="#484F58">{s.label}: </Text>
-            <Text color="#3FB950" bold>{s.value}</Text>
+            <Text color="#3FB950" bold>
+              {s.value}
+            </Text>
           </React.Fragment>
         ))}
       </Box>
 
       <Box marginTop={2}>
-        <Text color="#FF00AA" bold>{tick % 2 === 0 ? '► INSERT COIN ◄' : '  INSERT COIN  '}</Text>
+        <Text color="#FF00AA" bold>
+          {tick % 2 === 0 ? '► INSERT COIN ◄' : '  INSERT COIN  '}
+        </Text>
       </Box>
-      
+
       <Box marginTop={1}>
         <Text color="#484F58">type /help for manual</Text>
       </Box>

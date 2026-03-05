@@ -31,28 +31,38 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <Box flexDirection="column" padding={2} borderStyle="double" borderColor="#FF5555" width="100%">
           <Box marginBottom={1} justifyContent="center">
-            <Text color="#FF5555" bold inverse> ⚠️ CRITICAL_SYSTEM_FAILURE ⚠️ </Text>
+            <Text color="#FF5555" bold inverse>
+              {' '}
+              ⚠️ CRITICAL_SYSTEM_FAILURE ⚠️{' '}
+            </Text>
           </Box>
-          
+
           <Box flexDirection="column" borderStyle="single" borderColor="#484F58" paddingX={2} paddingY={1}>
-            <Text color="#FF5555" bold>ERROR_TYPE: </Text>
+            <Text color="#FF5555" bold>
+              ERROR_TYPE:{' '}
+            </Text>
             <Text color="white">{this.state.error?.name || 'UnknownError'}</Text>
-            
+
             <Box marginTop={1}>
-              <Text color="#FF5555" bold>MESSAGE: </Text>
+              <Text color="#FF5555" bold>
+                MESSAGE:{' '}
+              </Text>
               <Text color="white">{this.state.error?.message}</Text>
             </Box>
 
             <Box marginTop={1} flexDirection="column">
-              <Text color="#484F58" bold>STACK_TRACE_SUMMARY:</Text>
-              <Text color="#484F58">
-                {this.state.error?.stack?.split('\n').slice(0, 5).join('\n')}
+              <Text color="#484F58" bold>
+                STACK_TRACE_SUMMARY:
               </Text>
+              <Text color="#484F58">{this.state.error?.stack?.split('\n').slice(0, 5).join('\n')}</Text>
             </Box>
           </Box>
 
           <Box marginTop={2} flexDirection="column" alignItems="center">
-            <Text color="#00E5FF" bold> RECOVERY_OPTIONS: </Text>
+            <Text color="#00E5FF" bold>
+              {' '}
+              RECOVERY_OPTIONS:{' '}
+            </Text>
             <Text color="#8C959F"> ❯ Press Ctrl+C to terminate process </Text>
             <Text color="#8C959F"> ❯ Check .personal-cli/logs for detailed diagnostic data </Text>
           </Box>

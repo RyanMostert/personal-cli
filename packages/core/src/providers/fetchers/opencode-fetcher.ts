@@ -42,7 +42,7 @@ const OPENCODE_MODELS: OpenCodeModel[] = [
 
 function mapTags(tags?: string[]): ModelTag[] {
   if (!tags) return [];
-  
+
   const validTags: ModelTag[] = ['reasoning', 'coding', 'vision', 'fast', 'large'];
   return tags.filter((tag): tag is ModelTag => validTags.includes(tag as ModelTag));
 }
@@ -52,7 +52,7 @@ export async function fetchOpenCodeModels(apiKey?: string): Promise<FetchedModel
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    
+
     if (apiKey) {
       headers['Authorization'] = `Bearer ${apiKey}`;
     }

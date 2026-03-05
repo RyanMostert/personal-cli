@@ -63,7 +63,7 @@ const COPILOT_MODELS: CopilotModel[] = [
 export async function fetchCopilotModels(): Promise<FetchedModelEntry[]> {
   // In the future, we could validate models against the user's Copilot subscription
   // by making a request to GitHub's API, but for now we return the static list
-  
+
   return COPILOT_MODELS.map((model) => ({
     provider: 'github-copilot' as ProviderName,
     id: model.id,

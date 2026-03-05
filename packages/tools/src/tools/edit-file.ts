@@ -25,17 +25,17 @@ export function createEditFile(permissionFn?: PermissionCallback, onWrite?: Writ
 
       try {
         const originalContent = readFileSync(abs, 'utf-8');
-        
+
         // 1. Try exact match (including line endings normalization)
         const normalizedOriginal = originalContent.replace(/\r\n/g, '\n');
         const normalizedOld = oldText.replace(/\r\n/g, '\n');
         const normalizedNew = newText.replace(/\r\n/g, '\n');
 
         if (normalizedOriginal.includes(normalizedOld)) {
-          const content = allowMultiple 
+          const content = allowMultiple
             ? normalizedOriginal.split(normalizedOld).join(normalizedNew)
             : normalizedOriginal.replace(normalizedOld, normalizedNew);
-          
+
           writeFileSync(abs, content, 'utf-8');
           if (onWrite) onWrite(abs, originalContent, content);
           return { output: `SUCCESS: Surgical edit applied to ${path}` };
@@ -43,9 +43,12 @@ export function createEditFile(permissionFn?: PermissionCallback, onWrite?: Writ
 
         // 2. Try line-by-line trimmed match (handles indentation differences)
         const origLines = normalizedOriginal.split('\n');
-        const oldLines = normalizedOld.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        
-        if (oldLines.length === 0) return { error: "oldText is empty after trimming" };
+        const oldLines = normalizedOld
+          .split('\n')
+          .map((l) => l.trim())
+          .filter((l) => l.length > 0);
+
+        if (oldLines.length === 0) return { error: 'oldText is empty after trimming' };
 
         let foundIdx = -1;
         for (let i = 0; i <= origLines.length - oldLines.length; i++) {
@@ -68,20 +71,21 @@ export function createEditFile(permissionFn?: PermissionCallback, onWrite?: Writ
           // We need to find how many original lines we are replacing.
           // Since we matched trimmed lines, we should replace the block from foundIdx
           // but we need to be careful about which lines in origLines actually matched oldLines.
-          // For simplicity, we'll replace the block starting at foundIdx with length equal to the 
+          // For simplicity, we'll replace the block starting at foundIdx with length equal to the
           // number of lines we found in oldText.
-          
+
           resultLines.splice(foundIdx, normalizedOld.split('\n').length, ...newLines);
           const content = resultLines.join('\n');
-          
+
           writeFileSync(abs, content, 'utf-8');
           if (onWrite) onWrite(abs, originalContent, content);
           return { output: `SUCCESS: Applied edit to ${path} using fuzzy whitespace matching.` };
         }
 
-        return { 
-          error: `FAILED: Could not find exact or fuzzy match for the provided oldText in ${path}. \n\n` +
-                 `TIP: Ensure you are copying the code EXACTLY as it appears in the file, including all punctuation.`
+        return {
+          error:
+            `FAILED: Could not find exact or fuzzy match for the provided oldText in ${path}. \n\n` +
+            `TIP: Ensure you are copying the code EXACTLY as it appears in the file, including all punctuation.`,
         };
       } catch (err) {
         return { error: `CRITICAL_ERROR during file edit: ${String(err)}` };

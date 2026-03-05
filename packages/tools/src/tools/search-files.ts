@@ -6,17 +6,46 @@ import { TOOL_OUTPUT_MAX_CHARS } from '@personal-cli/shared';
 
 const IGNORE_DIRS = new Set(['.git', 'node_modules', 'dist', '.turbo', '.next', '__pycache__']);
 const TEXT_EXTS = new Set([
-  '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json', '.yaml', '.yml',
-  '.md', '.txt', '.sh', '.py', '.go', '.rs', '.java', '.c', '.cpp', '.h',
-  '.css', '.scss', '.html', '.toml', '.env',
+  '.ts',
+  '.tsx',
+  '.js',
+  '.jsx',
+  '.mjs',
+  '.cjs',
+  '.json',
+  '.yaml',
+  '.yml',
+  '.md',
+  '.txt',
+  '.sh',
+  '.py',
+  '.go',
+  '.rs',
+  '.java',
+  '.c',
+  '.cpp',
+  '.h',
+  '.css',
+  '.scss',
+  '.html',
+  '.toml',
+  '.env',
 ]);
 
-interface Match { file: string; line: number; text: string; }
+interface Match {
+  file: string;
+  line: number;
+  text: string;
+}
 
 function searchDir(dir: string, root: string, query: RegExp, results: Match[], filePattern?: RegExp) {
   if (results.length > 200) return;
   let entries;
-  try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
 
   for (const entry of entries) {
     if (IGNORE_DIRS.has(entry.name)) continue;
@@ -61,18 +90,14 @@ export const searchFiles = tool({
       regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
     }
 
-    const fileRegex = filePattern
-      ? new RegExp(filePattern.replace(/\*/g, '.*').replace(/\?/g, '.'))
-      : undefined;
+    const fileRegex = filePattern ? new RegExp(filePattern.replace(/\*/g, '.*').replace(/\?/g, '.')) : undefined;
 
     const results: Match[] = [];
     searchDir(root, root, regex, results, fileRegex);
 
     if (results.length === 0) return { output: 'No matches found.' };
 
-    let output = results
-      .map((r) => `${r.file}:${r.line}: ${r.text.slice(0, 120)}`)
-      .join('\n');
+    let output = results.map((r) => `${r.file}:${r.line}: ${r.text.slice(0, 120)}`).join('\n');
 
     if (output.length > TOOL_OUTPUT_MAX_CHARS) {
       output = output.slice(0, TOOL_OUTPUT_MAX_CHARS) + '\n... (truncated)';
