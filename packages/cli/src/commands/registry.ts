@@ -24,7 +24,53 @@ const FALLBACK_EXAMPLES = [
   "If tool unavailable, I'll explain using my training",
 ];
 
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import os from 'os';
+import { spawn } from 'child_process';
+import path from 'path';
+import fs from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const commands: Command[] = [
+  {
+    cmd: '/clip',
+    description: 'Attach an image from the clipboard as a file',
+    async handler(_args, ctx) {
+      ctx.addSystemMessage('Extracting clipboard image...');
+      try {
+        // Compose paths
+        const scriptPath = path.join(__dirname, '../../scripts/save_clipboard_image.py');
+        const outPath = path.join(os.tmpdir(), `clipimg-${Date.now()}.png`);
+        const python = process.platform === 'win32' ? 'python' : 'python3';
+        const res = await new Promise<string>((resolve, reject) => {
+          const proc = spawn(python, [scriptPath, outPath]);
+          let stdout = '';
+          let stderr = '';
+          proc.stdout.on('data', data => stdout += data.toString());
+          proc.stderr.on('data', data => stderr += data.toString());
+          proc.on('close', code => {
+            if (code === 0 && fs.existsSync(outPath)) {
+              resolve(outPath);
+            } else {
+              reject(stderr || stdout || `Clipboard image extraction failed (code ${code})`);
+            }
+          });
+        });
+        const ok = await ctx.attachFile(res);
+        if (ok) {
+          ctx.addSystemMessage('Clipboard image attached!');
+        } else {
+          ctx.addSystemMessage('Failed to attach clipboard image.');
+        }
+      } catch (err) {
+        ctx.addSystemMessage(typeof err === 'string' ? err : (err instanceof Error ? err.message : 'Clipboard image not found.'));
+      }
+    },
+  },
+
   {
     cmd: '/exit',
     aliases: ['/quit'],

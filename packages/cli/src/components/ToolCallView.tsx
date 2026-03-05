@@ -8,6 +8,10 @@ import { useTheme } from '../context/ThemeContext.js';
 interface Props {
   tool: ToolCallInfo;
   startTime?: number;
+  focused?: boolean;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
+  onFocus?: () => void;
 }
 
 const RESULT_PREVIEW_CHARS = 500;
@@ -125,12 +129,16 @@ function getFileInfo(tool: ToolCallInfo): { path?: string; lineCount?: number } 
   return null;
 }
 
-export function ToolCallView({ tool, startTime = Date.now() }: Props) {
+export function ToolCallView({ tool, startTime = Date.now(), focused = false, expanded = false, onToggleExpand, onFocus }: Props) {
   const theme = useTheme();
   const [elapsed, setElapsed] = useState(0);
   const resultSummary = tool.result !== undefined ? summarizeResult(tool.result) : null;
   const isError = Boolean(tool.error) || resultSummary?.isError === true;
   const isRunFinished = tool.result !== undefined || Boolean(tool.error);
+
+  // Focus/expand styling
+  const focusBorderColor = focused ? '#FF00AA' : (isError ? theme.error : isRunFinished ? theme.success : theme.warning);
+  const borderStyle = focused ? 'double' : 'single';
 
   const isEditFile = tool.toolName === 'edit_file';
   const editArgs = isEditFile ? (tool.args as any) : null;
@@ -155,10 +163,11 @@ export function ToolCallView({ tool, startTime = Date.now() }: Props) {
       marginY={0}
       paddingLeft={2}
       borderLeft
-      borderStyle="single"
-      borderColor={borderColor}
+      borderStyle={borderStyle}
+      borderColor={focusBorderColor}
       flexDirection="column"
       backgroundColor={isRunFinished ? 'transparent' : '#1A1A1A'}
+
     >
       {/* Status row - Claude Code style */}
       <Box flexDirection="row" alignItems="center">
@@ -213,18 +222,41 @@ export function ToolCallView({ tool, startTime = Date.now() }: Props) {
         </Box>
       )}
 
-      {/* Result preview row */}
-      {isRunFinished && resultSummary !== null && resultSummary.text && !isEditFile && (
-        <Box paddingLeft={4}>
-          <Text color={theme.dim}>⎿ </Text>
-          <Text color={resultSummary.isError ? theme.error : theme.dim} wrap="wrap">
-            {resultSummary.text}
-          </Text>
-          {resultSummary.lineCount && resultSummary.lineCount > 1 && (
-            <Text color={theme.muted}> ({resultSummary.lineCount} lines)</Text>
-          )}
-        </Box>
-      )}
+       {/* Focus/expand/collapse row */}
+       {isRunFinished && !isEditFile && (
+         <Box paddingLeft={3} alignItems="center">
+           {focused && (
+             <Text color="#FF00AA" bold>❯ </Text>
+           )}
+           <Text color={theme.primary} bold>
+             {expanded ? '▼ Collapse' : '▶ Expand'}
+           </Text>
+           {onToggleExpand && focused && (
+             <Text color={theme.dim}> (Press ENTER/TAB)</Text>
+           )}
+         </Box>
+       )}
+
+       {/* Result output row */}
+       {isRunFinished && resultSummary !== null && resultSummary.text && !isEditFile && (
+         expanded ? (
+           <Box paddingLeft={5}>
+             <Text color={resultSummary.isError ? theme.error : theme.text} wrap="wrap">
+               {typeof tool.result === 'string' ? tool.result : JSON.stringify(tool.result, null, 2)}
+             </Text>
+           </Box>
+         ) : (
+           <Box paddingLeft={5}>
+             <Text color={theme.dim}>⎿ </Text>
+             <Text color={resultSummary.isError ? theme.error : theme.dim} wrap="wrap">
+               {resultSummary.text}
+             </Text>
+             {resultSummary.lineCount && resultSummary.lineCount > 1 && (
+               <Text color={theme.muted}> ({resultSummary.lineCount} lines)</Text>
+             )}
+           </Box>
+         )
+       )}
 
       {/* Special rendering for edits */}
       {isEditFile && editArgs && (

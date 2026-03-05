@@ -333,7 +333,6 @@ export class Agent {
                     buffer = buffer.slice(closeIdx + 10);
                     inThought = false;
                   } else {
-                    // Check if the buffer ends with a partial closing tag
                     const partialIdx = buffer.lastIndexOf('</');
                     if (partialIdx !== -1 && '</thought>'.startsWith(buffer.slice(partialIdx))) {
                       const thought = buffer.slice(0, partialIdx);
@@ -342,7 +341,7 @@ export class Agent {
                         yield { type: 'thought-delta', delta: thought };
                       }
                       buffer = buffer.slice(partialIdx);
-                      break; // Wait for more data
+                      break;
                     } else {
                       thoughtText += buffer;
                       yield { type: 'thought-delta', delta: buffer };
@@ -350,31 +349,53 @@ export class Agent {
                     }
                   }
                 } else {
-                  const openIdx = buffer.indexOf('<thought>');
-                  if (openIdx !== -1) {
-                    const beforeText = buffer.slice(0, openIdx);
+                  // Check for both <thought> and <multi_tool_use.parallel>
+                  const thoughtOpenIdx = buffer.indexOf('<thought>');
+                  const multiToolOpenIdx = buffer.indexOf('<multi_tool_use.parallel>');
+                  
+                  // Handle <thought>
+                  if (thoughtOpenIdx !== -1 && (multiToolOpenIdx === -1 || thoughtOpenIdx < multiToolOpenIdx)) {
+                    const beforeText = buffer.slice(0, thoughtOpenIdx);
                     if (beforeText) {
                       rawText += beforeText;
                       yield { type: 'text-delta', delta: beforeText };
                     }
-                    buffer = buffer.slice(openIdx + 9);
+                    buffer = buffer.slice(thoughtOpenIdx + 9);
                     inThought = true;
-                  } else {
-                    // Check if the buffer ends with a partial opening tag
-                    const partialIdx = buffer.lastIndexOf('<');
-                    if (partialIdx !== -1 && '<thought>'.startsWith(buffer.slice(partialIdx))) {
-                      const beforeText = buffer.slice(0, partialIdx);
-                      if (beforeText) {
-                        rawText += beforeText;
-                        yield { type: 'text-delta', delta: beforeText };
-                      }
-                      buffer = buffer.slice(partialIdx);
-                      break; // Wait for more data
-                    } else {
-                      rawText += buffer;
-                      yield { type: 'text-delta', delta: buffer };
-                      buffer = '';
+                    continue;
+                  }
+                  
+                  // Handle <multi_tool_use.parallel> - just strip it from rawText/UI
+                  if (multiToolOpenIdx !== -1) {
+                    const beforeText = buffer.slice(0, multiToolOpenIdx);
+                    if (beforeText) {
+                      rawText += beforeText;
+                      yield { type: 'text-delta', delta: beforeText };
                     }
+                    const closeIdx = buffer.indexOf('</multi_tool_use.parallel>', multiToolOpenIdx);
+                    if (closeIdx !== -1) {
+                      buffer = buffer.slice(closeIdx + 26);
+                    } else {
+                      // Tag is open but not closed in this buffer, wait for more
+                      break;
+                    }
+                    continue;
+                  }
+
+                  // Partial tag check
+                  const partialThoughtIdx = buffer.lastIndexOf('<');
+                  if (partialThoughtIdx !== -1 && ('<thought>'.startsWith(buffer.slice(partialThoughtIdx)) || '<multi_tool_use.parallel>'.startsWith(buffer.slice(partialThoughtIdx)))) {
+                    const beforeText = buffer.slice(0, partialThoughtIdx);
+                    if (beforeText) {
+                      rawText += beforeText;
+                      yield { type: 'text-delta', delta: beforeText };
+                    }
+                    buffer = buffer.slice(partialThoughtIdx);
+                    break;
+                  } else {
+                    rawText += buffer;
+                    yield { type: 'text-delta', delta: buffer };
+                    buffer = '';
                   }
                 }
               }
@@ -553,8 +574,67 @@ export class Agent {
         this.totalCost += (totalCompletionTokens / 1_000_000) * entry.outputCostPer1M;
       }
 
+      // Parse any <multi_tool_use.parallel> blocks that weren't captured as tool-call events
+      // This handles models that output tool calls as XML instead of structured events
+      // Match self-closing format: <multi_tool_use.parallel tool_uses=[...] />
+      const multiToolRegex = /<multi_tool_use\.parallel\s+tool_uses=\[(.*?)\]\s*\/?>/g;
+      let multiToolMatch;
+      while ((multiToolMatch = multiToolRegex.exec(rawText)) !== null) {
+        try {
+          // Parse the array content - it's not valid JSON, so we need to be clever
+          const arrayContent = multiToolMatch[1];
+          // Split by },{ to get individual tool objects
+          const toolObjects = arrayContent.split(/},\s*{/);
+          
+          for (const toolObj of toolObjects) {
+            // Clean up the object string
+            const cleanObj = toolObj.replace(/^\{/, '').replace(/\}$/, '');
+            
+            // Extract recipient_name and parameters using regex
+            const recipientMatch = cleanObj.match(/recipient_name:\s*"([^"]+)"/);
+            const paramsMatch = cleanObj.match(/parameters:\s*\{([^}]*)\}/);
+            
+            if (recipientMatch) {
+              const toolCallId = generateId();
+              const toolName = recipientMatch[1].replace(/^functions\./, '');
+              
+              // Parse parameters
+              let args: Record<string, unknown> = {};
+              if (paramsMatch) {
+                const paramsStr = paramsMatch[1];
+                // Parse key: value pairs
+                const paramPairs = paramsStr.split(/,\s*/);
+                for (const pair of paramPairs) {
+                  const [key, ...valueParts] = pair.split(/:\s*/);
+                  if (key && valueParts.length > 0) {
+                    const value = valueParts.join(':').trim();
+                    // Try to parse as number, boolean, or keep as string
+                    if (value === 'true') args[key.trim()] = true;
+                    else if (value === 'false') args[key.trim()] = false;
+                    else if (!isNaN(Number(value))) args[key.trim()] = Number(value);
+                    else args[key.trim()] = value.replace(/^"|"$/g, '');
+                  }
+                }
+              }
+              
+              allToolCalls[toolCallId] = {
+                toolCallId,
+                toolName,
+                args,
+              };
+            }
+          }
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+
       // Final cleanup of rawText to ensure tags are stripped for history
-      const finalContent = rawText.replace(/<thought>[\s\S]*?<\/thought>/g, '').trim();
+      const finalContent = rawText
+        .replace(/<thought>[\s\S]*?<\/thought>/g, '')
+        .replace(/<multi_tool_use\.parallel[^>]*\/>/g, '')
+        .replace(/<multi_tool_use\.parallel>[\s\S]*?<\/multi_tool_use\.parallel>/g, '')
+        .trim();
 
       const assistantMessage: Message = {
         id: generateId(),
