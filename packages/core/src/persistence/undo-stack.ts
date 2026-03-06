@@ -23,7 +23,11 @@ export class UndoStack {
       // File was created in the change — remove it to undo
       try {
         unlinkSync(entry.path);
-      } catch {}
+      } catch (err: any) {
+        if (err.code !== 'ENOENT') {
+          console.error(`Failed to remove file during undo: ${entry.path}`, err);
+        }
+      }
     } else {
       writeFileSync(entry.path, entry.before, 'utf-8');
     }

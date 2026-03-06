@@ -66,7 +66,9 @@ function searchDir(dir: string, root: string, query: RegExp, results: Match[], f
             if (results.length >= 200) return;
           }
         }
-      } catch {}
+      } catch (err) {
+        // Ignore unreadable files (e.g. binary or permissions)
+      }
     }
   }
 }

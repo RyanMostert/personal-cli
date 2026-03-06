@@ -265,7 +265,9 @@ export function listMacros(): MacroDefinition[] {
     try {
       const content = readFileSync(join(macroDir, file), 'utf-8');
       macros.push(JSON.parse(content));
-    } catch {}
+    } catch (err) {
+      console.warn(`Failed to load macro from ${file}:`, err);
+    }
   }
 
   return macros;
