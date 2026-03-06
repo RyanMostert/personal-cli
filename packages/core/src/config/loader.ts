@@ -15,12 +15,14 @@ export interface UserSettings {
   maxSteps?: number;
   tokenBudget?: number;
   protectEnvFiles?: boolean; // default true
+  featureFlags?: Record<string, boolean>;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
   defaultMode: 'ask',
   maxSteps: 20,
   protectEnvFiles: true,
+  featureFlags: {},
 };
 
 export function loadSettings(): UserSettings {
