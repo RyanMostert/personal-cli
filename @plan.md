@@ -31,12 +31,12 @@ Key deliverables:
 - PR-ready implementation tasks with tests and docs
 
 Immediate todos (tracked):
-- analyze-chat-codebase: Audit chat UI & provider flows to identify integration points and UX gaps.
-- review-opencode: Review anomalyco/opencode for streaming, model-picker, and editor integration patterns.
-- review-gemini-cli: Review google-gemini/gemini-cli for model-management and streaming UX patterns.
-- prototype-streaming: Build a streaming POC (token streaming + progress/interrupt) behind a feature flag.
-- prototype-modelpicker: Prototype ModelPicker improvements (dynamic suggestions, cost badges, subscription-aware entries).
-- plan-chat-ui-improvements: Produce final implementation roadmap and milestones after prototypes and reviews.
+- [x] analyze-chat-codebase: Audit chat UI & provider flows to identify integration points and UX gaps.
+- [x] review-opencode: Reviewed anomalyco/opencode — terminal-first streaming UX, agent modes, and client/server architecture are instructive for TUI patterns.
+- [x] review-gemini-cli: Reviewed google-gemini/gemini-cli — MCP support, structured/streaming JSON output, and flexible auth flows are useful references.
+- [x] prototype-streaming: Build a streaming POC (token streaming + progress/interrupt) behind a feature flag.
+- [ ] prototype-modelpicker: Prototype ModelPicker improvements (dynamic suggestions, cost badges, subscription-aware entries).
+- [ ] plan-chat-ui-improvements: Produce final implementation roadmap and milestones after prototypes and reviews.
 
 Refactor alignment (from refactoring_plan.md):
 - Prioritize the streaming/parser refactor (agent streaming & parsing logic) as it unlocks safer UI/feature work.
