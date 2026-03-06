@@ -62,3 +62,8 @@ export { loadMCPConfig, saveMCPConfig, removeMCPConfig } from './config/mcp.js';
 
 // Config store abstraction
 export { ConfigStore, InMemoryConfigStore, createInMemoryConfigStore } from './config/config-store.js';
+
+// Persistence store (filesystem default, swap-able for tests)
+export { setPersistenceStore, getPersistenceStore, createInMemoryPersistenceStore, InMemoryPersistenceStore } from './persistence/store.js';
+export type { PersistenceStore } from './persistence/store.js';
+
