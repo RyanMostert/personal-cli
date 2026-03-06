@@ -81,7 +81,7 @@ export function StatusBar({
             </Text>
             {isStreaming && (
               <Text color="#00E5FF" bold>
-                LLM_STREAMING...{' '}
+                LLM_STREAMING{process.env.PERSONAL_CLI_STREAMING_POC ? '_POC' : ''}...{' '}
               </Text>
             )}
             {activeToolCount > 0 && (

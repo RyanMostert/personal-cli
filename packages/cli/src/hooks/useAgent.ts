@@ -121,6 +121,10 @@ export function useAgent() {
       }));
 
       // Buffer streaming text and flush at most every 80ms to reduce Ink repaints
+      // When PERSONAL_CLI_STREAMING_POC is set, reduce flush delay for a lower-latency prototype
+      const streamingPOC = !!process.env.PERSONAL_CLI_STREAMING_POC;
+      const flushDelay = streamingPOC ? Number(process.env.PERSONAL_CLI_STREAMING_POC) || 30 : 80;
+
       let textBuf = '';
       let thoughtBuf = '';
       let flushTimer: ReturnType<typeof setTimeout> | null = null;
@@ -150,13 +154,13 @@ export function useAgent() {
             case 'text-delta':
               if (event.delta) {
                 textBuf += event.delta;
-                if (!flushTimer) flushTimer = setTimeout(flush, 80);
+                if (!flushTimer) flushTimer = setTimeout(flush, flushDelay);
               }
               break;
             case 'thought-delta':
               if (event.delta) {
                 thoughtBuf += event.delta;
-                if (!flushTimer) flushTimer = setTimeout(flush, 80);
+                if (!flushTimer) flushTimer = setTimeout(flush, flushDelay);
               }
               break;
             case 'tool-call-start': {
