@@ -41,7 +41,7 @@ export {
 export type { FetchedModelEntry, ModelCacheEntry, ModelCache, CacheStats } from './models/cache.js';
 
 // Model refresh
-export { refreshProviderModels, refreshAllProviders } from './providers/model-refresh.js';
+export { refreshProviderModels, refreshAllProviders, testProviderConnection } from './providers/model-refresh.js';
 export type { RefreshResult } from './providers/model-refresh.js';
 
 // Fetchers
