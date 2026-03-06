@@ -1,6 +1,6 @@
 import type { AppConfig, UserSettings } from './loader.js';
 import { loadSettings, saveSettings, loadConfig, getDefaultModel as coreGetDefaultModel } from './loader.js';
-import { readAuth, writeAuth, setProviderKey, getProviderKey, removeProviderKey } from './auth.js';
+import { readAuth, writeAuth, setProviderKey, getProviderKey, removeProviderKey, type AuthStore } from './auth.js';
 
 /**
  * Lightweight ConfigStore wrapper to centralize config access and provide an in-memory
@@ -24,11 +24,11 @@ export class ConfigStore {
   }
 
   // Auth helpers
-  readAuth() {
+  readAuth(): AuthStore {
     return readAuth();
   }
 
-  writeAuth(val: Record<string, string>) {
+  writeAuth(val: AuthStore) {
     return writeAuth(val);
   }
 
@@ -51,9 +51,9 @@ export class ConfigStore {
 export class InMemoryConfigStore extends ConfigStore {
   private _settings: UserSettings | null = null;
   private _config: AppConfig | null = null;
-  private _auth: Record<string, string> = {};
+  private _auth: AuthStore = {};
 
-  constructor(initial?: { settings?: UserSettings; config?: AppConfig; auth?: Record<string, string> }) {
+  constructor(initial?: { settings?: UserSettings; config?: AppConfig; auth?: AuthStore }) {
     super();
     if (initial?.settings) this._settings = initial.settings;
     if (initial?.config) this._config = initial.config;
@@ -76,16 +76,16 @@ export class InMemoryConfigStore extends ConfigStore {
     return this._auth;
   }
 
-  writeAuth(val: Record<string, string>) {
+  writeAuth(val: AuthStore) {
     this._auth = { ...this._auth, ...val };
   }
 
   setProviderKey(provider: string, key: string) {
-    this._auth[provider] = key;
+    this._auth[provider] = { key };
   }
 
   getProviderKey(provider: string) {
-    return this._auth[provider];
+    return this._auth[provider]?.key;
   }
 
   removeProviderKey(provider: string) {
@@ -93,6 +93,6 @@ export class InMemoryConfigStore extends ConfigStore {
   }
 }
 
-export function createInMemoryConfigStore(initial?: { settings?: UserSettings; config?: AppConfig; auth?: Record<string, string> }) {
+export function createInMemoryConfigStore(initial?: { settings?: UserSettings; config?: AppConfig; auth?: AuthStore }) {
   return new InMemoryConfigStore(initial);
 }

@@ -10,6 +10,8 @@ import {
   convertToModelEntry,
   getAllCacheStats,
   isCopilotAuthenticated,
+  getProviderEntry,
+  getProviderEntries,
   type CacheStats,
 } from '@personal-cli/core';
 

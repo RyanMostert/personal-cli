@@ -76,7 +76,9 @@ export function OnboardingWizard({ onComplete, onAddProvider, configuredProvider
   const renderProviders = () => (
     <Box flexDirection="column">
       <Text color="#00E5FF" bold>STEP_01: LINKING_NEURAL_PROVIDERS</Text>
-      <Text color="#8C959F" marginBottom={1}>To function, I need an API key from at least one LLM provider.</Text>
+      <Box marginBottom={1}>
+        <Text color="#8C959F">To function, I need an API key from at least one LLM provider.</Text>
+      </Box>
       
       <Box flexDirection="column" borderStyle="round" borderColor="#484F58" paddingX={1}>
         {PROVIDER_REGISTRY.map((p, i) => {

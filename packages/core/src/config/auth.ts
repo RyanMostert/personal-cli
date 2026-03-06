@@ -3,7 +3,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { CONFIG_DIR } from '@personal-cli/shared';
 
-interface AuthStore {
+export interface AuthStore {
   [provider: string]: { key: string };
 }
 

@@ -1,17 +1,15 @@
 import type { CommandContext } from '../types/commands.js';
-import { getAllToolSchemas } from '@personal-cli/tools';
+import { Command } from './types.js';
+import { getAllToolSchemas, getPluginDir, listMacros, getMacroDir } from '@personal-cli/tools';
 import { generalCommands } from './general.js';
 import { toolsCommands } from './tools.js';
 import { mcpCommands } from './mcp.js';
-
-export interface Command {
-  cmd: string;
-  description: string;
-  aliases?: string[];
-  category?: string;
-  examples?: string[];
-  handler: (args: string, ctx: CommandContext) => void | Promise<void>;
-}
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import os from 'os';
+import { spawn } from 'child_process';
+import path from 'path';
+import fs from 'fs';
 
 const EXAMPLE_TASKS = [
   { task: 'Explain a concept', example: 'Explain how async/await works in JavaScript' },
@@ -27,13 +25,6 @@ const FALLBACK_EXAMPLES = [
   "If tool unavailable, I'll explain using my training",
 ];
 
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import os from 'os';
-import { spawn } from 'child_process';
-import path from 'path';
-import fs from 'fs';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -41,63 +32,7 @@ const commands: Command[] = [
   ...generalCommands,
   ...toolsCommands,
   ...mcpCommands,
-];
 
-// Additional commands are loaded by modules above; keep legacy code for edge-cases.
-
-// NOTE: The rest of the file historically had an inline commands list. We've modularized the main groups into separate files.
-
-  {
-    cmd: '/clip',
-    description: 'Attach an image from the clipboard as a file',
-    async handler(_args, ctx) {
-      ctx.addSystemMessage('Extracting clipboard image...');
-      try {
-        // Compose paths
-        const scriptPath = path.join(__dirname, '../../scripts/save_clipboard_image.py');
-        const outPath = path.join(os.tmpdir(), `clipimg-${Date.now()}.png`);
-        const python = process.platform === 'win32' ? 'python' : 'python3';
-        const res = await new Promise<string>((resolve, reject) => {
-          const proc = spawn(python, [scriptPath, outPath]);
-          let stdout = '';
-          let stderr = '';
-          proc.stdout.on('data', (data) => (stdout += data.toString()));
-          proc.stderr.on('data', (data) => (stderr += data.toString()));
-          proc.on('close', (code) => {
-            if (code === 0 && fs.existsSync(outPath)) {
-              resolve(outPath);
-            } else {
-              reject(stderr || stdout || `Clipboard image extraction failed (code ${code})`);
-            }
-          });
-        });
-        const ok = await ctx.attachFile(res);
-        if (ok) {
-          ctx.addSystemMessage('Clipboard image attached!');
-        } else {
-          ctx.addSystemMessage('Failed to attach clipboard image.');
-        }
-      } catch (err) {
-        ctx.addSystemMessage(
-          typeof err === 'string' ? err : err instanceof Error ? err.message : 'Clipboard image not found.',
-        );
-      }
-    },
-  },
-
-  {
-    cmd: '/exit',
-    aliases: ['/quit'],
-    description: 'Exit the application',
-    handler: (_, ctx) => ctx.exit(),
-  },
-  {
-    cmd: '/clear',
-    description: 'Clear conversation history',
-    handler: (_, ctx) => {
-      ctx.clearMessages();
-    },
-  },
   {
     cmd: '/model',
     description: 'Browse or switch models',
@@ -108,7 +43,7 @@ const commands: Command[] = [
       }
       const parts = args.includes('/') ? args.split('/') : args.split(' ');
       if (parts.length >= 2) {
-        ctx.switchModel(parts[0], parts.slice(1).join('/'));
+        ctx.switchModel(parts[0] as any, parts.slice(1).join('/'));
       } else {
         ctx.addSystemMessage('Usage: /model <provider/modelId>  or  /model to browse');
       }
@@ -201,7 +136,8 @@ const commands: Command[] = [
         ctx.addSystemMessage('Usage: /rename <title>');
         return;
       }
-      ctx.addSystemMessage(`Renamed to: ${args}`);
+      const ok = ctx.renameConversation(args);
+      ctx.addSystemMessage(ok ? `Renamed to: ${args}` : 'Nothing to rename yet — send a message first.');
     },
   },
   {
@@ -209,7 +145,15 @@ const commands: Command[] = [
     description: 'Copy last assistant response to clipboard',
     handler: (_, ctx) => {
       const last = ctx.messages.filter((m) => m.role === 'assistant').pop();
-      ctx.addSystemMessage(last ? 'Copied last response.' : 'No assistant response to copy.');
+      if (last) {
+        import('clipboardy').then((cb) => {
+          cb.default.write(last.content).then(() => {
+            ctx.addSystemMessage('Copied last response.');
+          });
+        });
+      } else {
+        ctx.addSystemMessage('No assistant response to copy.');
+      }
     },
   },
   {
@@ -328,17 +272,6 @@ const commands: Command[] = [
     },
   },
   {
-    cmd: '/mcp',
-    description: 'Manage MCP servers and external tools',
-    handler: (args, ctx) => {
-      if (!args) {
-        ctx.openMCPManager();
-        return;
-      }
-      // Subcommands handled in app.tsx
-    },
-  },
-  {
     cmd: '/plugins',
     description: 'Manage external plugins and tools',
     handler: async (args, ctx) => {
@@ -404,30 +337,6 @@ const commands: Command[] = [
     },
   },
   {
-    cmd: '/tools',
-    description: 'List all available tools (built-in + plugins)',
-    handler: async (_, ctx) => {
-      const plugins = await ctx.loadPlugins();
-
-      const tools = getAllToolSchemas(plugins);
-      const byCategory: Record<string, typeof tools> = {};
-      for (const tool of tools) {
-        if (!byCategory[tool.category]) byCategory[tool.category] = [];
-        byCategory[tool.category].push(tool);
-      }
-      let msg = '## Available Tools\n\n';
-      for (const [cat, catTools] of Object.entries(byCategory)) {
-        msg += `### ${cat}\n`;
-        for (const t of catTools) {
-          msg += `- **${t.name}**: ${t.description}\n`;
-        }
-        msg += '\n';
-      }
-      msg += `\nPlugin dir: ${getPluginDir()}`;
-      ctx.addSystemMessage(msg);
-    },
-  },
-  {
     cmd: '/macros',
     description: 'List, create, or run macros',
     handler: (args, ctx) => {
@@ -458,92 +367,6 @@ const commands: Command[] = [
         return;
       }
       ctx.addSystemMessage(`Theme: ${args}`);
-    },
-  },
-  {
-    cmd: '/zen',
-    description: 'Manage Zen Gateway MCP server',
-    category: 'mcp',
-    examples: ['/zen status', '/zen models', '/zen add'],
-    handler: async (args, ctx) => {
-      const parts = args.trim().split(/\s+/);
-      const subcommand = parts[0];
-
-      switch (subcommand) {
-        case 'status': {
-          ctx.addSystemMessage('Checking Zen Gateway status...');
-          try {
-            const status = await ctx.getZenGatewayStatus?.();
-            if (status) {
-              const msg = status.connected
-                ? `✅ **Zen Gateway Connected**\n📍 Endpoint: ${status.endpoint}\n📊 Models available: ${status.modelsAvailable}`
-                : `❌ **Zen Gateway Not Connected**\n📍 Endpoint: ${status.endpoint}\n⚠️ Error: ${status.lastError}`;
-              ctx.addSystemMessage(msg);
-            } else {
-              ctx.addSystemMessage('❌ Zen Gateway is not configured. Run `/zen add` to set it up.');
-            }
-          } catch (error) {
-            ctx.addSystemMessage(
-              `❌ Failed to check Zen Gateway status: ${error instanceof Error ? error.message : String(error)}`,
-            );
-          }
-          break;
-        }
-
-        case 'models': {
-          ctx.addSystemMessage('Fetching available models from Zen Gateway...');
-          try {
-            const models = await ctx.listZenModels?.();
-            if (models && models.length > 0) {
-              let msg = '## Available Zen Gateway Models\n\n';
-              for (const model of models) {
-                msg += `- **${model.id}** (${model.provider})\n`;
-                if (model.description) msg += `  ${model.description}\n`;
-                if (model.maxTokens) msg += `  Max tokens: ${model.maxTokens.toLocaleString()}\n`;
-                msg += '\n';
-              }
-              ctx.addSystemMessage(msg);
-            } else if (models) {
-              ctx.addSystemMessage('No models available. Make sure Zen Gateway is properly configured.');
-            } else {
-              ctx.addSystemMessage('❌ Zen Gateway is not configured. Run `/zen add` to set it up.');
-            }
-          } catch (error) {
-            ctx.addSystemMessage(
-              `❌ Failed to fetch models from Zen Gateway: ${error instanceof Error ? error.message : String(error)}`,
-            );
-          }
-          break;
-        }
-
-        case 'add':
-        case 'configure': {
-          await ctx.configureZenGateway?.();
-          break;
-        }
-
-        case 'remove':
-        case 'delete': {
-          await ctx.removeZenGateway?.();
-          ctx.addSystemMessage('🗑️ Zen Gateway configuration removed.');
-          break;
-        }
-
-        default: {
-          const msg = `## Zen Gateway Commands
-
-**Usage:** /zen <command>
-
-**Commands:**
-- "/zen status" — Check connection status
-- "/zen models" — List available AI models
-- "/zen add" or "/zen configure" — Configure Zen Gateway
-- "/zen remove" — Remove Zen Gateway configuration
-
-Zen Gateway provides unified access to multiple AI models through a single API.`;
-          ctx.addSystemMessage(msg);
-        }
-      }
     },
   },
 ];

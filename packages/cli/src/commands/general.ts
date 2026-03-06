@@ -1,5 +1,6 @@
+import type { CommandContext } from '../types/commands.js';
 import type { Command } from './types.js';
-import { getAllToolSchemas, loadPlugins, listMacros, getPluginDir, getMacroDir } from '@personal-cli/tools';
+import { getAllToolSchemas, loadPlugins, getPluginDir } from '@personal-cli/tools';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import os from 'os';
@@ -14,7 +15,7 @@ export const generalCommands: Command[] = [
   {
     cmd: '/clip',
     description: 'Attach an image from the clipboard as a file',
-    async handler(_args, ctx) {
+    async handler(_args: string, ctx: CommandContext) {
       ctx.addSystemMessage('Extracting clipboard image...');
       try {
         const scriptPath = path.join(__dirname, '../../scripts/save_clipboard_image.py');
@@ -46,46 +47,11 @@ export const generalCommands: Command[] = [
     cmd: '/exit',
     aliases: ['/quit'],
     description: 'Exit the application',
-    handler: (_, ctx) => ctx.exit(),
+    handler: (_: string, ctx: CommandContext) => ctx.exit(),
   },
   {
     cmd: '/clear',
     description: 'Clear conversation history',
-    handler: (_, ctx) => ctx.clearMessages(),
-  },
-  {
-    cmd: '/help',
-    description: 'Show available commands and examples',
-    category: 'help',
-    handler: (args, ctx) => {
-      if (args === 'examples') {
-        let msg = '## Example Tasks\n\n';
-        msg += 'Use `/help tools` to see available tools';
-        ctx.addSystemMessage(msg);
-        return;
-      }
-
-      if (args === 'tools') {
-        const plugins = loadPlugins();
-        const tools = getAllToolSchemas(plugins);
-        const byCategory: Record<string, typeof tools> = {};
-        for (const tool of tools) {
-          if (!byCategory[tool.category]) byCategory[tool.category] = [];
-          byCategory[tool.category].push(tool);
-        }
-        let msg = '## Available Tools\n\n';
-        for (const [cat, catTools] of Object.entries(byCategory)) {
-          msg += `### ${cat}\n`;
-          for (const t of catTools) msg += `- **${t.name}**: ${t.description}\n`;
-          msg += '\n';
-        }
-        msg += `\nPlugin dir: ${getPluginDir()}`;
-        ctx.addSystemMessage(msg);
-        return;
-      }
-
-      // Simplified help
-      ctx.addSystemMessage('Use `/help tools` or `/help examples`');
-    },
+    handler: (_: string, ctx: CommandContext) => ctx.clearMessages(),
   },
 ];

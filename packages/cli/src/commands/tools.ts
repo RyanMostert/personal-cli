@@ -1,3 +1,4 @@
+import type { CommandContext } from '../types/commands.js';
 import type { Command } from './types.js';
 import { getAllToolSchemas, loadPlugins, getPluginDir } from '@personal-cli/tools';
 
@@ -5,7 +6,7 @@ export const toolsCommands: Command[] = [
   {
     cmd: '/tools',
     description: 'List all available tools (built-in + plugins)',
-    handler: async (_, ctx) => {
+    handler: async (_: string, ctx: CommandContext) => {
       const plugins = await loadPlugins();
       const tools = getAllToolSchemas(plugins);
       const byCategory: Record<string, typeof tools> = {};
