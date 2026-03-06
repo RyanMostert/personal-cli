@@ -1,8 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 
 // Mock the 'ai' streamText to produce incremental text-delta parts
-vi.mock('ai', () => {
+vi.mock('ai', async (importOriginal) => {
+  const actual = await importOriginal();
   return {
+    ...actual,
     streamText: (opts: any) => {
       const fullStream = (async function* () {
         yield { type: 'text-delta', text: 'Hello' };
