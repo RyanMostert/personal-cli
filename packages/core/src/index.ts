@@ -54,5 +54,8 @@ export {
   addCopilotModel,
 } from './providers/fetchers/index.js';
 
+// Provider factory (runtime-aware provider info)
+export { getProviderEntries, getProviderEntry } from './providers/provider-factory.js';
+
 // MCP Config
 export { loadMCPConfig, saveMCPConfig, removeMCPConfig } from './config/mcp.js';
