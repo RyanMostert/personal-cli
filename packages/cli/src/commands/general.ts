@@ -1,6 +1,7 @@
 import type { CommandContext } from '../types/commands.js';
 import type { Command } from './types.js';
 import { getAllToolSchemas, loadPlugins, getPluginDir } from '@personal-cli/tools';
+import { ConfigStore } from '@personal-cli/core';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import os from 'os';
@@ -53,5 +54,51 @@ export const generalCommands: Command[] = [
     cmd: '/clear',
     description: 'Clear conversation history',
     handler: (_: string, ctx: CommandContext) => ctx.clearMessages(),
+  },
+  {
+    cmd: '/settings',
+    description: 'View or set CLI settings (list, get-flag, set-flag)',
+    async handler(args: string, ctx: CommandContext) {
+      const store = new ConfigStore();
+      if (!args) {
+        const s = store.loadSettings();
+        ctx.addSystemMessage(`Settings:\n${JSON.stringify(s, null, 2)}`);
+        return;
+      }
+      const parts = args.split(' ').filter(Boolean);
+      const verb = parts[0];
+      if (verb === 'list') {
+        const s = store.loadSettings();
+        ctx.addSystemMessage(JSON.stringify(s, null, 2));
+        return;
+      }
+      if (verb === 'get-flag') {
+        const key = parts[1];
+        if (!key) {
+          ctx.addSystemMessage('Usage: /settings get-flag <FLAG_NAME>');
+          return;
+        }
+        const s = store.loadSettings();
+        const val = s.featureFlags?.[key];
+        ctx.addSystemMessage(`flag ${key} = ${val === undefined ? 'unset' : val}`);
+        return;
+      }
+      if (verb === 'set-flag') {
+        const key = parts[1];
+        const val = parts[2];
+        if (!key || !val) {
+          ctx.addSystemMessage('Usage: /settings set-flag <FLAG_NAME> <on|off>');
+          return;
+        }
+        const bool = ['1','true','on','enabled'].includes(val.toLowerCase());
+        const s = store.loadSettings();
+        const ff = s.featureFlags ?? {};
+        ff[key] = bool;
+        store.saveSettings({ featureFlags: ff });
+        ctx.addSystemMessage(`Saved flag ${key} = ${bool}`);
+        return;
+      }
+      ctx.addSystemMessage('Usage: /settings [list|get-flag <name>|set-flag <name> <on|off>]');
+    },
   },
 ];
