@@ -72,30 +72,32 @@ Notes & context
 
 
 
-## New: TUI package skeleton (packages/tui)
+## New: TUI folder (packages/TUI) — preferred (non-package)
 
-A minimal TUI package skeleton has been added at `packages/tui` to provide a terminal-native UI alternative. The skeleton includes:
-- packages/tui/package.json (build/start scripts)
-- packages/tui/tsconfig.json
-- packages/tui/src/index.ts (createTUI() stub)
-- packages/tui/README.md (guidance + tasks for implementation)
+Decision: prefer a plain folder under `packages/` (packages/TUI) rather than adding a separate workspace package. The previously-added `packages/tui` package skeleton can be treated as an initial artifact; Gemini should either move those sources into `packages/TUI` (no package.json) or re-create the TUI inside `packages/TUI` so the UI lives as part of the repo tree without being published as its own package.
 
-Gemini implementation tasks (prioritized):
-1. Implement the interactive TUI using Ink (recommended) or Blessed/terminal-kit. Create components: App shell, MessageView, InputBox, ModelPicker, ProviderWizard, StatusBar, StreamingMessage.
-2. Streaming integration: use `parseStream()` from `@personal-cli/core` to normalize events and render incremental `text-delta` updates. Mirror buffering/flush behavior from `useAgent` to avoid excessive re-renders.
-3. Provider onboarding & test connection: call `testProviderConnection()` (core) and implement full ProviderWizard flows (OAuth/device flow for Copilot included).
-4. Model switching and browsing: reuse `ProviderManager` and model fetchers; show sample models and allow switching in the TUI.
-5. Keybindings and command mapping: map `/settings`, `/provider`, `/model`, `/mode`, and other commands to intuitive keys and a small command palette.
-6. Tests & CI: add vitest tests (component snapshots, streaming smoke tests) and ensure existing CI remains green.
+Implementation tasks (prioritized):
+1. Create `packages/TUI/` with a simple structure: `src/`, `src/components/`, `src/hooks/`, `src/cli.ts` (entry), `README.md`, and a `tsconfig.json` that extends the repo `tsconfig.base.json`. Do not add a package.json unless later converting this to a workspace package is desired.
+2. Implement the interactive TUI using Ink (recommended) or Blessed/terminal-kit. Components: App shell, MessageView, InputBox, ModelPicker, ProviderWizard, StatusBar, StreamingMessage.
+3. Streaming integration: consume `parseStream()` from `@personal-cli/core` to normalize events and render incremental `text-delta` updates; mirror the buffering/flush strategy from `useAgent` to avoid excessive render churn.
+4. Provider onboarding & test connection: call `testProviderConnection()` (core) and wire full ProviderWizard flows including OAuth/device flow for Copilot when required.
+5. Model switching and browsing: reuse `ProviderManager` and model fetchers; show sample models and allow switching in the TUI.
+6. Keybindings and command mapping: map `/settings`, `/provider`, `/model`, `/mode`, and other commands to intuitive keys and a command palette.
+7. Tests & CI: add vitest tests (component snapshots, streaming smoke tests) and ensure CI remains green.
+
+Migration notes (for maintainers):
+- Move the existing `packages/tui/src` files into `packages/TUI/src` and remove `packages/tui/package.json` if it should not be a workspace package.
+- Update any workspace scripts or references that pointed to `@personal-cli/tui` so they instead reference the repo-local TUI entry or the CLI runtime that launches it.
+- If later publishing/separating the TUI is desired, add a package.json and convert `packages/TUI` into a workspace package named `@personal-cli/tui`.
 
 How to run locally (for development):
-- Build: `pnpm -w -F @personal-cli/tui run build`
-- Start (after implementation): `pnpm -w -F @personal-cli/tui run start` or run the built `dist/cli.js` directly
+- Development: run the TUI entry directly (e.g. `node packages/TUI/src/cli.ts`) or add a dev script in the root package.json that launches the TUI via Node.js/ts-node.
+- Integration: the TUI should import and use `@personal-cli/core` (Agent, ProviderManager, ConfigStore, parseStream) at runtime rather than being built as an independent package.
 
 Notes:
 - Keep experimental features behind `ConfigStore` feature flags.
 - Coordinate with the core team: use `@personal-cli/core` exports for Agent, ProviderManager, ConfigStore, parseStream, and model refresh helpers.
 
-If you want the assistant to continue, tell it to either "implement TUI" or "start TUI development" and it will pick the next todo from the session tracker.
+If you want the assistant to continue, say "implement TUI" or "start TUI development" and it will pick the next todo from the session tracker.
 
 End of summary.
