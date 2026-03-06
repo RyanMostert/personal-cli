@@ -25,32 +25,14 @@ export function ThoughtView({ text, isStreaming }: Props) {
   const displayedText = showFull ? text : lines.slice(0, 3).join('\n') + '...';
 
   return (
-    <Box flexDirection="column" marginY={1} paddingLeft={2} borderLeft borderStyle="round" borderColor={theme.dim}>
-      <Box flexDirection="row" alignItems="center">
-        <Text color={theme.dim} bold italic>
-          {' '}
-          💭 INTERNAL_MONOLOGUE{' '}
-        </Text>
-        {isStreaming && (
-          <Text color={theme.dim} italic>
-            {' '}
-            (streaming...){' '}
-          </Text>
+    <Box flexDirection="column" marginBottom={1} paddingLeft={1}>
+      <Text color={theme.dim}>◈ <Text italic color={theme.muted}>{isStreaming ? 'thinking…' : 'thought'}</Text></Text>
+      <Box paddingLeft={2} flexDirection="column">
+        <Text color={theme.muted} italic wrap="wrap">{displayedText}</Text>
+        {isLong && !showFull && (
+          <Text color={theme.dim}>⋯ {lines.length - 3} more lines</Text>
         )}
       </Box>
-
-      <Box marginTop={1}>
-        <Text color={theme.dim} italic wrap="wrap">
-          {displayedText}
-        </Text>
-      </Box>
-
-      {isLong && !showFull && (
-        <Text color={theme.dim} dimColor>
-          {' '}
-          [+{lines.length - 3} lines hidden]{' '}
-        </Text>
-      )}
     </Box>
   );
 }

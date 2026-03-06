@@ -29,6 +29,7 @@ import {
   CostRecommendation,
   shouldShowRecommendation,
   PasteHandler,
+  TodoPanel,
 } from '../../tui/src/index.js';
 import { dispatch, getCommands, tryMatchIntent } from './commands/registry.js';
 import type { CommandContext } from './types/commands.js';
@@ -159,6 +160,7 @@ export function App({ initialAttachments = [] }: AppProps) {
     saveWorkspace,
     loadWorkspace,
     synthesizeAnswer,
+    todos,
   } = useAgent();
 
   const allVisibleToolCalls = useMemo(() => {
@@ -282,10 +284,12 @@ export function App({ initialAttachments = [] }: AppProps) {
 
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    if (isStreaming || isGameOver) return;
-    const timer = setInterval(() => setTick((t) => t + 1), 500);
+    if (isGameOver) return;
+    // Always tick — StatusBar uses this for the braille spinner during streaming
+    // and for rotating hints when idle. 100ms ≈ 10fps, smooth braille animation.
+    const timer = setInterval(() => setTick((t) => t + 1), 100);
     return () => clearInterval(timer);
-  }, [isStreaming, isGameOver]);
+  }, [isGameOver]);
 
   const isPickingProvider = overlay.type === 'provider-manager';
   const pendingProviderAdd = overlay.type === 'provider-wizard' ? (overlay.props?.providerId as string) : null;
@@ -1464,6 +1468,7 @@ export const helloWorld = async ({ name = 'World' }) => {
             <Box flexDirection="column" flexGrow={1} width={sidePanel ? '50%' : '100%'}>
               <Box flexDirection="column" paddingX={1}>
                 {messages.length === 0 && !isStreaming && <WelcomeScreen tick={tick} />}
+                {todos.length > 0 && <TodoPanel todos={todos} />}
                 {toolCalls.map((tc) => (
                   <ToolCallView
                     key={tc.toolCallId}

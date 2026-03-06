@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { Agent, ProviderManager, loadConfig, getDefaultModel, loadSettings } from '@personal-cli/core';
-import type { Message, StreamEvent, ToolCallInfo, AgentMode, ProviderName, Attachment } from '@personal-cli/shared';
+import type { Message, StreamEvent, ToolCallInfo, AgentMode, ProviderName, Attachment, TodoItem } from '@personal-cli/shared';
 import { DEFAULT_TOKEN_BUDGET, loadAttachment } from '@personal-cli/shared';
 import type { PendingPermission } from '../components/PermissionPrompt.js';
 import type { PendingQuestion } from '../components/QuestionPrompt.js';
@@ -18,6 +18,7 @@ interface AgentState {
   isPickingModel: boolean;
   attachedFiles: Attachment[];
   mode: AgentMode;
+  todos: TodoItem[];
 }
 
 export function useAgent() {
@@ -40,6 +41,7 @@ export function useAgent() {
     isPickingModel: false,
     attachedFiles: [],
     mode: loadSettings().defaultMode ?? 'ask',
+    todos: [],
   });
 
   const permissionCallback = useCallback((toolName: string, args?: Record<string, unknown>) => {
@@ -198,6 +200,11 @@ export function useAgent() {
               if (event.message) {
                 agent.addSystemMessage(event.message);
                 setState((prev) => ({ ...prev, messages: [...agent.getMessages()] }));
+              }
+              break;
+            case 'todo-update':
+              if (event.todos) {
+                setState((prev) => ({ ...prev, todos: event.todos! }));
               }
               break;
             case 'error':

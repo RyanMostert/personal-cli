@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Box, Text, useInput } from 'ink';
+import React from 'react';
+import { Box, Text } from 'ink';
 import type { Message } from '@personal-cli/shared';
 import { MarkdownRenderer } from './MarkdownRenderer.js';
 import { ToolCallView } from './ToolCallView.js';
@@ -41,26 +41,16 @@ export function MessageView({
     return (
       <Box flexDirection="column" marginBottom={1} paddingLeft={1}>
         <Box>
-          <Text color={theme.userLabel} bold>
-            P1{' '}
-          </Text>
-          <Text color={theme.dim}>❯ </Text>
+          <Text color={theme.userLabel} bold>{'❯ '}</Text>
           {isLarge ? (
             <Box>
-              <Text color={theme.primary} italic>
-                [pasted lines {lines.length}]
-              </Text>
+              <Text color={theme.dim} italic>{lines.length} lines</Text>
               {imageCount > 0 && (
-                <Text color={theme.primary} italic>
-                  {' '}
-                  [image {imageCount}]
-                </Text>
+                <Text color={theme.dim} italic> · {imageCount} image{imageCount > 1 ? 's' : ''}</Text>
               )}
             </Box>
           ) : (
-            <Text color={theme.text} bold>
-              {message.content}
-            </Text>
+            <Text color={theme.text}>{message.content}</Text>
           )}
         </Box>
       </Box>
@@ -70,32 +60,18 @@ export function MessageView({
   if (message.role === 'system') {
     return (
       <Box flexDirection="row" marginBottom={1} paddingLeft={1}>
-        <Text color={theme.warning} bold>
-          [!]{' '}
-        </Text>
-        <Text color={theme.muted} italic>
-          {message.content}
-        </Text>
+        <Text color={theme.dim}>· </Text>
+        <Text color={theme.muted} italic>{message.content}</Text>
       </Box>
     );
   }
 
-  // Assistant Message
+  // Assistant Message — no label, content speaks for itself
   return (
     <Box flexDirection="column" marginBottom={1} paddingLeft={1}>
-      <Box marginBottom={0}>
-        <Text color={theme.assistantLabel} bold>
-          CPU{' '}
-        </Text>
-        <Text color={theme.dim}>❯ </Text>
-        <Text color={theme.primary} dimColor>
-          [link_stable]
-        </Text>
-      </Box>
-
       {message.thought && <ThoughtView text={message.thought} />}
 
-      <Box paddingLeft={2} flexDirection="column">
+      <Box flexDirection="column">
         {message.toolCalls?.map((tc) => (
           <ToolCallView
             key={tc.toolCallId}
@@ -109,9 +85,7 @@ export function MessageView({
         {message.content ? (
           <MarkdownRenderer text={message.content} />
         ) : !message.toolCalls?.length ? (
-          <Text color={theme.dim} italic>
-            (no content received)
-          </Text>
+          <Text color={theme.dim} italic>(empty response)</Text>
         ) : null}
       </Box>
     </Box>

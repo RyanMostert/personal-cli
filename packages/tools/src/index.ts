@@ -11,7 +11,7 @@ import { diagnostics } from './tools/diagnostics.js';
 import { createRunCommand } from './tools/run-command.js';
 import { createWebFetch } from './tools/web-fetch.js';
 import { gitStatus, gitDiff, gitLog, createGitCommit } from './tools/git.js';
-import { todoWrite, todoRead } from './tools/todo.js';
+import { createTodoTools, type TodoUpdateCallback } from './tools/todo.js';
 import { webSearch } from './tools/web-search.js';
 import { createPatch } from './tools/patch.js';
 import { createQuestionTool } from './tools/question.js';
@@ -35,6 +35,7 @@ export interface CreateToolsOptions {
   onWrite?: WriteCallback;
   questionFn?: QuestionCallback;
   plugins?: LoadedPlugin[];
+  onTodoUpdate?: TodoUpdateCallback;
 }
 
 export function createTools(
@@ -51,7 +52,8 @@ export function createTools(
   // Hook resolvedPermission into readFile synchronously
   setReadFilePermission(resolvedPermission);
 
-  const { onWrite, questionFn, plugins } = options ?? {};
+  const { onWrite, questionFn, plugins, onTodoUpdate } = options ?? {};
+  const { todoWrite, todoRead } = createTodoTools(onTodoUpdate);
 
   const baseTools: Record<string, any> = {
     readFile,

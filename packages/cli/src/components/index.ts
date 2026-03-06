@@ -29,5 +29,6 @@ export * from './SidePanel';
 export * from './StatusBar';
 export * from './StreamingMessage';
 export * from './ThoughtView';
+export * from './TodoPanel';
 export * from './ToolCallView';
 export * from './WelcomeScreen';
