@@ -594,7 +594,13 @@ export const helloWorld = async ({ name = 'World' }) => {
         }
       }
     }
-    // Contextual Ctrl+C: Interruption vs Exit
+    // Contextual interruption: Escape aborts streaming; Ctrl+C aborts or exits
+    if (key.escape && isStreaming) {
+      abort();
+      addSystemMessage('INTERRUPTED: SYSTEM_HALTED');
+      return;
+    }
+
     if (key.ctrl && input === 'c') {
       const activeToolCount = toolCalls.filter((tc) => !tc.result && !tc.error).length;
       if (isStreaming || activeToolCount > 0) {
@@ -605,6 +611,7 @@ export const helloWorld = async ({ name = 'World' }) => {
       setIsGameOver(true);
       return;
     }
+
     if (key.escape && sidePanel && isSidePanelFocused) {
       setSidePanel(null);
       return;
