@@ -70,4 +70,32 @@ Notes & context
 - The authoritative Copilot model list remains in packages/core/src/providers/fetchers/copilot-fetcher.ts; ModelPicker maps those entries into the UI.
 - If you want the assistant to continue, tell it to either "fix streaming tests" or "proceed with provider onboarding" and it will pick the next todo from the session tracker.
 
+
+
+## New: TUI package skeleton (packages/tui)
+
+A minimal TUI package skeleton has been added at `packages/tui` to provide a terminal-native UI alternative. The skeleton includes:
+- packages/tui/package.json (build/start scripts)
+- packages/tui/tsconfig.json
+- packages/tui/src/index.ts (createTUI() stub)
+- packages/tui/README.md (guidance + tasks for implementation)
+
+Gemini implementation tasks (prioritized):
+1. Implement the interactive TUI using Ink (recommended) or Blessed/terminal-kit. Create components: App shell, MessageView, InputBox, ModelPicker, ProviderWizard, StatusBar, StreamingMessage.
+2. Streaming integration: use `parseStream()` from `@personal-cli/core` to normalize events and render incremental `text-delta` updates. Mirror buffering/flush behavior from `useAgent` to avoid excessive re-renders.
+3. Provider onboarding & test connection: call `testProviderConnection()` (core) and implement full ProviderWizard flows (OAuth/device flow for Copilot included).
+4. Model switching and browsing: reuse `ProviderManager` and model fetchers; show sample models and allow switching in the TUI.
+5. Keybindings and command mapping: map `/settings`, `/provider`, `/model`, `/mode`, and other commands to intuitive keys and a small command palette.
+6. Tests & CI: add vitest tests (component snapshots, streaming smoke tests) and ensure existing CI remains green.
+
+How to run locally (for development):
+- Build: `pnpm -w -F @personal-cli/tui run build`
+- Start (after implementation): `pnpm -w -F @personal-cli/tui run start` or run the built `dist/cli.js` directly
+
+Notes:
+- Keep experimental features behind `ConfigStore` feature flags.
+- Coordinate with the core team: use `@personal-cli/core` exports for Agent, ProviderManager, ConfigStore, parseStream, and model refresh helpers.
+
+If you want the assistant to continue, tell it to either "implement TUI" or "start TUI development" and it will pick the next todo from the session tracker.
+
 End of summary.
