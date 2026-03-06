@@ -71,10 +71,11 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
     (process.env.PERSONAL_CLI_MODEL_PICKER_POC ?? '').toLowerCase() === '1' ||
     (process.env.PERSONAL_CLI_MODEL_PICKER_POC ?? '').toLowerCase() === 'true';
 
-  // Detect Copilot auth state for subscription-aware entries
+  // Detect Copilot auth state for subscription-aware entries (via ProviderFactory)
   const copilotAuth = useMemo(() => {
     try {
-      return isCopilotAuthenticated();
+      const entry = getProviderEntry('github-copilot' as ProviderName);
+      return !!entry?.isAuthenticated;
     } catch {
       return false;
     }
@@ -91,7 +92,8 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
   // Load cached models on mount
   useEffect(() => {
     const loadCached = async () => {
-      const providers: ProviderName[] = ['openrouter', 'opencode', 'opencode-zen'];
+      // Dynamically derive providers from ProviderFactory; exclude github-copilot to avoid stale cache wins
+      const providers = getProviderEntries().map((p) => p.id).filter((id) => id !== 'github-copilot') as ProviderName[];
       const allCached: ModelEntry[] = [];
 
       for (const provider of providers) {
