@@ -1,7 +1,8 @@
 import type { CommandContext } from '../types/commands.js';
 import type { Command } from './types.js';
 import { getAllToolSchemas, loadPlugins, getPluginDir } from '@personal-cli/tools';
-import { ConfigStore } from '@personal-cli/core';
+import { ConfigStore, testProviderConnection } from '@personal-cli/core';
+import { PROVIDER_REGISTRY } from '@personal-cli/shared';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import os from 'os';
@@ -99,6 +100,53 @@ export const generalCommands: Command[] = [
         return;
       }
       ctx.addSystemMessage('Usage: /settings [list|get-flag <name>|set-flag <name> <on|off>]');
+    },
+  },
+  {
+    cmd: '/check-provider',
+    description: 'Test a provider connection and show sample models',
+    async handler(args: string, ctx: CommandContext) {
+      const providerArg = args.trim();
+
+      if (!providerArg) {
+        const ids = PROVIDER_REGISTRY.map((p) => p.id).join(', ');
+        ctx.addSystemMessage(`Usage: /check-provider <provider>\n\nAvailable providers: ${ids}`);
+        return;
+      }
+
+      ctx.addSystemMessage(`🔗 Testing connection to **${providerArg}**…`);
+
+      const result = await testProviderConnection(providerArg as any);
+
+      if (result.success) {
+        const providerEntry = PROVIDER_REGISTRY.find((p) => p.id === providerArg);
+        let msg = `✅ **${providerEntry?.label ?? providerArg}** — connection successful\n`;
+        msg += `Models available: **${result.modelCount}**\n`;
+        if (result.sampleModels && result.sampleModels.length > 0) {
+          msg += `\nSample models:\n`;
+          for (const m of result.sampleModels) {
+            msg += `  • ${m}\n`;
+          }
+          if (result.modelCount > result.sampleModels.length) {
+            msg += `  … and ${result.modelCount - result.sampleModels.length} more\n`;
+          }
+        }
+        if (providerEntry?.extraNote) {
+          msg += `\n💡 ${providerEntry.extraNote}`;
+        }
+        ctx.addSystemMessage(msg);
+      } else {
+        const providerEntry = PROVIDER_REGISTRY.find((p) => p.id === providerArg);
+        let msg = `❌ **${providerEntry?.label ?? providerArg}** — connection failed\n`;
+        msg += `Error: ${result.error ?? 'Unknown error'}\n`;
+        if (providerEntry?.keyUrl) {
+          msg += `\n🔑 Get your API key: https://${providerEntry.keyUrl}`;
+        }
+        if (providerEntry?.oauthFlow) {
+          msg += `\n🔒 This provider uses OAuth. Run \`/provider\` to authenticate.`;
+        }
+        ctx.addSystemMessage(msg);
+      }
     },
   },
 ];
