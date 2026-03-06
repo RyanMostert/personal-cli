@@ -1,5 +1,8 @@
 import type { CommandContext } from '../types/commands.js';
-import { getAllToolSchemas, loadPlugins, listMacros, getPluginDir, getMacroDir } from '@personal-cli/tools';
+import { getAllToolSchemas } from '@personal-cli/tools';
+import { generalCommands } from './general.js';
+import { toolsCommands } from './tools.js';
+import { mcpCommands } from './mcp.js';
 
 export interface Command {
   cmd: string;
@@ -35,6 +38,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const commands: Command[] = [
+  ...generalCommands,
+  ...toolsCommands,
+  ...mcpCommands,
+];
+
+// Additional commands are loaded by modules above; keep legacy code for edge-cases.
+
+// NOTE: The rest of the file historically had an inline commands list. We've modularized the main groups into separate files.
+
   {
     cmd: '/clip',
     description: 'Attach an image from the clipboard as a file',
