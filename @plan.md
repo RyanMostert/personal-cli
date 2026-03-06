@@ -35,7 +35,7 @@ Immediate todos (tracked):
 - [x] review-opencode: Reviewed anomalyco/opencode — terminal-first streaming UX, agent modes, and client/server architecture are instructive for TUI patterns.
 - [x] review-gemini-cli: Reviewed google-gemini/gemini-cli — MCP support, structured/streaming JSON output, and flexible auth flows are useful references.
 - [x] prototype-streaming: Build a streaming POC (token streaming + progress/interrupt) behind a feature flag.
-- [ ] prototype-modelpicker: Prototype ModelPicker improvements (dynamic suggestions, cost badges, subscription-aware entries).
+- [x] prototype-modelpicker: Prototype ModelPicker improvements (dynamic suggestions, cost badges, subscription-aware entries).
 - [ ] plan-chat-ui-improvements: Produce final implementation roadmap and milestones after prototypes and reviews.
 
 Refactor alignment (from refactoring_plan.md):
