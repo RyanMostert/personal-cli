@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import type { MCPServerConfig } from '@personal-cli/mcp-client';
 
@@ -17,23 +17,31 @@ const TRANSPORTS = ['stdio', 'sse', 'http'] as const;
 
 export function MCPWizard({ mode, serverName: initialName, existingConfig, serverType, onSave, onClose }: Props) {
   const isZenGateway = serverType === 'zen-gateway';
-  const zenEndpoint = process.env.ZEN_ENDPOINT || 'https://zen-gateway.opencode.com/api/v1';
+  const zenEndpoint = process.env.ZEN_ENDPOINT || 'https://opencode.ai/zen/v1';
   const zenApiKey = process.env.OPENCODE_API_KEY || process.env.ZEN_API_KEY || '';
   
-  const [focusField, setFocusField] = useState<FormField>(isZenGateway ? 'env' : 'name');
+  const [focusField, setFocusField] = useState<FormField>('name');
   const [name, setName] = useState(initialName || (isZenGateway ? 'zen-gateway' : ''));
   const [transport, setTransport] = useState<(typeof TRANSPORTS)[number]>(existingConfig?.transport || (isZenGateway ? 'stdio' : 'stdio'));
-  const [command, setCommand] = useState(existingConfig?.command || (isZenGateway ? 'npx' : ''));
-  const [args, setArgs] = useState(existingConfig?.args?.join(', ') || (isZenGateway ? '-y @personal-cli/zen-mcp-server' : ''));
-  const [env, setEnv] = useState(
+  const [command, setCommand] = useState(existingConfig?.command || (isZenGateway ? 'node' : ''));
+  const [args, setArgs] = useState(existingConfig?.args?.join(', ') || (isZenGateway ? './packages/zen-mcp-server/dist/main.js' : ''));
+  const initialEnv =
     existingConfig?.env
       ? Object.entries(existingConfig.env)
           .map(([k, v]) => `${k}=${v}`)
           .join('\n')
       : isZenGateway
-      ? `OPENCODE_API_KEY=${zenApiKey}\nZEN_ENDPOINT=${zenEndpoint}`
-      : '',
-  );
+        ? `OPENCODE_API_KEY=${zenApiKey}\nZEN_ENDPOINT=${zenEndpoint}`
+        : '';
+  const [env, setEnv] = useState(initialEnv);
+  const [envCursor, setEnvCursor] = useState(() => {
+    if (isZenGateway && !existingConfig?.env) {
+      return 'OPENCODE_API_KEY='.length;
+    }
+
+    return initialEnv.length;
+  });
+
   const [url, setUrl] = useState(existingConfig?.url || '');
   const [headers, setHeaders] = useState(
     existingConfig?.headers
@@ -47,7 +55,64 @@ export function MCPWizard({ mode, serverName: initialName, existingConfig, serve
   const [error, setError] = useState<string | null>(null);
 
   const isEditing = mode === 'edit';
-  const canEditName = !isEditing;
+  const canEditName = !isEditing || isZenGateway;
+
+  const saveConfig = () => {
+    if (!name.trim()) {
+      setError('Server name is required');
+      return;
+    }
+
+    const config: MCPServerConfig = {
+      transport,
+      timeout: parseInt(timeout) || 60000,
+      trust,
+      enabled: true,
+    };
+
+    if (transport === 'stdio') {
+      if (!command.trim()) {
+        setError('Command is required for stdio transport');
+        return;
+      }
+
+      config.command = command.trim();
+      if (args.trim()) {
+        config.args = args
+          .split(',')
+          .map((a) => a.trim())
+          .filter(Boolean);
+      }
+
+      if (env.trim()) {
+        config.env = {};
+        env.split('\n').forEach((line) => {
+          const [k, ...v] = line.split('=');
+          if (k && v.length > 0) {
+            config.env![k.trim()] = v.join('=').trim();
+          }
+        });
+      }
+    } else {
+      if (!url.trim()) {
+        setError('URL is required for SSE/HTTP transport');
+        return;
+      }
+
+      config.url = url.trim();
+      if (headers.trim()) {
+        config.headers = {};
+        headers.split('\n').forEach((line) => {
+          const [k, ...v] = line.split('=');
+          if (k && v.length > 0) {
+            config.headers![k.trim()] = v.join('=').trim();
+          }
+        });
+      }
+    }
+
+    onSave(name.trim(), config);
+  };
 
   const fields: FormField[] = [
     'name',
@@ -64,11 +129,18 @@ export function MCPWizard({ mode, serverName: initialName, existingConfig, serve
       return;
     }
 
+    if (key.ctrl && (input === 's' || input === '\u0013')) {
+      saveConfig();
+      return;
+    }
+
     if (key.return) {
       // In multiline fields, Enter inserts a newline unless Ctrl is held
       if ((focusField === 'env' || focusField === 'headers') && !key.ctrl) {
         if (focusField === 'env') {
-          setEnv((e) => e + '\n');
+          const clampedEnvCursor = Math.min(envCursor, env.length);
+          setEnv((e) => e.slice(0, clampedEnvCursor) + '\n' + e.slice(clampedEnvCursor));
+          setEnvCursor(clampedEnvCursor + 1);
         } else if (focusField === 'headers') {
           setHeaders((h) => h + '\n');
         }
@@ -79,58 +151,7 @@ export function MCPWizard({ mode, serverName: initialName, existingConfig, serve
       if (currentIndex < fields.length - 1) {
         setFocusField(fields[currentIndex + 1]);
       } else {
-        // Save
-        if (!name.trim()) {
-          setError('Server name is required');
-          return;
-        }
-
-        const config: MCPServerConfig = {
-          transport,
-          timeout: parseInt(timeout) || 60000,
-          trust,
-          enabled: true,
-        };
-
-        if (transport === 'stdio') {
-          if (!command.trim()) {
-            setError('Command is required for stdio transport');
-            return;
-          }
-          config.command = command.trim();
-          if (args.trim()) {
-            config.args = args
-              .split(',')
-              .map((a) => a.trim())
-              .filter(Boolean);
-          }
-          if (env.trim()) {
-            config.env = {};
-            env.split('\n').forEach((line) => {
-              const [k, ...v] = line.split('=');
-              if (k && v.length > 0) {
-                config.env![k.trim()] = v.join('=').trim();
-              }
-            });
-          }
-        } else {
-          if (!url.trim()) {
-            setError('URL is required for SSE/HTTP transport');
-            return;
-          }
-          config.url = url.trim();
-          if (headers.trim()) {
-            config.headers = {};
-            headers.split('\n').forEach((line) => {
-              const [k, ...v] = line.split('=');
-              if (k && v.length > 0) {
-                config.headers![k.trim()] = v.join('=').trim();
-              }
-            });
-          }
-        }
-
-        onSave(name.trim(), config);
+        saveConfig();
       }
       return;
     }
@@ -192,13 +213,28 @@ export function MCPWizard({ mode, serverName: initialName, existingConfig, serve
         }
         break;
 
-      case 'env':
-        if (key.backspace || key.delete) {
-          setEnv((e) => e.slice(0, -1));
+      case 'env': {
+        const clampedEnvCursor = Math.min(envCursor, env.length);
+        if (key.leftArrow) {
+          setEnvCursor(clampedEnvCursor > 0 ? clampedEnvCursor - 1 : 0);
+        } else if (key.rightArrow) {
+          setEnvCursor(clampedEnvCursor < env.length ? clampedEnvCursor + 1 : env.length);
+        } else if (key.backspace || key.delete) {
+          setEnv((e) => {
+            if (clampedEnvCursor > 0) {
+              setEnvCursor(clampedEnvCursor - 1);
+              return e.slice(0, clampedEnvCursor - 1) + e.slice(clampedEnvCursor);
+            }
+            return e;
+          });
         } else if (input && !key.ctrl && !key.meta) {
-          setEnv((e) => e + input);
+          setEnv((e) => {
+            setEnvCursor(clampedEnvCursor + 1);
+            return e.slice(0, clampedEnvCursor) + input + e.slice(clampedEnvCursor);
+          });
         }
         break;
+      }
 
       case 'url':
         if (key.backspace || key.delete) {
@@ -237,39 +273,69 @@ export function MCPWizard({ mode, serverName: initialName, existingConfig, serve
 
   const scanLine = '░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░';
 
-  const renderField = (field: FormField, label: string, value: string, isFocused: boolean, multiline = false) => (
-    <Box
-      flexDirection="column"
-      marginBottom={1}
-      borderStyle={isFocused ? 'double' : undefined}
-      borderColor={isFocused ? '#00E5FF' : undefined}
-      paddingX={isFocused ? 1 : 0}
-    >
-      <Text color={isFocused ? '#00E5FF' : '#484F58'} bold>
-        {isFocused ? '❯ ' : '  '}
-        {label}
-      </Text>
-      <Box flexDirection="column">
-        {multiline ? (
-          value ? (
-            value.split('\n').map((line, i) => (
-              <Text key={i} color={isFocused ? 'white' : '#8C959F'}>
-                {line || ' '}
-                {isFocused && i === value.split('\n').length - 1 && <Text color="#00E5FF">_</Text>}
-              </Text>
-            ))
-          ) : (
-            <Text color={isFocused ? '#00E5FF' : '#8C959F'}>{isFocused ? '_' : '<empty>'}</Text>
-          )
-        ) : (
-          <Box>
-            <Text color={isFocused ? 'white' : '#8C959F'}>{value || (isFocused ? '_' : '<empty>')}</Text>
-            {isFocused && value && <Text color="#00E5FF">_</Text>}
+  const renderField = (field: FormField, label: string, value: string, isFocused: boolean, multiline = false) => {
+    if (multiline && field === 'env') {
+      // Render env field with cursor
+      const clampedEnvCursor = Math.min(envCursor, value.length);
+      const before = value.slice(0, clampedEnvCursor);
+      const after = value.slice(clampedEnvCursor);
+      return (
+        <Box
+          flexDirection="column"
+          marginBottom={1}
+          borderStyle={isFocused ? 'double' : undefined}
+          borderColor={isFocused ? '#00E5FF' : undefined}
+          paddingX={isFocused ? 1 : 0}
+        >
+          <Text color={isFocused ? '#00E5FF' : '#484F58'} bold>
+            {isFocused ? '❯ ' : '  '}
+            {label}
+          </Text>
+          <Box flexDirection="column">
+            <Text color={isFocused ? 'white' : '#8C959F'}>
+              {before}
+              {isFocused && <Text color="#00E5FF">_</Text>}
+              {after || ' '}
+            </Text>
           </Box>
-        )}
+        </Box>
+      );
+    }
+    // Default rendering
+    return (
+      <Box
+        flexDirection="column"
+        marginBottom={1}
+        borderStyle={isFocused ? 'double' : undefined}
+        borderColor={isFocused ? '#00E5FF' : undefined}
+        paddingX={isFocused ? 1 : 0}
+      >
+        <Text color={isFocused ? '#00E5FF' : '#484F58'} bold>
+          {isFocused ? '❯ ' : '  '}
+          {label}
+        </Text>
+        <Box flexDirection="column">
+          {multiline ? (
+            value ? (
+              value.split('\n').map((line, i) => (
+                <Text key={i} color={isFocused ? 'white' : '#8C959F'}>
+                  {line || ' '}
+                  {isFocused && i === value.split('\n').length - 1 && <Text color="#00E5FF">_</Text>}
+                </Text>
+              ))
+            ) : (
+              <Text color={isFocused ? '#00E5FF' : '#8C959F'}>{isFocused ? '_' : '<empty>'}</Text>
+            )
+          ) : (
+            <Box>
+              <Text color={isFocused ? 'white' : '#8C959F'}>{value || (isFocused ? '_' : '<empty>')}</Text>
+              {isFocused && value && <Text color="#00E5FF">_</Text>}
+            </Box>
+          )}
+        </Box>
       </Box>
-    </Box>
-  );
+    );
+  };
 
   return (
     <Box flexDirection="column" paddingX={2} paddingY={1} marginY={1} borderStyle="single" borderColor="#00E5FF">
@@ -365,14 +431,15 @@ export function MCPWizard({ mode, serverName: initialName, existingConfig, serve
 
       {/* Actions */}
       <Box marginTop={1} justifyContent="space-between">
-        <Text color="#484F58"> ESC:ABORT │ TAB:NEXT FIELD </Text>
+        <Text color="#484F58"> ESC:ABORT │ TAB:NEXT FIELD │ CTRL+S:SAVE </Text>
         <Text color="#00E5FF" bold>
           {' '}
           {(focusField === 'env' || focusField === 'headers') 
-            ? 'ENTER:NEW_LINE │ CTRL+ENTER:NEXT' 
+            ? 'ENTER:NEW_LINE │ CTRL+S:SAVE' 
             : `ENTER:${focusField === fields[fields.length - 1] ? 'SAVE_CONFIG' : 'NEXT_FIELD'}`}{' '}
         </Text>
       </Box>
     </Box>
   );
 }
+

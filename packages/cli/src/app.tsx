@@ -53,10 +53,11 @@ import {
   saveMCPConfig,
   removeMCPConfig,
 } from '@personal-cli/core';
-import { MCPClientManager } from '@personal-cli/mcp-client';
+import { MCPClientManager, type MCPServerConfig, type ToolResult } from '@personal-cli/mcp-client';
 import {
-  ZenGatewayClient,
   ZenGatewayConfigSchema,
+  ZenGatewayStatusSchema,
+  ZenModelSchema,
   type ZenGatewayConfig,
   type ZenGatewayStatus,
   type ZenModel,
@@ -67,6 +68,47 @@ import clipboardy from 'clipboardy';
 
 interface AppProps {
   initialAttachments?: Array<{ path: string; type: 'file' | 'image' }>;
+}
+
+const DEFAULT_ZEN_ENDPOINT = 'https://opencode.ai/zen/v1';
+
+function parseZenGatewayConfig(config?: MCPServerConfig): ZenGatewayConfig | null {
+  const apiKey = config?.env?.OPENCODE_API_KEY || config?.env?.ZEN_API_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  const result = ZenGatewayConfigSchema.safeParse({
+    endpoint: config.env?.ZEN_ENDPOINT || DEFAULT_ZEN_ENDPOINT,
+    apiKey,
+    enabled: true,
+  });
+
+  return result.success ? result.data : null;
+}
+
+function parseZenGatewayConfigFromEnv(): ZenGatewayConfig | null {
+  const apiKey = process.env.OPENCODE_API_KEY || process.env.ZEN_API_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  const result = ZenGatewayConfigSchema.safeParse({
+    endpoint: process.env.ZEN_ENDPOINT || DEFAULT_ZEN_ENDPOINT,
+    apiKey,
+    enabled: true,
+  });
+
+  return result.success ? result.data : null;
+}
+
+function getTextResult(result: ToolResult): string {
+  const text = result.content.find((item) => item.type === 'text' && typeof item.text === 'string')?.text;
+  if (!text) {
+    throw new Error('Zen Gateway returned an empty response.');
+  }
+
+  return text;
 }
 
 export function App({ initialAttachments = [] }: AppProps) {
@@ -143,31 +185,86 @@ export function App({ initialAttachments = [] }: AppProps) {
 
   // Zen Gateway State
   const [zenConfig, setZenConfig] = useState<ZenGatewayConfig | null>(() => {
-    // Try to load from environment or MCP config
-    const apiKey = process.env.OPENCODE_API_KEY || process.env.ZEN_API_KEY;
-    if (apiKey) {
-      const result = ZenGatewayConfigSchema.safeParse({
-        endpoint: process.env.ZEN_ENDPOINT || 'https://zen-gateway.opencode.com/api/v1',
-        apiKey,
-        enabled: true,
-      });
-      if (result.success) return result.data;
-    }
-    return null;
+    const mcpConfigs = loadMCPConfig();
+    return parseZenGatewayConfig(mcpConfigs['zen-gateway']) ?? parseZenGatewayConfigFromEnv();
   });
-  const [zenClient, setZenClient] = useState<ZenGatewayClient | null>(() => {
-    const apiKey = process.env.OPENCODE_API_KEY || process.env.ZEN_API_KEY;
-    if (apiKey) {
-      const config = {
-        endpoint: process.env.ZEN_ENDPOINT || 'https://zen-gateway.opencode.com/api/v1',
-        apiKey,
-        enabled: true,
-      };
-      const result = ZenGatewayConfigSchema.safeParse(config);
-      if (result.success) return new ZenGatewayClient(result.data);
+
+  const resolveZenGatewayConfig = useCallback((): ZenGatewayConfig | null => {
+    if (zenConfig) {
+      return zenConfig;
     }
-    return null;
-  });
+
+    const config = parseZenGatewayConfig(loadMCPConfig()['zen-gateway']) ?? parseZenGatewayConfigFromEnv();
+    if (config) {
+      setZenConfig(config);
+    }
+
+    return config;
+  }, [zenConfig]);
+
+  const callZenGatewayTool = useCallback(
+    async <T,>(toolName: 'zen_get_status' | 'zen_list_models', parse: (text: string) => T): Promise<T | null> => {
+      if (!resolveZenGatewayConfig()) {
+        return null;
+      }
+
+      if (!mcpManager.isConnected('zen-gateway')) {
+        throw new Error('Zen Gateway is configured but the MCP server is not connected.');
+      }
+
+      const result = await mcpManager.callTool(`zen-gateway__${toolName}`, {});
+      const text = getTextResult(result);
+      if (result.isError) {
+        throw new Error(text.replace(/^Error:\s*/, ''));
+      }
+
+      return parse(text);
+    },
+    [mcpManager, resolveZenGatewayConfig],
+  );
+
+  const parseZenGatewayStatusResult = useCallback((text: string): ZenGatewayStatus => {
+    const parsed = ZenGatewayStatusSchema.safeParse(JSON.parse(text));
+    if (!parsed.success) {
+      throw new Error('Zen Gateway returned an invalid status response.');
+    }
+
+    return parsed.data;
+  }, []);
+
+  const parseZenGatewayModelsResult = useCallback((text: string): ZenModel[] => {
+    const parsed = ZenModelSchema.array().safeParse(JSON.parse(text));
+    if (!parsed.success) {
+      throw new Error('Zen Gateway returned an invalid models response.');
+    }
+
+    return parsed.data;
+  }, []);
+
+  const syncZenConfigFromMcp = useCallback((config: MCPServerConfig): void => {
+    const parsedConfig = parseZenGatewayConfig(config);
+    if (parsedConfig) {
+      setZenConfig(parsedConfig);
+    } else {
+      setZenConfig(null);
+    }
+  }, []);
+
+  const saveZenConfigFromMcp = useCallback((config: MCPServerConfig): void => {
+    const parsedConfig = parseZenGatewayConfig(config);
+    if (parsedConfig) {
+      setZenConfig(parsedConfig);
+      return;
+    }
+
+    const envConfig = parseZenGatewayConfigFromEnv();
+    if (envConfig) {
+      setZenConfig(envConfig);
+      return;
+    }
+
+    setZenConfig(null);
+  }, []);
 
   const [cmdSelectedIdx, setCmdSelectedIdx] = useState(0);
   const [fileAutoFiles, setFileAutoFiles] = useState<string[]>([]);
@@ -700,16 +797,10 @@ export const helloWorld = async ({ name = 'World' }) => {
         loadWorkspace,
         // Zen Gateway methods
         getZenGatewayStatus: async (): Promise<ZenGatewayStatus | null> => {
-          if (!zenClient) return null;
-          return zenClient.getStatus();
+          return callZenGatewayTool('zen_get_status', parseZenGatewayStatusResult);
         },
         listZenModels: async (): Promise<ZenModel[] | null> => {
-          if (!zenClient) return null;
-          try {
-            return await zenClient.listModels();
-          } catch {
-            return null;
-          }
+          return callZenGatewayTool('zen_list_models', parseZenGatewayModelsResult);
         },
         configureZenGateway: async (): Promise<void> => {
           // Open the MCP wizard with Zen Gateway preset
@@ -717,7 +808,6 @@ export const helloWorld = async ({ name = 'World' }) => {
         },
         removeZenGateway: async (): Promise<void> => {
           setZenConfig(null);
-          setZenClient(null);
           // Also remove from MCP config if it exists there
           const mcpConfigs = loadMCPConfig();
           if (mcpConfigs['zen-gateway']) {
@@ -875,6 +965,9 @@ export const helloWorld = async ({ name = 'World' }) => {
             if (serverName) {
               await mcpManager.disconnectServer(serverName);
               removeMCPConfig(serverName);
+              if (serverName === 'zen-gateway') {
+                setZenConfig(null);
+              }
               addSystemMessage(`Removed MCP server: ${serverName}`);
               // Refresh server list
               setMcpServers(mcpManager.getAllServerInfo());
@@ -890,6 +983,9 @@ export const helloWorld = async ({ name = 'World' }) => {
               if (config) {
                 try {
                   await mcpManager.connectServer(serverName, config);
+                  if (serverName === 'zen-gateway') {
+                    syncZenConfigFromMcp(config);
+                  }
                   addSystemMessage(`Connected to MCP server: ${serverName}`);
                   setMcpServers(mcpManager.getAllServerInfo());
                   setMcpServerCount(mcpManager.getConnectedServers().length);
@@ -906,6 +1002,9 @@ export const helloWorld = async ({ name = 'World' }) => {
           case 'disconnect':
             if (serverName) {
               await mcpManager.disconnectServer(serverName);
+              if (serverName === 'zen-gateway') {
+                setZenConfig(resolveZenGatewayConfig());
+              }
               addSystemMessage(`Disconnected from MCP server: ${serverName}`);
               setMcpServers(mcpManager.getAllServerInfo());
               setMcpServerCount(mcpManager.getConnectedServers().length);
@@ -920,6 +1019,9 @@ export const helloWorld = async ({ name = 'World' }) => {
               if (config.enabled !== false) {
                 try {
                   await mcpManager.connectServer(name, config);
+                  if (name === 'zen-gateway') {
+                    syncZenConfigFromMcp(config);
+                  }
                   connected++;
                 } catch (error) {
                   addSystemMessage(
@@ -1082,6 +1184,9 @@ export const helloWorld = async ({ name = 'World' }) => {
       compact,
       tokensUsed,
       cost,
+      callZenGatewayTool,
+      parseZenGatewayStatusResult,
+      parseZenGatewayModelsResult,
       switchModel,
       switchMode,
       openModelPicker,
@@ -1227,6 +1332,9 @@ export const helloWorld = async ({ name = 'World' }) => {
                 onConnect={async (name, config) => {
                   try {
                     await mcpManager.connectServer(name, config);
+                    if (name === 'zen-gateway') {
+                      syncZenConfigFromMcp(config);
+                    }
                     addSystemMessage(`Connected to MCP server: ${name}`);
                     setMcpServers(mcpManager.getAllServerInfo());
                     setMcpServerCount(mcpManager.getConnectedServers().length);
@@ -1236,6 +1344,9 @@ export const helloWorld = async ({ name = 'World' }) => {
                 }}
                 onDisconnect={async (name) => {
                   await mcpManager.disconnectServer(name);
+                  if (name === 'zen-gateway') {
+                    setZenConfig(resolveZenGatewayConfig());
+                  }
                   addSystemMessage(`Disconnected from MCP server: ${name}`);
                   setMcpServers(mcpManager.getAllServerInfo());
                   setMcpServerCount(mcpManager.getConnectedServers().length);
@@ -1269,6 +1380,12 @@ export const helloWorld = async ({ name = 'World' }) => {
                 serverType={mcpWizardServerType || 'custom'}
                 onSave={async (name, config) => {
                   saveMCPConfig(name, config);
+                  
+                  // If this is the Zen Gateway, sync CLI state from the saved MCP config
+                  if (name === 'zen-gateway') {
+                    saveZenConfigFromMcp(config);
+                  }
+                  
                   if (config.enabled !== false) {
                     try {
                       await mcpManager.connectServer(name, config);
@@ -1400,3 +1517,4 @@ export const helloWorld = async ({ name = 'World' }) => {
     </>
   );
 }
+

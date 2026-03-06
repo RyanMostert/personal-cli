@@ -132,15 +132,12 @@ export class ZenMCPServer {
 
           case 'zen_list_models': {
             const models = await this.client.listModels();
-            const formatted = models
-              .map((m) => `- ${m.id} (${m.provider}): ${m.description || 'No description'}`)
-              .join('\n');
 
             return {
               content: [
                 {
                   type: 'text',
-                  text: `Available models:\n${formatted}`,
+                  text: JSON.stringify(models),
                 },
               ],
             };
@@ -148,15 +145,12 @@ export class ZenMCPServer {
 
           case 'zen_get_status': {
             const status = await this.client.getStatus();
-            const text = status.connected
-              ? `✅ Connected to ${status.endpoint}\n📊 Models available: ${status.modelsAvailable}`
-              : `❌ Not connected to ${status.endpoint}\n⚠️ Error: ${status.lastError}`;
 
             return {
               content: [
                 {
                   type: 'text',
-                  text,
+                  text: JSON.stringify(status),
                 },
               ],
             };
@@ -244,9 +238,10 @@ export class ZenMCPServer {
   getMCPServerConfig(): MCPServerConfig {
     return {
       transport: 'stdio',
-      command: 'npx',
-      args: ['-y', '@personal-cli/zen-mcp-server'],
+      command: 'node',
+      args: ['./packages/zen-mcp-server/dist/main.js'],
       env: {
+        OPENCODE_API_KEY: this.config.apiKey,
         ZEN_API_KEY: this.config.apiKey,
         ZEN_ENDPOINT: this.config.endpoint,
       },

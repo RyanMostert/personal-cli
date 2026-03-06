@@ -460,34 +460,46 @@ const commands: Command[] = [
       switch (subcommand) {
         case 'status': {
           ctx.addSystemMessage('Checking Zen Gateway status...');
-          const status = await ctx.getZenGatewayStatus?.();
-          if (status) {
-            const msg = status.connected
-              ? `✅ **Zen Gateway Connected**\n📍 Endpoint: ${status.endpoint}\n📊 Models available: ${status.modelsAvailable}`
-              : `❌ **Zen Gateway Not Connected**\n📍 Endpoint: ${status.endpoint}\n⚠️ Error: ${status.lastError}`;
-            ctx.addSystemMessage(msg);
-          } else {
-            ctx.addSystemMessage('❌ Zen Gateway is not configured. Run `/zen add` to set it up.');
+          try {
+            const status = await ctx.getZenGatewayStatus?.();
+            if (status) {
+              const msg = status.connected
+                ? `✅ **Zen Gateway Connected**\n📍 Endpoint: ${status.endpoint}\n📊 Models available: ${status.modelsAvailable}`
+                : `❌ **Zen Gateway Not Connected**\n📍 Endpoint: ${status.endpoint}\n⚠️ Error: ${status.lastError}`;
+              ctx.addSystemMessage(msg);
+            } else {
+              ctx.addSystemMessage('❌ Zen Gateway is not configured. Run `/zen add` to set it up.');
+            }
+          } catch (error) {
+            ctx.addSystemMessage(
+              `❌ Failed to check Zen Gateway status: ${error instanceof Error ? error.message : String(error)}`,
+            );
           }
           break;
         }
 
         case 'models': {
           ctx.addSystemMessage('Fetching available models from Zen Gateway...');
-          const models = await ctx.listZenModels?.();
-          if (models && models.length > 0) {
-            let msg = '## Available Zen Gateway Models\n\n';
-            for (const model of models) {
-              msg += `- **${model.id}** (${model.provider})\n`;
-              if (model.description) msg += `  ${model.description}\n`;
-              if (model.maxTokens) msg += `  Max tokens: ${model.maxTokens.toLocaleString()}\n`;
-              msg += '\n';
+          try {
+            const models = await ctx.listZenModels?.();
+            if (models && models.length > 0) {
+              let msg = '## Available Zen Gateway Models\n\n';
+              for (const model of models) {
+                msg += `- **${model.id}** (${model.provider})\n`;
+                if (model.description) msg += `  ${model.description}\n`;
+                if (model.maxTokens) msg += `  Max tokens: ${model.maxTokens.toLocaleString()}\n`;
+                msg += '\n';
+              }
+              ctx.addSystemMessage(msg);
+            } else if (models) {
+              ctx.addSystemMessage('No models available. Make sure Zen Gateway is properly configured.');
+            } else {
+              ctx.addSystemMessage('❌ Zen Gateway is not configured. Run `/zen add` to set it up.');
             }
-            ctx.addSystemMessage(msg);
-          } else if (models) {
-            ctx.addSystemMessage('No models available. Make sure Zen Gateway is properly configured.');
-          } else {
-            ctx.addSystemMessage('❌ Zen Gateway is not configured. Run `/zen add` to set it up.');
+          } catch (error) {
+            ctx.addSystemMessage(
+              `❌ Failed to fetch models from Zen Gateway: ${error instanceof Error ? error.message : String(error)}`,
+            );
           }
           break;
         }

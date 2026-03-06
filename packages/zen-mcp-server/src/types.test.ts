@@ -4,7 +4,7 @@ import { ZenGatewayConfigSchema, ZenModelSchema } from './types.js';
 describe('ZenGatewayConfigSchema', () => {
   it('should validate a valid config', () => {
     const config = {
-      endpoint: 'https://zen-gateway.opencode.com/api/v1',
+      endpoint: 'https://opencode.ai/zen/v1',
       apiKey: 'test-api-key',
       enabled: true,
     };
@@ -26,13 +26,13 @@ describe('ZenGatewayConfigSchema', () => {
     const result = ZenGatewayConfigSchema.safeParse(config);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.endpoint).toBe('https://zen-gateway.opencode.com/api/v1');
+      expect(result.data.endpoint).toBe('https://opencode.ai/zen/v1');
     }
   });
 
   it('should fail without API key', () => {
     const config = {
-      endpoint: 'https://zen-gateway.opencode.com/api/v1',
+      endpoint: 'https://opencode.ai/zen/v1',
     };
 
     const result = ZenGatewayConfigSchema.safeParse(config);
@@ -66,3 +66,4 @@ describe('ZenModelSchema', () => {
     expect(result.success).toBe(true);
   });
 });
+
