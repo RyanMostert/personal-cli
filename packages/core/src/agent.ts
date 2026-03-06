@@ -8,6 +8,7 @@ import {
   type ProviderName,
   getModelEntry,
   type Attachment,
+  type TodoItem,
 } from '@personal-cli/shared';
 import { DEFAULT_TOKEN_BUDGET } from '@personal-cli/shared';
 import { ProviderManager } from './providers/manager.js';
@@ -66,6 +67,7 @@ export class Agent {
   private loadedPlugins: LoadedPlugin[] = [];
   private fallbackManager: ToolFallbackManager;
   private eventTracker: AgentEventTracker;
+  private pendingTodoUpdates: TodoItem[] | null = null;
 
   constructor(options: AgentOptions & { fallbackConfig?: FallbackConfig }) {
     this.providerManager = options.providerManager;
@@ -127,6 +129,7 @@ export class Agent {
       },
       questionFn: this.questionFn,
       plugins: this.loadedPlugins,
+      onTodoUpdate: (todos) => { this.pendingTodoUpdates = todos; },
     });
   }
 
@@ -591,6 +594,12 @@ export class Agent {
                   result: allToolCalls[toolCall.toolCallId]?.result || toolResult,
                 },
               };
+
+              // Drain pending todo updates triggered by this tool call
+              if (this.pendingTodoUpdates !== null) {
+                yield { type: 'todo-update', todos: this.pendingTodoUpdates };
+                this.pendingTodoUpdates = null;
+              }
               break;
             }
 
@@ -605,8 +614,9 @@ export class Agent {
             case 'finish': {
               const usage = (event as any).usage;
               if (usage) {
-                totalPromptTokens += usage.promptTokens ?? 0;
-                totalCompletionTokens += usage.completionTokens ?? 0;
+                // AI SDK v6 uses inputTokens/outputTokens; v4 used promptTokens/completionTokens
+                totalPromptTokens += usage.inputTokens ?? usage.promptTokens ?? 0;
+                totalCompletionTokens += usage.outputTokens ?? usage.completionTokens ?? 0;
               }
               break;
             }
@@ -627,6 +637,40 @@ export class Agent {
       const response = await result.response;
       for (const msg of response.messages) {
         this.coreMessages.push(msg);
+      }
+
+      // Auto-summary: if the model ran tools but produced no text, request a concise summary.
+      // This handles models (e.g. gpt-5-mini) that stop after tool calls without a follow-up.
+      if (rawText.trim() === '' && Object.keys(allToolCalls).length > 0) {
+        try {
+          const summaryResult = streamText({
+            model,
+            system: this.systemPrompt,
+            messages: [
+              ...this.coreMessages,
+              { role: 'user' as const, content: 'Please summarize the above tool results concisely.' },
+            ],
+            maxOutputTokens: 1024,
+          } as any);
+
+          for await (const part of summaryResult.fullStream) {
+            if (part.type === 'text-delta') {
+              const delta = (part.text ?? (part as any).delta ?? '') as string;
+              if (delta) {
+                rawText += delta;
+                yield { type: 'text-delta', delta };
+              }
+            }
+          }
+
+          // Incorporate summary into coreMessages so follow-up turns have context
+          const summaryResponse = await summaryResult.response;
+          for (const msg of summaryResponse.messages) {
+            this.coreMessages.push(msg);
+          }
+        } catch {
+          // Silently fail — an empty response is better than crashing
+        }
       }
 
       const entry = getModelEntry(

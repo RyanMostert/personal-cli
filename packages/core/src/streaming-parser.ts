@@ -5,10 +5,22 @@ import type { StreamEvent, TextDelta, ThoughtDelta, ToolCallStart, ToolCallResul
 // stream parts when they already provide intent, and normalizes common shapes.
 
 export async function* parseStream<T = any>(asyncIterable: AsyncIterable<T>): AsyncGenerator<StreamEvent> {
+  // Accumulate streamed tool-input-delta chunks per tool call (AI SDK v6+)
+  const toolInputBuffers = new Map<string, { toolName: string; argsJson: string }>();
+  // Track IDs already emitted via tool-input-end to skip the legacy tool-call duplicate
+  const emittedToolCallIds = new Set<string>();
+
   for await (const part of asyncIterable as AsyncIterable<any>) {
     try {
       const t = part?.type;
       switch (t) {
+        // ── Silent no-ops (lifecycle markers, no UI value) ──────────────────
+        case 'start':
+        case 'start-step':
+        case 'text-start':
+        case 'text-end':
+          break;
+
         case 'text-delta': {
           const delta = part.text ?? part.delta ?? '';
           yield { type: 'text-delta', delta } as TextDelta;
@@ -20,12 +32,18 @@ export async function* parseStream<T = any>(asyncIterable: AsyncIterable<T>): As
           yield { type: 'thought-delta', delta } as ThoughtDelta;
           break;
         }
+
+        // ── AI SDK v4 legacy tool events (kept for backwards compat) ─────────
         case 'tool-call': {
+          const id = part.toolCallId ?? part.id ?? String(Date.now());
+          // Skip if already emitted by the v6 tool-input-end handler
+          if (emittedToolCallIds.has(id)) break;
           const toolCall = {
-            toolCallId: part.toolCallId ?? part.id ?? String(Date.now()),
+            toolCallId: id,
             toolName: part.toolName ?? part.recipient_name ?? 'unknown',
             args: part.args ?? part.input ?? undefined,
           };
+          emittedToolCallIds.add(id);
           yield { type: 'tool-call-start', toolCall } as ToolCallStart;
           break;
         }
@@ -38,12 +56,43 @@ export async function* parseStream<T = any>(asyncIterable: AsyncIterable<T>): As
           yield { type: 'tool-call-result', toolCall } as ToolCallResult;
           break;
         }
+
+        // ── AI SDK v6 streaming tool-call protocol ───────────────────────────
+        case 'tool-input-start': {
+          const id = part.toolCallId ?? part.id ?? String(Date.now());
+          toolInputBuffers.set(id, { toolName: part.toolName ?? 'unknown', argsJson: '' });
+          break;
+        }
+        case 'tool-input-delta': {
+          const id = part.toolCallId ?? part.id;
+          if (id && toolInputBuffers.has(id)) {
+            toolInputBuffers.get(id)!.argsJson += part.inputTextDelta ?? part.delta ?? '';
+          }
+          break;
+        }
+        case 'tool-input-end': {
+          const id = part.toolCallId ?? part.id;
+          if (id && toolInputBuffers.has(id)) {
+            const buf = toolInputBuffers.get(id)!;
+            toolInputBuffers.delete(id);
+            let args: Record<string, unknown> | undefined;
+            try { args = JSON.parse(buf.argsJson); } catch { /* leave undefined */ }
+            emittedToolCallIds.add(id);
+            yield {
+              type: 'tool-call-start',
+              toolCall: { toolCallId: id, toolName: buf.toolName, args },
+            } as ToolCallStart;
+          }
+          break;
+        }
+
         case 'system': {
           const message = part.message ?? part.text ?? String(part);
           yield { type: 'system', message } as SystemEvent;
           break;
         }
         case 'finish':
+        case 'finish-step':
         case 'step-finish': {
           const usage = (part as any).usage ?? (part as any).usageInfo ?? undefined;
           yield { type: 'finish', usage } as FinishEvent;
@@ -59,10 +108,8 @@ export async function* parseStream<T = any>(asyncIterable: AsyncIterable<T>): As
             yield { type: 'text-delta', delta: part } as TextDelta;
           } else if (part?.text) {
             yield { type: 'text-delta', delta: part.text } as TextDelta;
-          } else {
-            // Emit as system message for visibility
-            yield { type: 'system', message: `Unknown stream part: ${JSON.stringify(part).slice(0, 200)}` } as SystemEvent;
           }
+          // Silently drop truly unknown parts (no system message noise)
           break;
         }
       }

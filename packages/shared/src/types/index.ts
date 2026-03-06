@@ -107,6 +107,14 @@ export interface AgentConfig {
   systemPrompt?: string;
 }
 
+// ─── Todo ─────────────────────────────────────────────────────────────────────
+
+export interface TodoItem {
+  id: number;
+  text: string;
+  done: boolean;
+}
+
 // ─── Streaming ────────────────────────────────────────────────────────────────
 
 export type StreamEventType =
@@ -118,7 +126,8 @@ export type StreamEventType =
   | 'step-finish'
   | 'finish'
   | 'error'
-  | 'system';
+  | 'system'
+  | 'todo-update';
 
 export interface ToolCallInfo {
   toolCallId: string;
@@ -143,4 +152,5 @@ export interface StreamEvent {
     completionTokens: number;
     totalTokens: number;
   };
+  todos?: TodoItem[];
 }

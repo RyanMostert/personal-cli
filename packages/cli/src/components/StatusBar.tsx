@@ -17,15 +17,10 @@ interface Props {
 }
 
 const HINTS = [
-  'PRESS [?] FOR QUICK HELP',
-  'CTRL+O TO BROWSE PROJECT FILES',
-  'CTRL+L TO TOGGLE PANEL FOCUS',
-  'CTRL+M TO SWITCH MODELS',
-  'CTRL+TAB TO CYCLE AGENT MODES',
-  'CTRL+K TO CUSTOMIZE KEYBINDS',
-  'TYPE / FOR COMMAND AUTOCOMPLETE',
-  'ATTACH FILES WITH @FILENAME',
-  'USE /mcp TO CONNECT EXTERNAL TOOLS',
+  '? help  /  commands  @file attach  ctrl+o files  ctrl+m model  ctrl+tab mode',
+  'ctrl+o files · ctrl+m model · ctrl+tab mode · ctrl+k keybinds · /mcp tools',
+  '? for help · type / for commands · @filename to attach files',
+  'ctrl+l panel focus · ctrl+z undo · ctrl+y redo · /compact to save context',
 ];
 
 export function StatusBar({
@@ -52,130 +47,80 @@ export function StatusBar({
   }, []);
 
   const progress = Math.min(1, tokensUsed / tokenBudget);
-  const bars = 20;
+  const bars = 16;
   const filled = Math.round(progress * bars);
-  const barStr = '█'.repeat(filled) + '░'.repeat(bars - filled);
+  const barStr = '▓'.repeat(filled) + '░'.repeat(bars - filled);
 
-  const hpColor = progress > 0.9 ? '#F85149' : progress > 0.7 ? '#D29922' : '#3FB950';
+  const tokenColor = progress > 0.9 ? '#F85149' : progress > 0.7 ? '#D29922' : '#6E7681';
   const costStr = cost > 0 ? `$${cost.toFixed(4)}` : '$0.00';
 
   const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
   const spinner = spinnerFrames[tick % spinnerFrames.length];
 
   // Contextual Tips
-  let activeHint = HINTS[hintIndex];
+  let activeHint = HINTS[hintIndex % HINTS.length];
   if (progress > 0.8) {
-    activeHint = '⚠️ HIGH TOKEN USAGE: RUN /compact TO ARCHIVE CONTEXT';
+    activeHint = '⚠ context at ' + Math.round(progress * 100) + '% — run /compact to condense';
   } else if (attachedFiles.length > 5) {
-    activeHint = '💡 LARGE INVENTORY: USE /detach TO CLEAR OLD FILES';
+    activeHint = 'large attachment set — use /detach to clear old files';
   }
+
+  // Bracketed mode labels for arcade HUD feel
+  const modeLabel: Record<string, string> = {
+    ask: '[ASK]',
+    plan: '[PLAN]',
+    build: '[BUILD]',
+    auto: '[AUTO]',
+  };
+  const modeColor: Record<string, string> = {
+    ask: '#3FB950',
+    plan: '#D29922',
+    build: '#F85149',
+    auto: '#00E5FF',
+  };
 
   return (
     <Box flexDirection="column" marginTop={1}>
-      {/* Activity Line */}
-      {(isStreaming || activeToolCount > 0 || leaderKeyActive) && (
-        <Box paddingX={1} marginBottom={0} justifyContent="space-between">
+      {/* Activity / Hint Line */}
+      <Box paddingX={1} marginBottom={0}>
+        {(isStreaming || activeToolCount > 0 || leaderKeyActive) ? (
           <Box>
-            <Text color="#00E5FF" bold>
-              {spinner}{' '}
-            </Text>
-            {isStreaming && (
-              <Text color="#00E5FF" bold>
-                LLM_STREAMING{process.env.PERSONAL_CLI_STREAMING_POC ? '_POC' : ''}...{' '}
-              </Text>
-            )}
-            {activeToolCount > 0 && (
-              <Text color="#D29922" bold>
-                RUNNING_TOOLS:{activeToolCount}{' '}
-              </Text>
-            )}
-            {leaderKeyActive && (
-              <Text color="#FF00AA" bold>
-                LEADER_KEY_ACTIVE (waiting for sequence...){' '}
-              </Text>
-            )}
+            <Text color="#00E5FF">{spinner} </Text>
+            {isStreaming && <Text color="#6E7681">receiving</Text>}
+            {activeToolCount > 0 && <Text color="#D29922"> · {activeToolCount} tool{activeToolCount > 1 ? 's' : ''} active</Text>}
+            {leaderKeyActive && <Text color="#FF00AA"> · leader — waiting…</Text>}
           </Box>
-          <Text color="#484F58">SYSTEM_BUSY</Text>
-        </Box>
-      )}
-
-      {/* Hint Line */}
-      {!isStreaming && activeToolCount === 0 && (
-        <Box paddingX={1} marginBottom={0}>
-          <Text color="#484F58">» </Text>
-          <Text color={activeHint.startsWith('⚠️') ? '#F85149' : '#00E5FF'} bold>
-            {activeHint}
-          </Text>
-        </Box>
-      )}
+        ) : (
+          <Text color="#484F58">{activeHint}</Text>
+        )}
+      </Box>
 
       {/* Separator */}
-      <Text color="#484F58">{'━'.repeat(process.stdout.columns || 80)}</Text>
+      <Text color="#30363D">{'─'.repeat(process.stdout.columns || 80)}</Text>
 
-      {/* Stats Line */}
+      {/* HUD Stats Line */}
       <Box justifyContent="space-between" paddingX={1}>
         <Box>
-          <Text color="#FF00AA" bold>
-            P1 [L1]{' '}
-          </Text>
-          <Text color="#484F58">│ </Text>
-          <Text color="white" bold>
-            {provider}/{modelId}
-          </Text>
-          <Text color="#484F58"> │ </Text>
-          {mode === 'ask' && (
-            <Text color="#3FB950" bold>
-              [🛡️ GUARDIAN:ASK]
-            </Text>
+          <Text color="#6E7681">{provider}</Text>
+          <Text color="#30363D"> / </Text>
+          <Text color="white">{modelId}</Text>
+          <Text color="#484F58">  </Text>
+          <Text color={modeColor[mode] ?? '#6E7681'} bold>{modeLabel[mode] ?? `[${mode.toUpperCase()}]`}</Text>
+          {attachedFiles.length > 0 && (
+            <Text color="#484F58">  {attachedFiles.length} attached</Text>
           )}
-          {mode === 'plan' && (
-            <Text color="#D29922" bold>
-              [🧠 STRATEGIST:PLAN]
-            </Text>
-          )}
-          {mode === 'build' && (
-            <Text color="#F85149" bold>
-              [⚔️ ARCHITECT:BUILD]
-            </Text>
-          )}
-          {mode === 'auto' && (
-            <Text color="#00E5FF" bold>
-              [🤖 AUTONOMOUS:AUTO]
-            </Text>
+          {mcpServerCount > 0 && (
+            <Text color="#484F58">  {mcpServerCount} mcp</Text>
           )}
         </Box>
 
         <Box>
-          <Text color={hpColor} bold>
-            HP{' '}
-          </Text>
-          <Text color={hpColor}>{Math.round((1 - progress) * 100)}% </Text>
-          <Text color="#484F58">[{barStr}] </Text>
-
-          <Text color="#AA00FF" bold>
-            {' '}
-            MP{' '}
-          </Text>
-          <Text color="#AA00FF">{Math.round(progress * 100)}% </Text>
-
-          <Text color="#484F58"> │ </Text>
-          <Text color="#D29922" bold>
-            {costStr}
-          </Text>
+          <Text color="#484F58">CTX </Text>
+          <Text color={tokenColor}>{barStr}</Text>
+          <Text color="#484F58"> {Math.round(progress * 100)}%</Text>
+          <Text color="#30363D">  </Text>
+          <Text color={cost > 0 ? '#D29922' : '#484F58'}>{costStr}</Text>
         </Box>
-
-        {attachedFiles.length > 0 && (
-          <>
-            <Text color="#484F58"> │ </Text>
-            <Text color="#AA00FF">INV:{attachedFiles.length}</Text>
-          </>
-        )}
-        {mcpServerCount > 0 && (
-          <>
-            <Text color="#484F58"> │ </Text>
-            <Text color="#00E5FF">🔌 {mcpServerCount}</Text>
-          </>
-        )}
       </Box>
     </Box>
   );
