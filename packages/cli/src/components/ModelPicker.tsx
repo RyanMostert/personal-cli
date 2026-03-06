@@ -3,6 +3,7 @@ import { Box, Text, useInput } from 'ink';
 import { MODEL_REGISTRY, type ProviderName, type ModelEntry, type ModelTag } from '@personal-cli/shared';
 import fuzzysort from 'fuzzysort';
 import {
+  getCopilotModelList,
   getRecentModels,
   addRecentModel,
   getCachedModels,
@@ -33,17 +34,33 @@ type RowHeader = { kind: 'header'; provider: string; label: string; collapsed: b
 type RowModel = { kind: 'model'; model: ModelEntry };
 type Row = RowHeader | RowModel;
 
-// Compute which providers exceed the threshold (runs once)
-function defaultCollapsedSet(): Set<string> {
+function getStaticModels(): ModelEntry[] {
+  return [
+    ...MODEL_REGISTRY.filter((model) => model.provider !== 'github-copilot'),
+    ...getCopilotModelList().map((model) => ({
+      provider: 'github-copilot' as ProviderName,
+      id: model.id,
+      label: model.label,
+      contextWindow: model.contextWindow,
+      inputCostPer1M: null,
+      outputCostPer1M: null,
+      free: true,
+      tags: model.tags,
+    })),
+  ];
+}
+
+function defaultCollapsedSet(models: ModelEntry[]): Set<string> {
   const counts = new Map<string, number>();
-  for (const m of MODEL_REGISTRY) counts.set(m.provider, (counts.get(m.provider) ?? 0) + 1);
+  for (const m of models) counts.set(m.provider, (counts.get(m.provider) ?? 0) + 1);
   return new Set([...counts.entries()].filter(([, c]) => c > COLLAPSE_THRESHOLD).map(([p]) => p));
 }
 
 export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
+  const staticModels = useMemo(() => getStaticModels(), []);
   const [filter, setFilter] = useState('');
   const [rowFocus, setRowFocus] = useState(0);
-  const [collapsedProviders, setCollapsedProviders] = useState<Set<string>>(defaultCollapsedSet);
+  const [collapsedProviders, setCollapsedProviders] = useState<Set<string>>(() => defaultCollapsedSet(staticModels));
   const [costSavingMode, setCostSavingMode] = useState(false);
   const [cachedModels, setCachedModels] = useState<ModelEntry[]>([]);
   const [cacheStats, setCacheStats] = useState<CacheStats[]>([]);
@@ -51,7 +68,7 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
   // Load cached models on mount
   useEffect(() => {
     const loadCached = async () => {
-      const providers: ProviderName[] = ['openrouter', 'github-copilot', 'opencode', 'opencode-zen'];
+      const providers: ProviderName[] = ['openrouter', 'opencode', 'opencode-zen'];
       const allCached: ModelEntry[] = [];
 
       for (const provider of providers) {
@@ -100,10 +117,10 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
     const recent = getRecentModels();
     return recent
       .map((r: { provider: string; modelId: string }) =>
-        MODEL_REGISTRY.find((m) => m.provider === r.provider && m.id === r.modelId),
+        staticModels.find((m) => m.provider === r.provider && m.id === r.modelId),
       )
       .filter((m): m is ModelEntry => m !== undefined);
-  }, []);
+  }, [staticModels]);
 
   // Merge static and cached models
   const allModels = useMemo(() => {
@@ -111,7 +128,7 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
     const modelMap = new Map<string, ModelEntry>();
 
     // Add static models first
-    for (const m of MODEL_REGISTRY) {
+    for (const m of staticModels) {
       modelMap.set(`${m.provider}/${m.id}`, m);
     }
 
@@ -121,7 +138,7 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
     }
 
     return Array.from(modelMap.values());
-  }, [cachedModels]);
+  }, [cachedModels, staticModels]);
 
   // Filter models
   const filtered = useMemo(() => {
