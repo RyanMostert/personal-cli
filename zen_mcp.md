@@ -6,7 +6,7 @@ This guide outlines the steps to configure your CLI assistant to use the OpenCod
 
 ## 1. Prerequisites
 - **Access to OpenCode Zen Gateway:**
-    - API endpoint URL (e.g., `https://zen-gateway.opencode.com/api/v1`)
+    - API endpoint URL (e.g., `https://opencode.ai/zen/v1`)
     - API key/token (usually provided by your administrator)
 - **Your CLI tool installed and working (with pnpm, Node.js, and necessary configs)**
 
@@ -56,19 +56,19 @@ For the most secure setup, use environment variables:
 ### **Mac/Linux:**
 ```bash
 export OPENCODE_API_KEY=sk-...
-export ZEN_ENDPOINT=https://zen-gateway.opencode.com/api/v1  # Optional
+export ZEN_ENDPOINT=https://opencode.ai/zen/v1  # Optional
 ```
 
 ### **Windows (PowerShell):**
 ```powershell
 $env:OPENCODE_API_KEY="sk-..."
-$env:ZEN_ENDPOINT="https://zen-gateway.opencode.com/api/v1"  # Optional
+$env:ZEN_ENDPOINT="https://opencode.ai/zen/v1"  # Optional
 ```
 
 ### **Windows (CMD):**
 ```cmd
 set OPENCODE_API_KEY=sk-...
-set ZEN_ENDPOINT=https://zen-gateway.opencode.com/api/v1  # Optional
+set ZEN_ENDPOINT=https://opencode.ai/zen/v1  # Optional
 ```
 
 > **Tip:** Add these to your shell profile (`.bashrc`, `.zshrc`, or PowerShell profile) for persistence.
@@ -89,7 +89,7 @@ If you prefer to configure manually, edit your MCP config file:
     "args": ["-y", "@personal-cli/zen-mcp-server"],
     "env": {
       "OPENCODE_API_KEY": "sk-...",
-      "ZEN_ENDPOINT": "https://zen-gateway.opencode.com/api/v1"
+      "ZEN_ENDPOINT": "https://opencode.ai/zen/v1"
     },
     "enabled": true,
     "timeout": 60000,
@@ -128,7 +128,7 @@ Once configured, you can use these commands:
 Expected output:
 ```
 ✅ Zen Gateway Connected
-📍 Endpoint: https://zen-gateway.opencode.com/api/v1
+📍 Endpoint: https://opencode.ai/zen/v1
 📊 Models available: 15
 ```
 
@@ -231,3 +231,4 @@ For issues or questions:
 ---
 
 **Last Updated:** 2026-03-05
+

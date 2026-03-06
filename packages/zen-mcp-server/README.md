@@ -13,12 +13,14 @@ MCP server implementation for OpenCode Zen Gateway - providing unified access to
 
 ## Installation
 
-This package is part of the `personal-cli` monorepo workspace and is not published to npm. To use it within the workspace:
+This package is part of the `personal-cli` monorepo workspace and is **not published to npm**. To use it within the workspace:
 
 ```bash
 pnpm install
 pnpm --filter @personal-cli/zen-mcp-server build
 ```
+
+The built output will be available at `packages/zen-mcp-server/dist/main.js`.
 
 ## Usage
 
@@ -27,10 +29,13 @@ pnpm --filter @personal-cli/zen-mcp-server build
 ```bash
 # Set your API key
 export OPENCODE_API_KEY=your-api-key
+export ZEN_ENDPOINT=https://opencode.ai/zen/v1
 
-# Run the server
-npx @personal-cli/zen-mcp-server
+# Run the server (from the workspace root)
+node ./packages/zen-mcp-server/dist/main.js
 ```
+
+Or configure it via personal-cli's MCP wizard using `/zen add` command.
 
 ### As a Library
 
@@ -39,7 +44,7 @@ import { ZenGatewayClient, ZenMCPServer } from '@personal-cli/zen-mcp-server';
 
 // Create a client
 const client = new ZenGatewayClient({
-  endpoint: 'https://zen-gateway.opencode.com/api/v1',
+  endpoint: 'https://opencode.ai/zen/v1',
   apiKey: 'your-api-key',
   enabled: true,
 });
@@ -69,7 +74,7 @@ import { ZenMCPServer } from '@personal-cli/zen-mcp-server';
 
 const server = new ZenMCPServer({
   config: {
-    endpoint: 'https://zen-gateway.opencode.com/api/v1',
+    endpoint: 'https://opencode.ai/zen/v1',
     apiKey: 'your-api-key',
     enabled: true,
   },
@@ -82,7 +87,7 @@ await server.start();
 ## Environment Variables
 
 - `OPENCODE_API_KEY` or `ZEN_API_KEY` - Your Zen Gateway API key (required)
-- `ZEN_ENDPOINT` - Custom endpoint URL (optional, defaults to `https://zen-gateway.opencode.com/api/v1`)
+- `ZEN_ENDPOINT` - Custom endpoint URL (optional, defaults to `https://opencode.ai/zen/v1`)
 
 ## Available MCP Tools
 
@@ -131,10 +136,11 @@ Example configuration:
 {
   "zen-gateway": {
     "transport": "stdio",
-    "command": "npx",
-    "args": ["-y", "@personal-cli/zen-mcp-server"],
+    "command": "node",
+    "args": ["./packages/zen-mcp-server/dist/main.js"],
     "env": {
-      "OPENCODE_API_KEY": "your-api-key"
+      "OPENCODE_API_KEY": "your-api-key",
+      "ZEN_ENDPOINT": "https://opencode.ai/zen/v1"
     },
     "enabled": true
   }
@@ -162,3 +168,4 @@ When integrated with personal-cli, you can use:
 ## License
 
 MIT
+

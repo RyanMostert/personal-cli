@@ -10,7 +10,7 @@ export const ZenModelSchema = z.object({
 });
 
 export const ZenGatewayConfigSchema = z.object({
-  endpoint: z.string().url().default('https://zen-gateway.opencode.com/api/v1'),
+  endpoint: z.string().url().default('https://opencode.ai/zen/v1'),
   apiKey: z.string(),
   enabled: z.boolean().default(true),
 });
@@ -25,3 +25,4 @@ export const ZenGatewayStatusSchema = z.object({
 export type ZenModel = z.infer<typeof ZenModelSchema>;
 export type ZenGatewayConfig = z.infer<typeof ZenGatewayConfigSchema>;
 export type ZenGatewayStatus = z.infer<typeof ZenGatewayStatusSchema>;
+
