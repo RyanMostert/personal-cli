@@ -34,6 +34,7 @@ import { existsSync, readFileSync, writeFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { ToolFallbackManager, createFallbackManager, type FallbackConfig } from './fallback/tool-fallback.js';
 import { AgentEventTracker, createEventTracker, type AgentEvent } from './fallback/event-tracker.js';
+import { parseStream } from './streaming-parser.js';
 
 export interface AgentOptions {
   providerManager: ProviderManager;
@@ -358,10 +359,10 @@ export class Agent {
       );
 
       try {
-        for await (const part of result.fullStream) {
-          switch (part.type) {
+        for await (const event of parseStream(result.fullStream)) {
+          switch (event.type) {
             case 'text-delta': {
-              const text = part.text;
+              const text = (event as any).delta;
               buffer += text;
 
               while (buffer.length > 0) {
@@ -449,36 +450,36 @@ export class Agent {
               break;
             }
 
-            case 'reasoning-delta': {
-              const rText = (part as any).reasoning || (part as any).text || '';
+            case 'thought-delta': {
+              const rText = (event as any).delta || '';
               thoughtText += rText;
               yield { type: 'thought-delta', delta: rText };
               break;
             }
 
-            case 'tool-call': {
-              const toolName = part.toolName;
-              const args = ('args' in part ? part.args : (part as any).input) as Record<string, unknown>;
+            case 'tool-call-start': {
+              const toolCall = (event as any).toolCall;
 
-              allToolCalls[part.toolCallId] = {
-                toolCallId: part.toolCallId,
-                toolName: toolName,
-                args: args,
+              allToolCalls[toolCall.toolCallId] = {
+                toolCallId: toolCall.toolCallId,
+                toolName: toolCall.toolName,
+                args: toolCall.args,
               };
 
               // Track tool call start
-              this.eventTracker.trackToolCall(toolName, args);
+              this.eventTracker.trackToolCall(toolCall.toolName, toolCall.args || {});
 
               yield {
                 type: 'tool-call-start',
-                toolCall: allToolCalls[part.toolCallId],
+                toolCall: allToolCalls[toolCall.toolCallId],
               };
               break;
             }
 
-            case 'tool-result': {
-              const toolName = part.toolName;
-              const rawToolResult = 'result' in part ? part.result : (part as any).output;
+            case 'tool-call-result': {
+              const toolCall = (event as any).toolCall;
+              const toolName = toolCall.toolName;
+              const rawToolResult = toolCall.result;
 
               // Normalize tool result - extract output string if it's an object
               const toolResult: unknown = rawToolResult;
@@ -496,8 +497,8 @@ export class Agent {
                 }
               }
 
-              if (allToolCalls[part.toolCallId]) {
-                allToolCalls[part.toolCallId].result = toolResult;
+              if (allToolCalls[toolCall.toolCallId]) {
+                allToolCalls[toolCall.toolCallId].result = toolResult;
               }
 
               // Track the tool result
@@ -506,12 +507,12 @@ export class Agent {
               // Check if we need fallback - use the normalized result
               const needsFallback = this.fallbackManager.shouldAttemptFallback(toolName, resultForCheck);
 
-              if (needsFallback && allToolCalls[part.toolCallId]) {
-                const args = allToolCalls[part.toolCallId].args || {};
+              if (needsFallback && allToolCalls[toolCall.toolCallId]) {
+                const args = allToolCalls[toolCall.toolCallId].args || {};
 
                 // Yield fallback attempt event
                 yield {
-                  type: 'system' as const,
+                  type: 'system',
                   message: `Tool "${toolName}" returned no results. Attempting fallback strategies...`,
                 };
 
@@ -542,41 +543,41 @@ export class Agent {
                   if (fallbackResult.output.includes('[LLM_SYNTHESIS_NEEDED]')) {
                     const query = fallbackResult.output.replace('[LLM_SYNTHESIS_NEEDED]', '').trim();
                     yield {
-                      type: 'system' as const,
+                      type: 'system',
                       message: `No instant results found. Generating explanation for: "${query}"...`,
                     };
 
                     // Synthesize answer
                     const synthesizedAnswer = await this.synthesizeAnswer(query);
-                    allToolCalls[part.toolCallId].result = synthesizedAnswer;
+                    allToolCalls[toolCall.toolCallId].result = synthesizedAnswer;
 
                     yield {
-                      type: 'system' as const,
+                      type: 'system',
                       message: `✓ Generated explanation based on AI knowledge`,
                     };
                   } else if (fallbackResult.output.includes('[CODE_SEARCH_NEEDED]')) {
                     yield {
-                      type: 'system' as const,
+                      type: 'system',
                       message: `Searching codebase for relevant examples...`,
                     };
                   } else if (fallbackResult.source === 'web_fetch_recovery') {
                     // For web fetch failures, show the helpful recovery message
-                    allToolCalls[part.toolCallId].result = fallbackResult.output;
+                    allToolCalls[toolCall.toolCallId].result = fallbackResult.output;
                     yield {
-                      type: 'system' as const,
+                      type: 'system',
                       message: fallbackResult.output,
                     };
                   } else {
                     // Update the tool result with fallback output
-                    allToolCalls[part.toolCallId].result = fallbackResult.output;
+                    allToolCalls[toolCall.toolCallId].result = fallbackResult.output;
                     yield {
-                      type: 'system' as const,
+                      type: 'system',
                       message: `Fallback successful: ${fallbackResult.output.slice(0, 200)}${fallbackResult.output.length > 200 ? '...' : ''}`,
                     };
                   }
                 } else {
                   yield {
-                    type: 'system' as const,
+                    type: 'system',
                     message: `Fallback strategies exhausted. I'll provide the best answer I can based on available information.`,
                   };
                 }
@@ -585,25 +586,34 @@ export class Agent {
               yield {
                 type: 'tool-call-result',
                 toolCall: {
-                  toolCallId: part.toolCallId,
-                  toolName: part.toolName,
-                  result: allToolCalls[part.toolCallId]?.result || toolResult,
+                  toolCallId: toolCall.toolCallId,
+                  toolName: toolName,
+                  result: allToolCalls[toolCall.toolCallId]?.result || toolResult,
                 },
               };
               break;
             }
 
+            case 'system': {
+              yield event as any;
+              break;
+            }
+
             case 'error':
-              throw part.error;
+              throw (event as any).error;
+
+            case 'finish': {
+              const usage = (event as any).usage;
+              if (usage) {
+                totalPromptTokens += usage.promptTokens ?? 0;
+                totalCompletionTokens += usage.completionTokens ?? 0;
+              }
+              break;
+            }
 
             default: {
-              if ((part as any).type === 'step-finish') {
-                const p = part as any;
-                if (p.usage) {
-                  totalPromptTokens += p.usage.promptTokens ?? 0;
-                  totalCompletionTokens += p.usage.completionTokens ?? 0;
-                }
-              }
+              // unknown event types - surface for debugging
+              yield { type: 'system', message: `Unhandled stream event: ${(event as any).type}` };
               break;
             }
           }
