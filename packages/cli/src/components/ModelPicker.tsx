@@ -9,6 +9,7 @@ import {
   getCachedModels,
   convertToModelEntry,
   getAllCacheStats,
+  isCopilotAuthenticated,
   type CacheStats,
 } from '@personal-cli/core';
 
@@ -64,6 +65,28 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
   const [costSavingMode, setCostSavingMode] = useState(false);
   const [cachedModels, setCachedModels] = useState<ModelEntry[]>([]);
   const [cacheStats, setCacheStats] = useState<CacheStats[]>([]);
+
+  // Opt-in POC for enhanced ModelPicker UI (enable with env PERSONAL_CLI_MODEL_PICKER_POC=1)
+  const MODEL_PICKER_POC =
+    (process.env.PERSONAL_CLI_MODEL_PICKER_POC ?? '').toLowerCase() === '1' ||
+    (process.env.PERSONAL_CLI_MODEL_PICKER_POC ?? '').toLowerCase() === 'true';
+
+  // Detect Copilot auth state for subscription-aware entries
+  const copilotAuth = useMemo(() => {
+    try {
+      return isCopilotAuthenticated();
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // Small heuristic for recommending models in the UI
+  const isRecommended = (m: ModelEntry): boolean => {
+    if (m.free) return true;
+    if (m.tags?.includes('coding')) return true;
+    if (m.inputCostPer1M != null && m.inputCostPer1M < 1) return true;
+    return false;
+  };
 
   // Load cached models on mount
   useEffect(() => {
@@ -410,6 +433,20 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
                   </Text>
                 ))}
               </Box>
+              {MODEL_PICKER_POC && (
+                <Box marginLeft={1}>
+                  {isRecommended(m) && (
+                    <Text color="#00FFAA" bold>
+                      ★ recommended{' '}
+                    </Text>
+                  )}
+                  {m.provider === 'github-copilot' && !copilotAuth && (
+                    <Text color="#FF5555" bold>
+                      🔒 login to use
+                    </Text>
+                  )}
+                </Box>
+              )}
             </Box>
           );
         })}
