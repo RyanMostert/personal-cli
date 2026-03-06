@@ -59,3 +59,6 @@ export { getProviderEntries, getProviderEntry } from './providers/provider-facto
 
 // MCP Config
 export { loadMCPConfig, saveMCPConfig, removeMCPConfig } from './config/mcp.js';
+
+// Config store abstraction
+export { ConfigStore, InMemoryConfigStore, createInMemoryConfigStore } from './config/config-store.js';
