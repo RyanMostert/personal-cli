@@ -8,6 +8,9 @@ dist/
 .DS_Store
 opencode-explore
 openrouter.md
-packages/cli/src/components/.js
-packages/cli/src/components/.js.map
-packages/cli/src/components/.d.ts
+
+# Compiled artifacts that tsc emits next to source files (should always go to dist/)
+packages/*/src/**/*.js
+packages/*/src/**/*.js.map
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.d.ts.map

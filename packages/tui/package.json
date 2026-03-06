@@ -4,8 +4,12 @@
   "private": true,
   "type": "module",
   "main": "dist/index.js",
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^5.7.0"
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsup src/index.ts --format esm --dts --external ink react --external @personal-cli/core --external @personal-cli/shared --platform node",
     "start": "node dist/cli.js",
     "test": "vitest"
   }

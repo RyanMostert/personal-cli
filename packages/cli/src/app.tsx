@@ -1,33 +1,37 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { PasteHandler } from './components/PasteHandler';
 import { Box, Text, useInput, useApp, Static } from 'ink';
-import { StatusBar } from './components/StatusBar.js';
-import { MessageView } from './components/MessageView.js';
-import { StreamingMessage } from './components/StreamingMessage.js';
-import { WelcomeScreen } from './components/WelcomeScreen.js';
-import { GameOverScreen } from './components/GameOverScreen.js';
-import { InputBox } from './components/InputBox.js';
-import { ToolCallView } from './components/ToolCallView.js';
-import { PermissionPrompt } from './components/PermissionPrompt.js';
-import { QuestionPrompt } from './components/QuestionPrompt.js';
-import { ModelPicker } from './components/ModelPicker.js';
-import { ProviderManager } from './components/ProviderManager.js';
-import { ProviderWizard } from './components/ProviderWizard.js';
-import { HistoryPicker } from './components/HistoryPicker.js';
-import { MCPManager } from './components/MCPManager.js';
-import { MCPWizard } from './components/MCPWizard.js';
-import { PluginManager } from './components/PluginManager.js';
-import { PluginWizard } from './components/PluginWizard.js';
-import { OnboardingWizard } from './components/OnboardingWizard.js';
-import { CommandAutocomplete, filterCommands } from './components/CommandAutocomplete.js';
+import {
+  StatusBar,
+  MessageView,
+  StreamingMessage,
+  WelcomeScreen,
+  GameOverScreen,
+  InputBox,
+  ToolCallView,
+  PermissionPrompt,
+  QuestionPrompt,
+  ModelPicker,
+  ProviderManager,
+  ProviderWizard,
+  HistoryPicker,
+  MCPManager,
+  MCPWizard,
+  PluginManager,
+  PluginWizard,
+  OnboardingWizard,
+  CommandAutocomplete,
+  filterCommands,
+  FileAutocomplete,
+  SidePanel,
+  FileExplorer,
+  KeyHintOverlay,
+  KeybindingManager,
+  CostRecommendation,
+  shouldShowRecommendation,
+  PasteHandler,
+} from '../../tui/src/index.js';
 import { dispatch, getCommands, tryMatchIntent } from './commands/registry.js';
 import type { CommandContext } from './types/commands.js';
-import { FileAutocomplete } from './components/FileAutocomplete.js';
-import { SidePanel } from './components/SidePanel.js';
-import { FileExplorer } from './components/FileExplorer.js';
-import { KeyHintOverlay } from './components/KeyHintOverlay.js';
-import { KeybindingManager } from './components/KeybindingManager.js';
-import { CostRecommendation, shouldShowRecommendation } from './components/CostRecommendation.js';
 import { useAgent } from './hooks/useAgent.js';
 import { useOverlay } from './context/OverlayContext.js';
 import { useSetTheme } from './context/ThemeContext.js';
