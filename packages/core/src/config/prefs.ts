@@ -7,6 +7,7 @@ const PREFS_FILE = join(homedir(), '.personal-cli', 'prefs.json');
 interface Prefs {
   theme?: string;
   recentModels?: Array<{ provider: string; modelId: string }>;
+  telemetryEnabled?: boolean;
 }
 
 function readPrefs(): Prefs {
@@ -14,7 +15,7 @@ function readPrefs(): Prefs {
     if (existsSync(PREFS_FILE)) {
       return JSON.parse(readFileSync(PREFS_FILE, 'utf-8')) as Prefs;
     }
-  } catch {
+  } catch (err) {
     // Ignore errors
   }
   return {};
@@ -23,9 +24,19 @@ function readPrefs(): Prefs {
 function writePrefs(prefs: Prefs): void {
   try {
     writeFileSync(PREFS_FILE, JSON.stringify(prefs, null, 2), { mode: 0o600 });
-  } catch {
+  } catch (err) {
     // Ignore errors
   }
+}
+
+export function getTelemetryEnabled(): boolean {
+  return readPrefs().telemetryEnabled ?? false;
+}
+
+export function setTelemetryEnabled(enabled: boolean): void {
+  const prefs = readPrefs();
+  prefs.telemetryEnabled = enabled;
+  writePrefs(prefs);
 }
 
 export function getTheme(): string {

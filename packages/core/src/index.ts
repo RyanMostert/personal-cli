@@ -15,7 +15,9 @@ export {
 export type { ConversationMeta, SavedConversation } from './persistence/conversations.js';
 export { getFrecency, getBatchFrecency, getTopRecentFiles, recordAccess } from './persistence/frecency.js';
 export { appendHistory, loadHistory } from './persistence/history.js';
-export { getTheme, setTheme, getRecentModels, addRecentModel } from './config/prefs.js';
+export { getTheme, setTheme, getRecentModels, addRecentModel, getTelemetryEnabled, setTelemetryEnabled } from './config/prefs.js';
+export { trackEvent } from './telemetry.js';
+export type { TelemetryEvent } from './telemetry.js';
 export {
   startDeviceFlow,
   pollForGitHubToken,

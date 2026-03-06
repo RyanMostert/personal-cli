@@ -87,7 +87,9 @@ export class Agent {
         try {
           const content = readFileSync(p, 'utf-8').trim();
           projectHints.push(`### Source: ${file}\n${content}`);
-        } catch {}
+        } catch (err) {
+          // Ignore unreadable hint files
+        }
       }
     }
 
@@ -243,13 +245,17 @@ export class Agent {
     let listing = '';
     try {
       listing = readdirSync(cwd).slice(0, 30).join(', ');
-    } catch {}
+    } catch (err) {
+      // Ignore if we can't read the directory
+    }
 
     let pkgJson = '';
     try {
       const p = join(cwd, 'package.json');
       if (existsSync(p)) pkgJson = readFileSync(p, 'utf-8').slice(0, 1000);
-    } catch {}
+    } catch (err) {
+      // Ignore if we can't read package.json
+    }
 
     const prompt = `Analyze the following project and write a concise AGENTS.md file. This file will be prepended to the AI assistant's system prompt on every session, so make it useful: include what the project is, its tech stack, key directories/files, important conventions, and anything an AI coding assistant should know before touching the code.\n\nProject files: ${listing}\n\n${pkgJson ? `package.json (truncated):\n${pkgJson}` : ''}\n\nWrite AGENTS.md content only — no markdown code fences, no preamble. Start directly with a heading.`;
 
@@ -290,6 +296,16 @@ export class Agent {
   }
 
   async *sendMessage(userContent: string, attachedFiles?: Attachment[]): AsyncGenerator<StreamEvent> {
+    // 1. Check for auto-compaction if over 85% budget
+    if (this.totalTokensUsed > this.tokenBudget * 0.85) {
+      yield {
+        type: 'system',
+        message: 'Neural buffer at 85% capacity. Commencing auto-compaction...',
+      };
+      await this.compact();
+      this.totalTokensUsed = 0; // Reset after compaction as we start fresh
+    }
+
     // Build context block if files are attached
     const contextBlock = attachedFiles?.length
       ? `<context>\n${attachedFiles.map((f) => `<file path="${f.path}">\n${f.content || ''}\n</file>`).join('\n')}\n</context>\n\n`
@@ -303,12 +319,6 @@ export class Agent {
       timestamp: Date.now(),
     };
     this.messages.push(userMessage);
-
-    // Auto-compact when token usage crosses 85% of budget
-    if (this.totalTokensUsed > this.tokenBudget * 0.85) {
-      await this.compact();
-      yield { type: 'system', message: 'Context auto-compacted to stay within token budget.' };
-    }
 
     // Add user message to coreMessages
     this.coreMessages.push({ role: 'user', content: fullContent });
@@ -471,7 +481,7 @@ export class Agent {
               const rawToolResult = 'result' in part ? part.result : (part as any).output;
 
               // Normalize tool result - extract output string if it's an object
-              let toolResult: unknown = rawToolResult;
+              const toolResult: unknown = rawToolResult;
               let resultForCheck: unknown = rawToolResult;
 
               if (typeof rawToolResult === 'object' && rawToolResult !== null) {
@@ -645,7 +655,7 @@ export class Agent {
               const toolName = recipientMatch[1].replace(/^functions\./, '');
 
               // Parse parameters
-              let args: Record<string, unknown> = {};
+              const args: Record<string, unknown> = {};
               if (paramsMatch) {
                 const paramsStr = paramsMatch[1];
                 // Parse key: value pairs
@@ -704,7 +714,10 @@ export class Agent {
               this.conversationId,
             );
             if (!this.conversationId) this.conversationId = id;
-          } catch {}
+          } catch (err) {
+            // Silently fail to save history - avoids breaking UI but could be logged to telemetry
+            console.error('Background save history failed', err);
+          }
         });
       }
 
@@ -726,7 +739,9 @@ export class Agent {
           this.conversationId,
         );
         if (!this.conversationId) this.conversationId = id;
-      } catch {}
+      } catch (err) {
+        console.error('Failed to save history:', err);
+      }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
         yield { type: 'finish', usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 } };

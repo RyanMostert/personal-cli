@@ -63,3 +63,39 @@ This document outlines the strategic plan for evolving Personal-CLI into a world
 2. **Editor Integration & NLP** (Done)
 3. **Plugin Architecture & Persistence** (Done)
 4. **Polishing & Theming** (Done)
+
+---
+
+# Codebase Improvement Plan (2026-03)
+
+## Overview
+This plan addresses missing features and improvement areas identified in the latest codebase review. It focuses on onboarding, help overlays, error handling, clipboard/image support, usage tracking, telemetry, and code/documentation cleanup.
+
+## Todos
+
+1. **Onboarding & Help Flows**
+   - [x] Implement a guided onboarding wizard for new users.
+   - [x] Expand `/help` overlays with contextual tips and usage samples.
+   - [x] Add explicit onboarding documentation and quickstart guides.
+
+2. **Clipboard/Image Support**
+   - [x] Complete TODOs in `useClipboardImage.ts` to support more image types and clipboard formats.
+   - [x] Add error handling and user feedback for unsupported formats.
+
+3. **Error Handling & Reliability**
+   - [x] Audit all modules for minimal or missing error handling (e.g., empty catch blocks).
+   - [x] Standardize error reporting and user-facing error messages.
+
+4. **Usage Tracking & Telemetry**
+   - [x] Implement usage tracking and auto-compaction features as planned.
+   - [x] Add telemetry/monitoring with user opt-in and clear privacy documentation.
+
+5. **Documentation & Code Cleanup**
+   - [x] Update and expand documentation for all major features and flows.
+   - [x] Remove legacy/untracked directories and files as noted in review feedback.
+   - [x] Address all TODOs and FIXMEs in code and docs.
+
+## Notes
+- Prioritize onboarding/help and error handling for immediate user impact.
+- Reference `plan.md`, `future_plan.md`, and review feedback files for additional context.
+- Track progress using the todos table and update this plan as work proceeds.

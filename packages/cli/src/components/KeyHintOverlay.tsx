@@ -12,6 +12,11 @@ export function KeyHintOverlay({ onClose }: Props) {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const categories: Record<string, Keybinding[]> = {
+    ESSENTIAL_TIPS: [
+      { id: 'tip_cmd', combo: { input: '/' }, action: '', description: 'Type / for all commands', category: 'global' },
+      { id: 'tip_file', combo: { input: '@' }, action: '', description: 'Type @ to attach context', category: 'global' },
+      { id: 'tip_mode', combo: { key: 'tab' }, action: '', description: 'Cycle ask/plan/build', category: 'global' },
+    ],
     GLOBAL_COMMANDS: DEFAULT_KEYBINDINGS.filter((k) => k.category === 'global'),
     NAVIGATION: DEFAULT_KEYBINDINGS.filter((k) => k.category === 'navigation'),
     PANEL_CONTROLS: DEFAULT_KEYBINDINGS.filter((k) => k.category === 'panel'),

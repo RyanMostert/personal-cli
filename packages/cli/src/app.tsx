@@ -18,6 +18,7 @@ import { MCPManager } from './components/MCPManager.js';
 import { MCPWizard } from './components/MCPWizard.js';
 import { PluginManager } from './components/PluginManager.js';
 import { PluginWizard } from './components/PluginWizard.js';
+import { OnboardingWizard } from './components/OnboardingWizard.js';
 import { CommandAutocomplete, filterCommands } from './components/CommandAutocomplete.js';
 import { dispatch, getCommands, tryMatchIntent } from './commands/registry.js';
 import type { CommandContext } from './types/commands.js';
@@ -52,6 +53,9 @@ import {
   loadMCPConfig,
   saveMCPConfig,
   removeMCPConfig,
+  getTelemetryEnabled,
+  setTelemetryEnabled,
+  trackEvent,
 } from '@personal-cli/core';
 import { MCPClientManager, type MCPServerConfig, type ToolResult } from '@personal-cli/mcp-client';
 import {
@@ -293,10 +297,17 @@ export function App({ initialAttachments = [] }: AppProps) {
   const isManagingPlugins = overlay.type === 'plugin-manager';
   const pluginWizardMode = overlay.type === 'plugin-wizard' ? (overlay.props?.mode as 'add' | 'edit') : null;
   const pluginWizardName = overlay.type === 'plugin-wizard' ? (overlay.props?.pluginName as string) : null;
+  const isOnboarding = overlay.type === 'onboarding';
   const [activePlugins, setActivePlugins] = useState<import('@personal-cli/tools').LoadedPlugin[]>([]);
 
   useEffect(() => {
     setInputHistory(loadPromptHistory());
+    
+    // Trigger onboarding if no providers are configured
+    const auth = readAuth();
+    if (Object.keys(auth).length === 0 && messages.length === 0) {
+      open('onboarding');
+    }
   }, []);
 
   // Load initial attachments from CLI arguments
@@ -829,6 +840,7 @@ export const helloWorld = async ({ name = 'World' }) => {
       const intentMatch = tryMatchIntent(trimmed);
       if (intentMatch) {
         const fullCmd = `${intentMatch.cmd} ${intentMatch.args}`.trim();
+        trackEvent('command_intent', { original: trimmed, mapped: fullCmd });
         const handled = await dispatch(fullCmd, ctx);
         if (handled) {
           setInputValue('');
@@ -836,7 +848,25 @@ export const helloWorld = async ({ name = 'World' }) => {
         }
       }
 
+      // Track raw command execution (if it looks like a slash command)
+      if (trimmed.startsWith('/')) {
+        trackEvent('command_run', { command: trimmed.split(' ')[0] });
+      }
+
       // Original manual cases (kept for compatibility or until migrated)
+      if (trimmed === '/telemetry on' || trimmed === '/telemetry off') {
+        const turnOn = trimmed === '/telemetry on';
+        setTelemetryEnabled(turnOn);
+        addSystemMessage(turnOn ? 'Telemetry enabled.' : 'Telemetry disabled.');
+        setInputValue('');
+        return;
+      }
+      if (trimmed === '/telemetry') {
+        const isEnabled = getTelemetryEnabled();
+        addSystemMessage(`Telemetry is currently ${isEnabled ? 'ON' : 'OFF'}. Use /telemetry [on|off] to change.`);
+        setInputValue('');
+        return;
+      }
       if (trimmed === '/exit' || trimmed === '/quit') {
         setIsGameOver(true);
         return;
@@ -1218,13 +1248,16 @@ export const helloWorld = async ({ name = 'World' }) => {
     isManagingMCP ||
     !!mcpWizardMode ||
     isManagingPlugins ||
-    !!pluginWizardMode;
+    !!pluginWizardMode ||
+    isOnboarding;
 
   return (
     <>
       <PasteHandler
         onAttach={async (attachment) => {
-          if (attachment.type === 'path') {
+          if (attachment.type === 'error') {
+            addSystemMessage(`Clipboard Error: ${attachment.mimeType}`);
+          } else if (attachment.type === 'path') {
             const ok = await attachFile(attachment.path);
             addSystemMessage(
               ok ? `Attached (Paste/Drop): ${attachment.path}` : `Error: could not attach ${attachment.path}`,
@@ -1405,6 +1438,13 @@ export const helloWorld = async ({ name = 'World' }) => {
                   close();
                 }}
                 onClose={() => close()}
+              />
+            )}
+            {isOnboarding && (
+              <OnboardingWizard
+                configuredProviders={Object.keys(readAuth())}
+                onAddProvider={(id) => open('provider-wizard', { providerId: id })}
+                onComplete={() => close()}
               />
             )}
           </Box>

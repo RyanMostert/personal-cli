@@ -12,6 +12,7 @@ type OverlayType =
   | 'mcp-wizard'
   | 'plugin-manager'
   | 'plugin-wizard'
+  | 'onboarding'
   | null;
 
 interface OverlayState {

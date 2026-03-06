@@ -15,8 +15,12 @@ export const PasteHandler: React.FC<Props> = ({ onAttach }) => {
     const handlePaste = async () => {
       // 1. Try Image extraction (base64 PNG)
       const img = await extractClipboardImage();
-      if (img) {
-        onAttach({ ...img, type: 'image' });
+      if (img && 'error' in img) {
+        // Log error but proceed to path detection as fallback
+        onAttach({ path: '', name: '', type: 'error', mimeType: img.error as string });
+        return;
+      } else if (img) {
+        onAttach({ ...(img as { path: string; name: string; mimeType: string }), type: 'image' });
         return;
       }
 
