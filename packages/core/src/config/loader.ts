@@ -3,6 +3,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { parse as parseYaml } from 'yaml';
 import { ProvidersConfigSchema, AgentConfigSchema, MCPConfigSchema, type AppConfig } from '@personal-cli/shared';
+export type { AppConfig };
 import { CONFIG_DIR, CONFIG_PROVIDERS_FILE, DEFAULT_PROVIDER, DEFAULT_MODEL } from '@personal-cli/shared';
 
 const settingsPath = join(homedir(), CONFIG_DIR, 'settings.json');

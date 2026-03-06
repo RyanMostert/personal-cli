@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import { getCommands } from '../commands/registry.js';
-import type { Command } from '../commands/registry.js';
+import type { Command } from '../commands/types.js';
 import { getAllToolSchemas } from '@personal-cli/tools';
 
 // Re-export for backward compatibility

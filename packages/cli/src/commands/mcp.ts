@@ -1,10 +1,11 @@
+import type { CommandContext } from '../types/commands.js';
 import type { Command } from './types.js';
 
 export const mcpCommands: Command[] = [
   {
     cmd: '/mcp',
     description: 'Manage MCP servers and external tools',
-    handler: (args, ctx) => {
+    handler: (args: string, ctx: CommandContext) => {
       if (!args) {
         ctx.openMCPManager();
         return;
@@ -17,7 +18,7 @@ export const mcpCommands: Command[] = [
     description: 'Manage Zen Gateway MCP server',
     category: 'mcp',
     examples: ['/zen status', '/zen models', '/zen add'],
-    handler: async (args, ctx) => {
+    handler: async (args: string, ctx: CommandContext) => {
       const parts = args.trim().split(/\s+/);
       const subcommand = parts[0];
 
