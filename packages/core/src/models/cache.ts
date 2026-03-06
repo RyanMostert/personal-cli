@@ -78,6 +78,11 @@ export async function cacheModels(provider: ProviderName, models: FetchedModelEn
 }
 
 export async function getCachedModels(provider: ProviderName): Promise<FetchedModelEntry[] | null> {
+  // Temporarily avoid returning cached GitHub Copilot models so the authoritative
+  // core copilot fetcher (getCopilotModelList) remains the single source of truth.
+  // This prevents stale cached entries from overriding the dynamic copilot list.
+  if (provider === 'github-copilot') return null;
+
   const cache = await loadModelCache();
   const entry = cache[provider];
   if (!entry) return null;
