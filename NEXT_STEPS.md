@@ -72,12 +72,12 @@ Notes & context
 
 
 
-## New: TUI folder (packages/TUI) — preferred (non-package)
+## New: TUI folder (packages/tui) — preferred (non-package)
 
-Decision: prefer a plain folder under `packages/` (packages/TUI) rather than adding a separate workspace package. The previously-added `packages/tui` package skeleton can be treated as an initial artifact; Gemini should either move those sources into `packages/TUI` (no package.json) or re-create the TUI inside `packages/TUI` so the UI lives as part of the repo tree without being published as its own package.
+Decision: prefer a plain folder under `packages/` (packages/tui) rather than adding a separate workspace package. The existing `packages/tui` package skeleton can be treated as the canonical TUI location; Gemini should either reconcile it as a repo-local folder (remove package.json) or keep it as the working TUI source and update references accordingly so the UI lives as part of the repo tree without being published as its own package.
 
 Implementation tasks (prioritized):
-1. Create `packages/TUI/` with a simple structure: `src/`, `src/components/`, `src/hooks/`, `src/cli.ts` (entry), `README.md`, and a `tsconfig.json` that extends the repo `tsconfig.base.json`. Do not add a package.json unless later converting this to a workspace package is desired.
+1. Create `packages/tui/` with a simple structure if needed: `src/`, `src/components/`, `src/hooks/`, `src/cli.ts` (entry), `README.md`, and a `tsconfig.json` that extends the repo `tsconfig.base.json`. Do not add a package.json unless later converting this to a workspace package is desired.
 2. Implement the interactive TUI using Ink (recommended) or Blessed/terminal-kit. Components: App shell, MessageView, InputBox, ModelPicker, ProviderWizard, StatusBar, StreamingMessage.
 3. Streaming integration: consume `parseStream()` from `@personal-cli/core` to normalize events and render incremental `text-delta` updates; mirror the buffering/flush strategy from `useAgent` to avoid excessive render churn.
 4. Provider onboarding & test connection: call `testProviderConnection()` (core) and wire full ProviderWizard flows including OAuth/device flow for Copilot when required.
@@ -85,10 +85,12 @@ Implementation tasks (prioritized):
 6. Keybindings and command mapping: map `/settings`, `/provider`, `/model`, `/mode`, and other commands to intuitive keys and a command palette.
 7. Tests & CI: add vitest tests (component snapshots, streaming smoke tests) and ensure CI remains green.
 
+Update (assistant): packages/tui/src/index.ts was updated to re-export core CLI UI components (StatusBar, StreamingMessage, MessageView, InputBox, ModelPicker, ProviderWizard) and contexts/hooks; a minimal createTUI() skeleton and a CLI entry (packages/tui/src/cli.ts) were added as placeholders. Components still live under packages/cli/src/components — Gemini can either move them into packages/tui/src/components or use these re-exports as the centralized surface to start implementing the TUI without code duplication.
+
 Migration notes (for maintainers):
-- Move the existing `packages/tui/src` files into `packages/TUI/src` and remove `packages/tui/package.json` if it should not be a workspace package.
+- Reconcile the existing `packages/tui` artifact: either keep `packages/tui` as the canonical TUI folder (remove its package.json to make it a repo-local folder) or move its `src` files to a newly-created `packages/tui` repo-local folder and remove the old package.json. Ensure imports and NEXT_STEPS.md reference `packages/tui` consistently.
 - Update any workspace scripts or references that pointed to `@personal-cli/tui` so they instead reference the repo-local TUI entry or the CLI runtime that launches it.
-- If later publishing/separating the TUI is desired, add a package.json and convert `packages/TUI` into a workspace package named `@personal-cli/tui`.
+- If later publishing/separating the TUI is desired, add a package.json and convert `packages/tui` into a workspace package named `@personal-cli/tui`.
 
 How to run locally (for development):
 - Development: run the TUI entry directly (e.g. `node packages/TUI/src/cli.ts`) or add a dev script in the root package.json that launches the TUI via Node.js/ts-node.
