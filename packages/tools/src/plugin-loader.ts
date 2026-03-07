@@ -232,6 +232,94 @@ export function getBuiltInToolSchemas(): ToolSchema[] {
         options: { type: 'array', required: true },
       },
     },
+    // ── File system operations ──────────────────────────────────────────────
+    {
+      name: 'moveFile',
+      description: 'Move or rename a file or directory',
+      category: 'file',
+      args: {
+        source: { type: 'string', required: true },
+        destination: { type: 'string', required: true },
+        overwrite: { type: 'boolean' },
+      },
+    },
+    {
+      name: 'copyFile',
+      description: 'Copy a file or directory to a new location',
+      category: 'file',
+      args: {
+        source: { type: 'string', required: true },
+        destination: { type: 'string', required: true },
+        overwrite: { type: 'boolean' },
+      },
+    },
+    {
+      name: 'deleteFile',
+      description: 'Delete a file or directory (soft-delete to trash for undo recovery)',
+      category: 'file',
+      args: {
+        path: { type: 'string', required: true },
+        recursive: { type: 'boolean' },
+      },
+    },
+    // ── Multi-file editing ──────────────────────────────────────────────────
+    {
+      name: 'batchEdit',
+      description: 'Search-and-replace across multiple files matching a glob pattern',
+      category: 'file',
+      args: {
+        pattern: { type: 'string', required: true },
+        replacement: { type: 'string', required: true },
+        glob: { type: 'string', required: true },
+        isRegex: { type: 'boolean' },
+        flags: { type: 'string' },
+        dryRun: { type: 'boolean' },
+      },
+    },
+    // ── Testing ─────────────────────────────────────────────────────────────
+    {
+      name: 'runTests',
+      description: 'Run the project test suite (auto-detects vitest/jest/mocha)',
+      category: 'system',
+      args: {
+        filter: { type: 'string' },
+        cwd: { type: 'string' },
+      },
+    },
+    // ── Workspace memory ────────────────────────────────────────────────────
+    {
+      name: 'memoryWrite',
+      description: 'Store a named fact in workspace memory (.pcli-memory.json)',
+      category: 'utility',
+      args: {
+        key: { type: 'string', required: true },
+        value: { type: 'string', required: true },
+      },
+    },
+    {
+      name: 'memoryRead',
+      description: 'Read one or all entries from workspace memory',
+      category: 'utility',
+      args: { key: { type: 'string' } },
+    },
+    {
+      name: 'memoryDelete',
+      description: 'Delete a key from workspace memory',
+      category: 'utility',
+      args: { key: { type: 'string', required: true } },
+    },
+    // ── Notifications ───────────────────────────────────────────────────────
+    {
+      name: 'notifyUser',
+      description: 'Notify the user when a long-running task completes (terminal bell + status-bar flash)',
+      category: 'utility',
+      args: {
+        title: { type: 'string', required: true },
+        body: { type: 'string' },
+        level: { type: 'string' },
+        osNotify: { type: 'boolean' },
+      },
+    },
   ];
 }
 

@@ -14,6 +14,10 @@ interface Props {
   mcpServerCount?: number;
   activeToolCount?: number;
   leaderKeyActive?: boolean;
+  /** Current tool name being executed, for inline display. */
+  activeToolName?: string;
+  /** Flash notification from notifyUser tool. */
+  notification?: { title: string; level: 'info' | 'success' | 'warning' | 'error' } | null;
 }
 
 const HINTS = [
@@ -36,8 +40,11 @@ export function StatusBar({
   mcpServerCount = 0,
   activeToolCount = 0,
   leaderKeyActive = false,
+  activeToolName,
+  notification,
 }: Props) {
   const [hintIndex, setHintIndex] = useState(0);
+  const [flashVisible, setFlashVisible] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -45,6 +52,14 @@ export function StatusBar({
     }, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  // Flash notification for 4 seconds when a new one arrives
+  useEffect(() => {
+    if (!notification) return;
+    setFlashVisible(true);
+    const t = setTimeout(() => setFlashVisible(false), 4000);
+    return () => clearTimeout(t);
+  }, [notification]);
 
   const progress = Math.min(1, tokensUsed / tokenBudget);
   const bars = 16;
@@ -81,13 +96,33 @@ export function StatusBar({
 
   return (
     <Box flexDirection="column" marginTop={1}>
-      {/* Activity / Hint Line */}
+      {/* Activity / Hint / Notification Line */}
       <Box paddingX={1} marginBottom={0}>
-        {(isStreaming || activeToolCount > 0 || leaderKeyActive) ? (
+        {flashVisible && notification ? (
+          <Box>
+            <Text color={
+              notification.level === 'error' ? '#F85149' :
+              notification.level === 'warning' ? '#D29922' :
+              notification.level === 'success' ? '#3FB950' : '#00E5FF'
+            } bold>
+              {'! '}
+            </Text>
+            <Text color={
+              notification.level === 'error' ? '#F85149' :
+              notification.level === 'warning' ? '#D29922' :
+              notification.level === 'success' ? '#3FB950' : '#6E7681'
+            }>{notification.title}</Text>
+          </Box>
+        ) : (isStreaming || activeToolCount > 0 || leaderKeyActive) ? (
           <Box>
             <Text color="#00E5FF">{spinner} </Text>
-            {isStreaming && <Text color="#6E7681">receiving</Text>}
-            {activeToolCount > 0 && <Text color="#D29922"> · {activeToolCount} tool{activeToolCount > 1 ? 's' : ''} active</Text>}
+            {isStreaming && !activeToolName && <Text color="#6E7681">receiving</Text>}
+            {isStreaming && activeToolName && (
+              <Text color="#6E7681">running <Text color="#D29922">{activeToolName}</Text></Text>
+            )}
+            {activeToolCount > 0 && !isStreaming && (
+              <Text color="#D29922">{activeToolCount} tool{activeToolCount > 1 ? 's' : ''} active</Text>
+            )}
             {leaderKeyActive && <Text color="#FF00AA"> · leader — waiting…</Text>}
           </Box>
         ) : (
