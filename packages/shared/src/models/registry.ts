@@ -1,4 +1,6 @@
 import type { ProviderName } from '../types/index.js';
+import type { ModelEntry, ModelTag } from './types.js';
+export type { ModelEntry, ModelTag } from './types.js';
 import { opencodeZenModels } from './opencode-zen.js';
 import { anthropicModels } from './anthropic.js';
 import { openaiModels } from './openai.js';
@@ -6,19 +8,6 @@ import { googleModels } from './google.js';
 import { openrouterModels } from './openrouter.js';
 import { deepseekModels } from './deepseek.js';
 import { groqModels } from './groq.js';
-
-export type ModelTag = 'reasoning' | 'coding' | 'vision' | 'fast' | 'large';
-
-export interface ModelEntry {
-  provider: ProviderName;
-  id: string;
-  label: string;
-  contextWindow: number;
-  inputCostPer1M: number | null;
-  outputCostPer1M: number | null;
-  free: boolean;
-  tags?: ModelTag[];
-}
 
 export const MODEL_REGISTRY: ModelEntry[] = [
   ...opencodeZenModels,

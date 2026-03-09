@@ -1,5 +1,5 @@
 import type { ProviderName } from '../types/index.js';
-import type { ModelEntry, ModelTag } from './registry.js';
+import type { ModelEntry, ModelTag } from './types.js';
 
 const fast = { tags: ['fast'] as ModelTag[] };
 const coding = { tags: ['coding'] as ModelTag[] };

@@ -34,6 +34,8 @@ import {
 import { dispatch, getCommands, tryMatchIntent } from './commands/registry.js';
 import type { CommandContext } from './types/commands.js';
 import { useAgent } from './hooks/useAgent.js';
+import { useZenGateway } from './hooks/useZenGateway.js';
+import { useSidePanel } from './hooks/useSidePanel.js';
 import { useOverlay } from './context/OverlayContext.js';
 import { useSetTheme } from './context/ThemeContext.js';
 import {
@@ -156,98 +158,31 @@ export function App({ initialAttachments = [] }: AppProps) {
   );
   const [mcpServerCount, setMcpServerCount] = useState(0);
 
-  // Zen Gateway State
-  const [zenConfig, setZenConfig] = useState<ZenGatewayConfig | null>(() => {
-    const mcpConfigs = loadMCPConfig();
-    return parseZenGatewayConfig(mcpConfigs['zen-gateway']) ?? parseZenGatewayConfigFromEnv();
-  });
-
-  const resolveZenGatewayConfig = useCallback((): ZenGatewayConfig | null => {
-    if (zenConfig) {
-      return zenConfig;
-    }
-
-    const config =
-      parseZenGatewayConfig(loadMCPConfig()['zen-gateway']) ?? parseZenGatewayConfigFromEnv();
-    if (config) {
-      setZenConfig(config);
-    }
-
-    return config;
-  }, [zenConfig]);
-
-  const callZenGatewayTool = useCallback(
-    async <T,>(
-      toolName: 'zen_get_status' | 'zen_list_models',
-      parse: (text: string) => T,
-    ): Promise<T | null> => {
-      if (!resolveZenGatewayConfig()) {
-        return null;
-      }
-
-      if (!mcpManager.isConnected('zen-gateway')) {
-        throw new Error('Zen Gateway is configured but the MCP server is not connected.');
-      }
-
-      const result = await mcpManager.callTool(`zen-gateway__${toolName}`, {});
-      const text = getToolTextResult(result);
-      if (result.isError) {
-        throw new Error(text.replace(/^Error:\s*/, ''));
-      }
-
-      return parse(text);
-    },
-    [mcpManager, resolveZenGatewayConfig],
-  );
-
-  const parseZenGatewayStatusResult = useCallback((text: string): ZenGatewayStatus => {
-    const parsed = ZenGatewayStatusSchema.safeParse(JSON.parse(text));
-    if (!parsed.success) {
-      throw new Error('Zen Gateway returned an invalid status response.');
-    }
-
-    return parsed.data;
-  }, []);
-
-  const parseZenGatewayModelsResult = useCallback((text: string): ZenModel[] => {
-    const parsed = ZenModelSchema.array().safeParse(JSON.parse(text));
-    if (!parsed.success) {
-      throw new Error('Zen Gateway returned an invalid models response.');
-    }
-
-    return parsed.data;
-  }, []);
-
-  const syncZenConfigFromMcp = useCallback((config: MCPServerConfig): void => {
-    const parsedConfig = parseZenGatewayConfig(config);
-    if (parsedConfig) {
-      setZenConfig(parsedConfig);
-    } else {
-      setZenConfig(null);
-    }
-  }, []);
-
-  const saveZenConfigFromMcp = useCallback((config: MCPServerConfig): void => {
-    const parsedConfig = parseZenGatewayConfig(config);
-    if (parsedConfig) {
-      setZenConfig(parsedConfig);
-      return;
-    }
-
-    const envConfig = parseZenGatewayConfigFromEnv();
-    if (envConfig) {
-      setZenConfig(envConfig);
-      return;
-    }
-
-    setZenConfig(null);
-  }, []);
+  // Zen Gateway
+  const {
+    zenConfig,
+    setZenConfig,
+    resolveZenGatewayConfig,
+    callZenGatewayTool,
+    parseZenGatewayStatusResult,
+    parseZenGatewayModelsResult,
+    syncZenConfigFromMcp,
+    saveZenConfigFromMcp,
+  } = useZenGateway(mcpManager);
 
   const [cmdSelectedIdx, setCmdSelectedIdx] = useState(0);
   const [fileAutoFiles, setFileAutoFiles] = useState<string[]>([]);
   const [fileAutoSelectedIdx, setFileAutoSelectedIdx] = useState(0);
 
   const { exit } = useApp();
+
+  // Side Panel
+  const { openFileInPanel, handleSaveFile, handleExplainChange } = useSidePanel(
+    setSidePanel,
+    addSystemMessage,
+    synthesizeAnswer,
+    pendingPermission,
+  );
 
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -409,55 +344,6 @@ export const helloWorld = async ({ name = 'World' }) => {
     },
     [addSystemMessage, loadPlugins],
   );
-
-  const openFileInPanel = useCallback(
-    async (fp: string) => {
-      try {
-        const content = await fs.readFile(fp, 'utf-8');
-        recordAccess(fp);
-        setSidePanel({ type: 'file', path: fp, content });
-      } catch {
-        addSystemMessage(`Error: could not open ${fp}`);
-      }
-    },
-    [addSystemMessage],
-  );
-
-  const handleSaveFile = useCallback(
-    async (path: string, content: string) => {
-      try {
-        await fs.writeFile(path, content, 'utf-8');
-        addSystemMessage(`✓ Saved changes to ${path}`);
-        setSidePanel((prev) => (prev && prev.path === path ? { ...prev, content } : prev));
-      } catch (err) {
-        addSystemMessage(
-          `✗ Failed to save ${path}: ${err instanceof Error ? err.message : String(err)}`,
-        );
-      }
-    },
-    [addSystemMessage],
-  );
-
-  const handleExplainChange = useCallback(async () => {
-    if (!pendingPermission) return;
-    const { toolName, args } = pendingPermission;
-    if (toolName !== 'edit_file' && toolName !== 'patch') return;
-
-    setSidePanel({ type: 'thoughts', thought: 'Analysing proposed changes...' });
-
-    const diffText =
-      toolName === 'edit_file'
-        ? `File: ${args?.path}\nSearch: ${args?.search}\nReplace: ${args?.replace}`
-        : `Patch: ${args?.patch}`;
-
-    try {
-      const topic = `Explain what these code changes do in plain English. Focus on the impact and intent:\n\n${diffText}`;
-      const explanation = await synthesizeAnswer(topic);
-      setSidePanel({ type: 'thoughts', thought: explanation });
-    } catch (err) {
-      setSidePanel({ type: 'thoughts', thought: 'Error generating explanation.' });
-    }
-  }, [pendingPermission, synthesizeAnswer]);
 
   const showCommandAutocomplete =
     inputValue.startsWith('/') &&

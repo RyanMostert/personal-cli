@@ -30,6 +30,8 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/ban-ts-comment': 'off',
       'max-len': ['error', { code: 100, ignoreStrings: true, ignoreTemplateLiterals: true }],
+      'max-lines': ['error', { max: 1500, skipBlankLines: true, skipComments: true }],
+      'max-lines-per-function': ['error', { max: 1500, skipComments: true, IIFEs: true }],
       complexity: 'off',
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',

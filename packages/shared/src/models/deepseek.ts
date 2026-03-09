@@ -1,5 +1,5 @@
 import type { ProviderName } from '../types/index.js';
-import type { ModelEntry } from './registry.js';
+import type { ModelEntry } from './types.js';
 
 export const deepseekModels: ModelEntry[] = [
   {
