@@ -5,11 +5,9 @@ import {
   mkdirSync,
   copyFileSync,
   renameSync,
-  unlinkSync,
   readFileSync,
   readdirSync,
   statSync,
-  rmSync,
 } from 'fs';
 import { resolve, dirname, basename, join } from 'path';
 import { tmpdir } from 'os';
@@ -29,7 +27,11 @@ export function createMoveFile(permissionFn?: PermissionCallback, onWrite?: Writ
     inputSchema: z.object({
       source: z.string().describe('Source file or directory path'),
       destination: z.string().describe('Destination path'),
-      overwrite: z.boolean().optional().default(false).describe('If true, overwrites destination if it exists'),
+      overwrite: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe('If true, overwrites destination if it exists'),
     }),
     execute: async ({ source, destination, overwrite }) => {
       if (permissionFn) {
@@ -43,7 +45,9 @@ export function createMoveFile(permissionFn?: PermissionCallback, onWrite?: Writ
 
         if (!existsSync(absSrc)) return { error: `Source not found: ${source}` };
         if (existsSync(absDst) && !overwrite) {
-          return { error: `Destination already exists: ${destination}. Use overwrite: true to replace.` };
+          return {
+            error: `Destination already exists: ${destination}. Use overwrite: true to replace.`,
+          };
         }
 
         mkdirSync(dirname(absDst), { recursive: true });
@@ -51,7 +55,11 @@ export function createMoveFile(permissionFn?: PermissionCallback, onWrite?: Writ
         // Capture before state for undo
         let before: string | null = null;
         if (existsSync(absDst)) {
-          try { before = readFileSync(absDst, 'utf-8'); } catch { /* binary or dir */ }
+          try {
+            before = readFileSync(absDst, 'utf-8');
+          } catch {
+            /* binary or dir */
+          }
         }
 
         renameSync(absSrc, absDst);
@@ -60,7 +68,9 @@ export function createMoveFile(permissionFn?: PermissionCallback, onWrite?: Writ
           try {
             const after = readFileSync(absDst, 'utf-8');
             onWrite(absDst, before, after);
-          } catch { /* binary or dir — skip undo tracking */ }
+          } catch {
+            /* binary or dir — skip undo tracking */
+          }
         }
 
         return { output: `Moved ${source} → ${destination}` };
@@ -78,7 +88,11 @@ export function createCopyFile(permissionFn?: PermissionCallback, onWrite?: Writ
     inputSchema: z.object({
       source: z.string().describe('Source file or directory path'),
       destination: z.string().describe('Destination path'),
-      overwrite: z.boolean().optional().default(false).describe('If true, overwrites destination if it exists'),
+      overwrite: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe('If true, overwrites destination if it exists'),
     }),
     execute: async ({ source, destination, overwrite }) => {
       if (permissionFn) {
@@ -92,7 +106,9 @@ export function createCopyFile(permissionFn?: PermissionCallback, onWrite?: Writ
 
         if (!existsSync(absSrc)) return { error: `Source not found: ${source}` };
         if (existsSync(absDst) && !overwrite) {
-          return { error: `Destination already exists: ${destination}. Use overwrite: true to replace.` };
+          return {
+            error: `Destination already exists: ${destination}. Use overwrite: true to replace.`,
+          };
         }
 
         mkdirSync(dirname(absDst), { recursive: true });
@@ -109,7 +125,9 @@ export function createCopyFile(permissionFn?: PermissionCallback, onWrite?: Writ
           try {
             const after = readFileSync(absDst, 'utf-8');
             onWrite(absDst, null, after);
-          } catch { /* binary — skip */ }
+          } catch {
+            /* binary — skip */
+          }
         }
 
         return { output: `Copied ${source} → ${destination}` };
@@ -139,7 +157,11 @@ export function createDeleteFile(permissionFn?: PermissionCallback, onWrite?: Wr
       'Delete a file or directory. Files are soft-deleted to a trash directory so /undo can recover them. Use recursive: true for directories.',
     inputSchema: z.object({
       path: z.string().describe('File or directory path to delete'),
-      recursive: z.boolean().optional().default(false).describe('If true, deletes directories recursively'),
+      recursive: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe('If true, deletes directories recursively'),
     }),
     execute: async ({ path, recursive }) => {
       if (permissionFn) {
@@ -165,7 +187,9 @@ export function createDeleteFile(permissionFn?: PermissionCallback, onWrite?: Wr
             const before = readFileSync(trashPath, 'utf-8');
             // onWrite with after='' signals deletion; undo restores before
             onWrite(abs, before, '');
-          } catch { /* binary */ }
+          } catch {
+            /* binary */
+          }
         }
 
         return {

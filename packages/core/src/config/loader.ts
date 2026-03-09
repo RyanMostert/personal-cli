@@ -2,9 +2,19 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { parse as parseYaml } from 'yaml';
-import { ProvidersConfigSchema, AgentConfigSchema, MCPConfigSchema, type AppConfig } from '@personal-cli/shared';
+import {
+  ProvidersConfigSchema,
+  AgentConfigSchema,
+  MCPConfigSchema,
+  type AppConfig,
+} from '@personal-cli/shared';
 export type { AppConfig };
-import { CONFIG_DIR, CONFIG_PROVIDERS_FILE, DEFAULT_PROVIDER, DEFAULT_MODEL } from '@personal-cli/shared';
+import {
+  CONFIG_DIR,
+  CONFIG_PROVIDERS_FILE,
+  DEFAULT_PROVIDER,
+  DEFAULT_MODEL,
+} from '@personal-cli/shared';
 
 const settingsPath = join(homedir(), CONFIG_DIR, 'settings.json');
 
@@ -56,7 +66,10 @@ function readYamlFile<T>(filePath: string, schema: { parse: (v: unknown) => T })
 export function loadConfig(): AppConfig {
   const globalConfigDir = join(homedir(), CONFIG_DIR);
 
-  const providers = readYamlFile(join(globalConfigDir, CONFIG_PROVIDERS_FILE), ProvidersConfigSchema);
+  const providers = readYamlFile(
+    join(globalConfigDir, CONFIG_PROVIDERS_FILE),
+    ProvidersConfigSchema,
+  );
 
   const agent = AgentConfigSchema.parse({});
 

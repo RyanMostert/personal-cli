@@ -41,12 +41,19 @@ export function MessageView({
     return (
       <Box flexDirection="column" marginBottom={1} paddingLeft={1}>
         <Box>
-          <Text color={theme.userLabel} bold>{'❯ '}</Text>
+          <Text color={theme.userLabel} bold>
+            {'❯ '}
+          </Text>
           {isLarge ? (
             <Box>
-              <Text color={theme.dim} italic>{lines.length} lines</Text>
+              <Text color={theme.dim} italic>
+                {lines.length} lines
+              </Text>
               {imageCount > 0 && (
-                <Text color={theme.dim} italic> · {imageCount} image{imageCount > 1 ? 's' : ''}</Text>
+                <Text color={theme.dim} italic>
+                  {' '}
+                  · {imageCount} image{imageCount > 1 ? 's' : ''}
+                </Text>
               )}
             </Box>
           ) : (
@@ -61,7 +68,9 @@ export function MessageView({
     return (
       <Box flexDirection="row" marginBottom={1} paddingLeft={1}>
         <Text color={theme.dim}>· </Text>
-        <Text color={theme.muted} italic>{message.content}</Text>
+        <Text color={theme.muted} italic>
+          {message.content}
+        </Text>
       </Box>
     );
   }
@@ -85,7 +94,9 @@ export function MessageView({
         {message.content ? (
           <MarkdownRenderer text={message.content} />
         ) : !message.toolCalls?.length ? (
-          <Text color={theme.dim} italic>(empty response)</Text>
+          <Text color={theme.dim} italic>
+            (empty response)
+          </Text>
         ) : null}
       </Box>
     </Box>

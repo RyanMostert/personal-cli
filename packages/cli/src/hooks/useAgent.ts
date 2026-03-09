@@ -1,6 +1,20 @@
 import { useState, useCallback, useRef } from 'react';
-import { Agent, ProviderManager, loadConfig, getDefaultModel, loadSettings } from '@personal-cli/core';
-import type { Message, StreamEvent, ToolCallInfo, AgentMode, ProviderName, Attachment, TodoItem } from '@personal-cli/shared';
+import {
+  Agent,
+  ProviderManager,
+  loadConfig,
+  getDefaultModel,
+  loadSettings,
+} from '@personal-cli/core';
+import type {
+  Message,
+  StreamEvent,
+  ToolCallInfo,
+  AgentMode,
+  ProviderName,
+  Attachment,
+  TodoItem,
+} from '@personal-cli/shared';
 import { DEFAULT_TOKEN_BUDGET, loadAttachment } from '@personal-cli/shared';
 import type { PendingPermission } from '../components/PermissionPrompt.js';
 import type { PendingQuestion } from '../components/QuestionPrompt.js';
@@ -192,7 +206,9 @@ export function useAgent() {
               setState((prev) => ({
                 ...prev,
                 toolCalls: prev.toolCalls.map((tc) =>
-                  tc.toolCallId === event.toolCall!.toolCallId ? { ...tc, result: event.toolCall!.result } : tc,
+                  tc.toolCallId === event.toolCall!.toolCallId
+                    ? { ...tc, result: event.toolCall!.result }
+                    : tc,
                 ),
               }));
               break;

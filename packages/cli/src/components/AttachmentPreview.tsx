@@ -58,11 +58,14 @@ export function AttachmentPreview({ attachments, onRemove }: Props) {
             )}
           </Text>
           {/* Text file preview */}
-          {att.path && isTextFile(att.mimeType, att.name) && <TextFilePreview path={att.path} lines={5} />}
+          {att.path && isTextFile(att.mimeType, att.name) && (
+            <TextFilePreview path={att.path} lines={5} />
+          )}
           {/* Image stub/metadata */}
           {att.type === 'image' && (
             <Text dimColor>
-              Image (no dimensions/exif available) – type: {att.mimeType || 'unknown'}, size: {att.size || 'unknown'}
+              Image (no dimensions/exif available) – type: {att.mimeType || 'unknown'}, size:{' '}
+              {att.size || 'unknown'}
             </Text>
           )}
           {/* Error feedback for missing/unreadable files handled in TextFilePreview */}

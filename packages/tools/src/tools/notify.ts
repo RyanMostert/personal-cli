@@ -16,7 +16,9 @@ function osNotify(title: string, body: string): void {
       const script = `display notification "${body.replace(/"/g, '\\"')}" with title "${title.replace(/"/g, '\\"')}"`;
       exec(`osascript -e '${script}'`, { timeout: 3000 });
     } else if (platform === 'linux') {
-      exec(`notify-send "${title.replace(/"/g, '\\"')}" "${body.replace(/"/g, '\\"')}"`, { timeout: 3000 });
+      exec(`notify-send "${title.replace(/"/g, '\\"')}" "${body.replace(/"/g, '\\"')}"`, {
+        timeout: 3000,
+      });
     } else if (platform === 'win32') {
       // PowerShell toast notification — works without admin rights on Win10+
       const ps =
@@ -32,7 +34,11 @@ function osNotify(title: string, body: string): void {
   }
 }
 
-export type NotifyCallback = (title: string, body: string, level: 'info' | 'success' | 'warning' | 'error') => void;
+export type NotifyCallback = (
+  title: string,
+  body: string,
+  level: 'info' | 'success' | 'warning' | 'error',
+) => void;
 
 export function createNotifyUser(onNotify?: NotifyCallback) {
   return tool({
@@ -50,7 +56,9 @@ export function createNotifyUser(onNotify?: NotifyCallback) {
         .boolean()
         .optional()
         .default(false)
-        .describe('If true, also shows a desktop OS notification (requires notify-send / osascript / PowerShell)'),
+        .describe(
+          'If true, also shows a desktop OS notification (requires notify-send / osascript / PowerShell)',
+        ),
     }),
     execute: async ({ title, body, level, osNotify: doOsNotify }) => {
       // Always ring the terminal bell

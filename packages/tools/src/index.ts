@@ -152,14 +152,18 @@ function convertArgsToZod(args?: Record<string, ToolArgSchema>) {
   return z.object(shape);
 }
 
-function makePermissionResolver(rules: PermissionRule[], userCallback?: PermissionCallback): PermissionCallback {
+function makePermissionResolver(
+  rules: PermissionRule[],
+  userCallback?: PermissionCallback,
+): PermissionCallback {
   return async (toolName, args) => {
     const pathArg = (args.path ?? args.command ?? args.filePath ?? '') as string;
 
     // Check rules in reverse order (last match wins, like CSS)
     for (const rule of [...rules].reverse()) {
       const toolMatch = rule.tool === '*' || rule.tool === toolName;
-      const patternMatch = !rule.pattern || minimatch(pathArg, rule.pattern, { dot: true, matchBase: true });
+      const patternMatch =
+        !rule.pattern || minimatch(pathArg, rule.pattern, { dot: true, matchBase: true });
       if (!toolMatch || !patternMatch) continue;
 
       if (rule.action === 'allow') return true;

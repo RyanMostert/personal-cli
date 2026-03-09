@@ -2,7 +2,6 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { readFileSync, writeFileSync } from 'fs';
 import fg from 'fast-glob';
-import { resolve } from 'path';
 import type { PermissionCallback, WriteCallback } from '../types.js';
 
 interface FileChange {
@@ -18,12 +17,18 @@ export function createBatchEdit(permissionFn?: PermissionCallback, onWrite?: Wri
       'Search-and-replace across multiple files matching a glob pattern. Returns a diff summary. Use for symbol renames, import updates, and bulk refactors.',
     inputSchema: z.object({
       pattern: z.string().describe('Text or regex pattern to find'),
-      replacement: z.string().describe('Replacement string (supports $1 capture groups when isRegex: true)'),
+      replacement: z
+        .string()
+        .describe('Replacement string (supports $1 capture groups when isRegex: true)'),
       glob: z
         .string()
         .describe('Glob pattern to select files, e.g. "src/**/*.ts" or "**/*.{ts,tsx}"')
         .default('**/*.ts'),
-      isRegex: z.boolean().optional().default(false).describe('If true, treats pattern as a JavaScript regex'),
+      isRegex: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe('If true, treats pattern as a JavaScript regex'),
       flags: z
         .string()
         .optional()

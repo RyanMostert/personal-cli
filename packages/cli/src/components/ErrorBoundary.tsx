@@ -29,7 +29,13 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <Box flexDirection="column" padding={2} borderStyle="double" borderColor="#FF5555" width="100%">
+        <Box
+          flexDirection="column"
+          padding={2}
+          borderStyle="double"
+          borderColor="#FF5555"
+          width="100%"
+        >
           <Box marginBottom={1} justifyContent="center">
             <Text color="#FF5555" bold inverse>
               {' '}
@@ -37,7 +43,13 @@ export class ErrorBoundary extends Component<Props, State> {
             </Text>
           </Box>
 
-          <Box flexDirection="column" borderStyle="single" borderColor="#484F58" paddingX={2} paddingY={1}>
+          <Box
+            flexDirection="column"
+            borderStyle="single"
+            borderColor="#484F58"
+            paddingX={2}
+            paddingY={1}
+          >
             <Text color="#FF5555" bold>
               ERROR_TYPE:{' '}
             </Text>
@@ -54,7 +66,9 @@ export class ErrorBoundary extends Component<Props, State> {
               <Text color="#484F58" bold>
                 STACK_TRACE_SUMMARY:
               </Text>
-              <Text color="#484F58">{this.state.error?.stack?.split('\n').slice(0, 5).join('\n')}</Text>
+              <Text color="#484F58">
+                {this.state.error?.stack?.split('\n').slice(0, 5).join('\n')}
+              </Text>
             </Box>
           </Box>
 

@@ -28,7 +28,11 @@ export function createWebFetch(permissionFn?: PermissionCallback) {
       'Fetch content from a URL. Uses Jina Reader to get high-quality Markdown, falling back to a clean text-only version.',
     inputSchema: z.object({
       url: z.string().describe('The URL to fetch'),
-      useRaw: z.boolean().optional().default(false).describe('If true, skips Jina Reader and attempts a direct fetch.'),
+      useRaw: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe('If true, skips Jina Reader and attempts a direct fetch.'),
     }),
     execute: async ({ url, useRaw }) => {
       if (permissionFn) {
@@ -36,7 +40,8 @@ export function createWebFetch(permissionFn?: PermissionCallback) {
         if (!ok) return { error: 'Permission denied by user.' };
       }
 
-      const userAgent = 'Mozilla/5.0 (compatible; PersonalCLI/1.0; +https://github.com/ramos/personal-cli)';
+      const userAgent =
+        'Mozilla/5.0 (compatible; PersonalCLI/1.0; +https://github.com/ramos/personal-cli)';
 
       try {
         // 1. Try Jina Reader first (Standard for OpenCode / high-fidelity agents)
@@ -53,7 +58,7 @@ export function createWebFetch(permissionFn?: PermissionCallback) {
                 metadata: { source: 'jina-reader', url },
               };
             }
-          } catch (e) {
+          } catch {
             // Fallback to direct fetch
           }
         }
@@ -85,7 +90,9 @@ export function createWebFetch(permissionFn?: PermissionCallback) {
         const html = await res.text();
         const cleaned = cleanHtml(html);
         const finalOutput =
-          cleaned.length > FALLBACK_LIMIT ? cleaned.slice(0, FALLBACK_LIMIT) + '\n\n[CONTENT_TRUNCATED]' : cleaned;
+          cleaned.length > FALLBACK_LIMIT
+            ? cleaned.slice(0, FALLBACK_LIMIT) + '\n\n[CONTENT_TRUNCATED]'
+            : cleaned;
 
         return {
           output: finalOutput,

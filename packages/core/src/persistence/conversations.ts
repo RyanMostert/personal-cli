@@ -8,7 +8,13 @@ export function saveConversation(
   title?: string,
   existingId?: string,
 ): string {
-  return getPersistenceStore().saveConversation(messages, model, firstUserMessage, title, existingId);
+  return getPersistenceStore().saveConversation(
+    messages,
+    model,
+    firstUserMessage,
+    title,
+    existingId,
+  );
 }
 
 export function loadConversation(id: string) {
@@ -35,6 +41,12 @@ export function loadWorkspace(path: string) {
   return getPersistenceStore().loadWorkspace(path);
 }
 
-export function exportConversation(messages: any[], model: any, tokensUsed: number, cost: number, path?: string): string {
+export function exportConversation(
+  messages: any[],
+  model: any,
+  tokensUsed: number,
+  cost: number,
+  path?: string,
+): string {
   return getPersistenceStore().exportConversation(messages, model, tokensUsed, cost, path);
 }

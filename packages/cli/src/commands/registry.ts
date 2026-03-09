@@ -4,26 +4,14 @@ import { getAllToolSchemas, getPluginDir, listMacros, getMacroDir } from '@perso
 import { generalCommands } from './general.js';
 import { toolsCommands } from './tools.js';
 import { mcpCommands } from './mcp.js';
+import { EXAMPLE_TASKS, FALLBACK_EXAMPLES } from './examples.js';
+export { tryMatchIntent } from './intent-matcher.js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import os from 'os';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
-
-const EXAMPLE_TASKS = [
-  { task: 'Explain a concept', example: 'Explain how async/await works in JavaScript' },
-  { task: 'Search code', example: 'Find all uses of the useEffect hook' },
-  { task: 'Refactor', example: 'Refactor this function to use TypeScript' },
-  { task: 'Debug', example: "Why am I getting 'undefined is not a function'?" },
-  { task: 'Documentation', example: 'Generate JSDoc for this file' },
-];
-
-const FALLBACK_EXAMPLES = [
-  "If search fails, I'll check MDN for web docs",
-  "If file not found, I'll search similar filenames",
-  "If tool unavailable, I'll explain using my training",
-];
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -116,7 +104,8 @@ const commands: Command[] = [
     cmd: '/cost',
     description: 'Show token usage and cost',
     handler: (_, ctx) => {
-      const costStr = ctx.cost > 0 ? `$${ctx.cost.toFixed(4)}` : 'unknown (free or unregistered model)';
+      const costStr =
+        ctx.cost > 0 ? `$${ctx.cost.toFixed(4)}` : 'unknown (free or unregistered model)';
       ctx.addSystemMessage(`Tokens: ${ctx.tokensUsed.toLocaleString()}  Cost: ${costStr}`);
     },
   },
@@ -125,7 +114,9 @@ const commands: Command[] = [
     description: 'Export conversation history to a markdown file',
     handler: (args, ctx) => {
       const exportPath = ctx.exportConversation(args || undefined);
-      ctx.addSystemMessage(`📋 EXPORT_SUCCESS: Conversation history archived to: **${exportPath}**`);
+      ctx.addSystemMessage(
+        `📋 EXPORT_SUCCESS: Conversation history archived to: **${exportPath}**`,
+      );
     },
   },
   {
@@ -137,7 +128,9 @@ const commands: Command[] = [
         return;
       }
       const ok = ctx.renameConversation(args);
-      ctx.addSystemMessage(ok ? `Renamed to: ${args}` : 'Nothing to rename yet — send a message first.');
+      ctx.addSystemMessage(
+        ok ? `Renamed to: ${args}` : 'Nothing to rename yet — send a message first.',
+      );
     },
   },
   {
@@ -283,7 +276,9 @@ const commands: Command[] = [
       const plugins = await ctx.loadPlugins();
       if (args === 'list') {
         if (plugins.length === 0) {
-          ctx.addSystemMessage(`No plugins active. Place your JS plugins in: \`${getPluginDir()}\``);
+          ctx.addSystemMessage(
+            `No plugins active. Place your JS plugins in: \`${getPluginDir()}\``,
+          );
           return;
         }
         let msg = '## Active Plugins\n\n';
@@ -332,7 +327,9 @@ const commands: Command[] = [
       ctx.addSystemMessage('📡 SYNC_INITIALIZING: Checking for remote configurations...');
       // Simulated cloud sync for now
       setTimeout(() => {
-        ctx.addSystemMessage('📡 SYNC_COMPLETE: All local histories and configurations are up to date.');
+        ctx.addSystemMessage(
+          '📡 SYNC_COMPLETE: All local histories and configurations are up to date.',
+        );
       }, 1500);
     },
   },
@@ -363,7 +360,9 @@ const commands: Command[] = [
     description: 'Switch UI theme',
     handler: (args, ctx) => {
       if (!args) {
-        ctx.addSystemMessage('Themes: default  dracula  tokyo-night  nord  gruvbox\nUsage: /theme <name>');
+        ctx.addSystemMessage(
+          'Themes: default  dracula  tokyo-night  nord  gruvbox\nUsage: /theme <name>',
+        );
         return;
       }
       ctx.addSystemMessage(`Theme: ${args}`);
@@ -413,7 +412,11 @@ function levenshtein(a: string, b: string): number {
   for (let i = 1; i <= a.length; i++) {
     for (let j = 1; j <= b.length; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      matrix[i][j] = Math.min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + cost);
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost,
+      );
     }
   }
   return matrix[a.length][b.length];
@@ -421,34 +424,4 @@ function levenshtein(a: string, b: string): number {
 
 export function getCommands(): Command[] {
   return commands;
-}
-
-/**
- * Lightweight Intent Mapping
- * Matches natural language patterns to CLI commands.
- */
-const INTENT_MAP: Array<{ pattern: RegExp; cmd: string; getArgs?: (match: RegExpMatchArray) => string }> = [
-  { pattern: /^(attach|add)\s+file\s+(.+)$/i, cmd: '/add', getArgs: (m) => m[2] },
-  { pattern: /^(show|open)\s+(.+)$/i, cmd: '/open', getArgs: (m) => m[2] },
-  { pattern: /^(undo|revert)(\s+that)?$/i, cmd: '/undo' },
-  { pattern: /^(redo|repeat)(\s+that)?$/i, cmd: '/redo' },
-  { pattern: /^(clear|reset)\s+chat$/i, cmd: '/clear' },
-  { pattern: /^(exit|quit|stop)$/i, cmd: '/exit' },
-  { pattern: /^(cancel|halt|stop)\s+(it|operation|ai)$/i, cmd: '/cancel' },
-  { pattern: /^(switch|change)\s+(to\s+)?mode\s+(.+)$/i, cmd: '/mode', getArgs: (m) => m[3] },
-  { pattern: /^(switch|change)\s+(to\s+)?model\s+(.+)$/i, cmd: '/model', getArgs: (m) => m[3] },
-];
-
-export function tryMatchIntent(input: string): { cmd: string; args: string } | null {
-  const trimmed = input.trim();
-  for (const intent of INTENT_MAP) {
-    const match = trimmed.match(intent.pattern);
-    if (match) {
-      return {
-        cmd: intent.cmd,
-        args: intent.getArgs ? intent.getArgs(match) : '',
-      };
-    }
-  }
-  return null;
 }

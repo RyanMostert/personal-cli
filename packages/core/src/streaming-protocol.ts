@@ -42,4 +42,11 @@ export interface ErrorEvent {
   error: Error | string;
 }
 
-export type StreamEvent = TextDelta | ThoughtDelta | ToolCallStart | ToolCallResult | SystemEvent | FinishEvent | ErrorEvent;
+export type StreamEvent =
+  | TextDelta
+  | ThoughtDelta
+  | ToolCallStart
+  | ToolCallResult
+  | SystemEvent
+  | FinishEvent
+  | ErrorEvent;

@@ -49,7 +49,9 @@ export class MCPClientManager {
   }
 
   async reloadAll(): Promise<void> {
-    const reloads = Array.from(this.configs.entries()).map(([name, config]) => this.connectServer(name, config));
+    const reloads = Array.from(this.configs.entries()).map(([name, config]) =>
+      this.connectServer(name, config),
+    );
     await Promise.all(reloads);
   }
 
@@ -72,7 +74,9 @@ export class MCPClientManager {
     if (serverName) {
       const client = this.clients.get(serverName);
       if (client) {
-        const serverTools = client.getTools().map((tool) => this.wrapTool(serverName, tool, client));
+        const serverTools = client
+          .getTools()
+          .map((tool) => this.wrapTool(serverName, tool, client));
         tools.push(...serverTools);
       }
     } else {

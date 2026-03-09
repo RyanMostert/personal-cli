@@ -54,6 +54,8 @@ describe('Agent streaming POC integration', () => {
     expect(finishEvents.length).toBeGreaterThanOrEqual(1);
 
     const msgs = agent.getMessages();
-    expect(msgs.some((m) => m.role === 'assistant' && m.content.includes('Hello world'))).toBeTruthy();
+    expect(
+      msgs.some((m) => m.role === 'assistant' && m.content.includes('Hello world')),
+    ).toBeTruthy();
   });
 });

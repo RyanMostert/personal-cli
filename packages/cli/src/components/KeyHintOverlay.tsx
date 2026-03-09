@@ -13,9 +13,27 @@ export function KeyHintOverlay({ onClose }: Props) {
 
   const categories: Record<string, Keybinding[]> = {
     ESSENTIAL_TIPS: [
-      { id: 'tip_cmd', combo: { input: '/' }, action: '', description: 'Type / for all commands', category: 'global' },
-      { id: 'tip_file', combo: { input: '@' }, action: '', description: 'Type @ to attach context', category: 'global' },
-      { id: 'tip_mode', combo: { key: 'tab' }, action: '', description: 'Cycle ask/plan/build', category: 'global' },
+      {
+        id: 'tip_cmd',
+        combo: { input: '/' },
+        action: '',
+        description: 'Type / for all commands',
+        category: 'global',
+      },
+      {
+        id: 'tip_file',
+        combo: { input: '@' },
+        action: '',
+        description: 'Type @ to attach context',
+        category: 'global',
+      },
+      {
+        id: 'tip_mode',
+        combo: { key: 'tab' },
+        action: '',
+        description: 'Cycle ask/plan/build',
+        category: 'global',
+      },
     ],
     GLOBAL_COMMANDS: DEFAULT_KEYBINDINGS.filter((k) => k.category === 'global'),
     NAVIGATION: DEFAULT_KEYBINDINGS.filter((k) => k.category === 'navigation'),
@@ -43,7 +61,10 @@ export function KeyHintOverlay({ onClose }: Props) {
 
   const scrollOffset = Math.max(
     0,
-    Math.min(selectedIndex - Math.floor(VISIBLE_COUNT / 2), Math.max(0, flatList.length - VISIBLE_COUNT)),
+    Math.min(
+      selectedIndex - Math.floor(VISIBLE_COUNT / 2),
+      Math.max(0, flatList.length - VISIBLE_COUNT),
+    ),
   );
 
   const visibleItems = flatList.slice(scrollOffset, scrollOffset + VISIBLE_COUNT);

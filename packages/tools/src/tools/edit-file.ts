@@ -10,9 +10,15 @@ export function createEditFile(permissionFn?: PermissionCallback, onWrite?: Writ
       'Apply a surgical edit to a file by replacing an exact string with a new string. Use this for all code changes. Provide enough context in oldText to make it unique.',
     inputSchema: z.object({
       path: z.string().describe('File path to edit'),
-      oldText: z.string().describe('The EXACT text to find in the file. Include surrounding lines for uniqueness.'),
+      oldText: z
+        .string()
+        .describe('The EXACT text to find in the file. Include surrounding lines for uniqueness.'),
       newText: z.string().describe('The replacement text.'),
-      allowMultiple: z.boolean().optional().default(false).describe('If true, replaces all occurrences.'),
+      allowMultiple: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe('If true, replaces all occurrences.'),
     }),
     execute: async ({ path, oldText, newText, allowMultiple }) => {
       if (permissionFn) {

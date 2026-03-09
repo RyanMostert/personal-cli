@@ -20,7 +20,7 @@ const SUPPORTED_BASE64_TYPES = [
 export async function extractClipboardImage() {
   try {
     const text = await clipboardy.read();
-    
+
     // 1. Try base64 detection
     if (text.startsWith('data:image/')) {
       for (const type of SUPPORTED_BASE64_TYPES) {
@@ -43,16 +43,16 @@ export async function extractClipboardImage() {
     try {
       const fileName = `clipboard-${uuidv4()}.png`;
       const tempPath = path.join(os.tmpdir(), fileName);
-      
+
       // Try to find the script
       const scriptName = 'save_clipboard_image.py';
       let scriptPath = '';
-      
+
       // Attempt to resolve script path from source and dist locations
       const __dirname = path.dirname(fileURLToPath(import.meta.url));
       const possiblePaths = [
         path.join(__dirname, '..', '..', 'scripts', scriptName), // from src/hooks/
-        path.join(__dirname, '..', 'scripts', scriptName),       // from dist/ (if scripts copied)
+        path.join(__dirname, '..', 'scripts', scriptName), // from dist/ (if scripts copied)
         path.join(process.cwd(), 'packages', 'cli', 'scripts', scriptName), // from project root
         path.join(process.cwd(), 'scripts', scriptName), // from package root
       ];
@@ -81,7 +81,9 @@ export async function extractClipboardImage() {
             const stderr = execErr.stderr?.toString() || '';
             const stdout = execErr.stdout?.toString() || '';
             if (stdout.includes('Pillow') || stderr.includes('Pillow')) {
-              return { error: 'Native clipboard image support requires Pillow. Run: pip install Pillow' };
+              return {
+                error: 'Native clipboard image support requires Pillow. Run: pip install Pillow',
+              };
             }
             if (stdout.includes('not supported') || stderr.includes('not supported')) {
               return { error: 'Clipboard image extraction not supported on this platform.' };
@@ -92,7 +94,6 @@ export async function extractClipboardImage() {
     } catch (pyErr) {
       // General python script setup error, ignore and fall through
     }
-
   } catch (err: any) {
     return { error: `Clipboard read error: ${err.message}` };
   }

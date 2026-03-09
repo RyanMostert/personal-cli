@@ -64,7 +64,11 @@ export async function startDeviceFlow(): Promise<{
  * Step 2: Poll until the user authorizes. Returns the GitHub OAuth token.
  * Caller should call this after displaying the user_code and verification_uri.
  */
-export async function pollForGitHubToken(deviceCode: string, interval: number, onTick?: () => void): Promise<string> {
+export async function pollForGitHubToken(
+  deviceCode: string,
+  interval: number,
+  onTick?: () => void,
+): Promise<string> {
   const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
   const pollInterval = Math.max(interval, 5) * 1000; // at least 5s
 
@@ -132,7 +136,9 @@ export async function getCopilotToken(): Promise<string> {
   if (!res.ok) {
     // If 401, the GitHub token is stale — clear cached token to force re-auth
     cachedCopilotToken = null;
-    throw new Error(`Failed to get Copilot token (${res.status}). Re-authenticate via the provider manager.`);
+    throw new Error(
+      `Failed to get Copilot token (${res.status}). Re-authenticate via the provider manager.`,
+    );
   }
 
   const data = (await res.json()) as CopilotToken;

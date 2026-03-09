@@ -1,40 +1,23 @@
 import { homedir } from 'os';
 import { join } from 'path';
-import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, readdirSync, unlinkSync } from 'fs';
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  appendFileSync,
+  mkdirSync,
+  readdirSync,
+  unlinkSync,
+} from 'fs';
 import type { Message, ActiveModel } from '@personal-cli/shared';
-
-// Conversation/frecency/history types (kept local to persistence layer)
-export interface ConversationMeta {
-  id: string;
-  title: string;
-  date: number;
-  model: string; // "provider/modelId"
-  messageCount: number;
-}
-
-export interface SavedConversation {
-  id: string;
-  title: string;
-  date: number;
-  model: ActiveModel;
-  messages: Message[];
-}
-
-export interface SavedWorkspace extends SavedConversation {
-  attachments: any[];
-  tokensUsed: number;
-  cost: number;
-}
-
-interface HistoryEntry {
-  text: string;
-  timestamp: number;
-}
-
-interface FrecencyEntry {
-  score: number;
-  lastUsed: number;
-}
+import type {
+  ConversationMeta,
+  SavedConversation,
+  SavedWorkspace,
+  HistoryEntry,
+  FrecencyEntry,
+} from './types.js';
+export type { ConversationMeta, SavedConversation, SavedWorkspace } from './types.js';
 
 export interface PersistenceStore {
   appendHistory(text: string): void;
@@ -53,7 +36,13 @@ export interface PersistenceStore {
   renameConversation(id: string, title: string): boolean;
   saveWorkspace(path: string, data: SavedWorkspace): void;
   loadWorkspace(path: string): SavedWorkspace | null;
-  exportConversation(messages: Message[], model: ActiveModel, tokensUsed: number, cost: number, path?: string): string;
+  exportConversation(
+    messages: Message[],
+    model: ActiveModel,
+    tokensUsed: number,
+    cost: number,
+    path?: string,
+  ): string;
 
   getFrecency(path: string): number;
   getBatchFrecency(paths: string[]): Map<string, number>;
@@ -156,7 +145,9 @@ class FileSystemPersistenceStore implements PersistenceStore {
       .filter((f) => f.endsWith('.json'))
       .map((f) => {
         try {
-          const d = JSON.parse(readFileSync(join(this.HISTORY_DIR(), f), 'utf-8')) as SavedConversation;
+          const d = JSON.parse(
+            readFileSync(join(this.HISTORY_DIR(), f), 'utf-8'),
+          ) as SavedConversation;
           return {
             id: d.id,
             title: d.title,
@@ -204,7 +195,13 @@ class FileSystemPersistenceStore implements PersistenceStore {
     }
   }
 
-  exportConversation(messages: Message[], model: ActiveModel, tokensUsed: number, cost: number, path?: string): string {
+  exportConversation(
+    messages: Message[],
+    model: ActiveModel,
+    tokensUsed: number,
+    cost: number,
+    path?: string,
+  ): string {
     const date = new Date().toISOString().split('T')[0];
     const filePath = path ?? join(homedir(), `conversation-${date}-${Date.now()}.md`);
     const content = [
@@ -306,7 +303,10 @@ class FileSystemPersistenceStore implements PersistenceStore {
     const store = this.readFrecencyStore();
     const now = Date.now();
     return Object.entries(store)
-      .map(([p, e]) => ({ path: p, score: e.score + Math.max(0, 10 - (now - e.lastUsed) / (1000 * 60 * 60 * 24)) }))
+      .map(([p, e]) => ({
+        path: p,
+        score: e.score + Math.max(0, 10 - (now - e.lastUsed) / (1000 * 60 * 60 * 24)),
+      }))
       .sort((a, b) => b.score - a.score)
       .slice(0, n)
       .map((e) => e.path);
@@ -322,7 +322,10 @@ class FileSystemPersistenceStore implements PersistenceStore {
   }
 
   private slugify(text: string): string {
-    return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)+/g, '');
   }
 }
 
@@ -343,7 +346,13 @@ export class InMemoryPersistenceStore implements PersistenceStore {
     return this._history.map((e) => e.text);
   }
 
-  saveConversation(messages: Message[], model: ActiveModel, firstUserMessage: string, title?: string, existingId?: string): string {
+  saveConversation(
+    messages: Message[],
+    model: ActiveModel,
+    firstUserMessage: string,
+    title?: string,
+    existingId?: string,
+  ): string {
     const timestamp = Date.now();
     const id = existingId ?? `${timestamp}-${Math.random().toString(36).slice(2, 8)}`;
     const title_ = (title ?? firstUserMessage ?? 'Untitled').slice(0, 60);
@@ -358,7 +367,13 @@ export class InMemoryPersistenceStore implements PersistenceStore {
 
   listConversations(): ConversationMeta[] {
     return Array.from(this._convos.values())
-      .map((d) => ({ id: d.id, title: d.title, date: d.date, model: `${d.model.provider}/${d.model.modelId}`, messageCount: d.messages.length }))
+      .map((d) => ({
+        id: d.id,
+        title: d.title,
+        date: d.date,
+        model: `${d.model.provider}/${d.model.modelId}`,
+        messageCount: d.messages.length,
+      }))
       .sort((a, b) => b.date - a.date);
   }
 
@@ -382,7 +397,13 @@ export class InMemoryPersistenceStore implements PersistenceStore {
     return null;
   }
 
-  exportConversation(_messages: Message[], _model: ActiveModel, _tokensUsed: number, _cost: number, _path?: string): string {
+  exportConversation(
+    _messages: Message[],
+    _model: ActiveModel,
+    _tokensUsed: number,
+    _cost: number,
+    _path?: string,
+  ): string {
     return 'in-memory-export';
   }
 
@@ -411,7 +432,10 @@ export class InMemoryPersistenceStore implements PersistenceStore {
     const now = Date.now();
     const prev = this._frecency[path];
     const days = prev ? (now - prev.lastUsed) / (1000 * 60 * 60 * 24) : Infinity;
-    this._frecency[path] = { score: (prev?.score ?? 0) + 1 + Math.max(0, 10 - days), lastUsed: now };
+    this._frecency[path] = {
+      score: (prev?.score ?? 0) + 1 + Math.max(0, 10 - days),
+      lastUsed: now,
+    };
   }
 }
 
@@ -426,7 +450,11 @@ export function getPersistenceStore(): PersistenceStore {
   return _store;
 }
 
-export function createInMemoryPersistenceStore(initial?: { history?: HistoryEntry[]; convos?: SavedConversation[]; frecency?: Record<string, FrecencyEntry> }) {
+export function createInMemoryPersistenceStore(initial?: {
+  history?: HistoryEntry[];
+  convos?: SavedConversation[];
+  frecency?: Record<string, FrecencyEntry>;
+}) {
   const s = new InMemoryPersistenceStore();
   if (initial?.history) s['_history'] = initial.history.slice();
   if (initial?.convos) for (const c of initial.convos) s['_convos'].set(c.id, c);

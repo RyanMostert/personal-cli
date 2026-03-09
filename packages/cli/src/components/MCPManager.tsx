@@ -1,6 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
-import { MCPClientStatus, type MCPServerInfo, type MCPServerConfig } from '@personal-cli/mcp-client';
+import {
+  MCPClientStatus,
+  type MCPServerInfo,
+  type MCPServerConfig,
+} from '@personal-cli/mcp-client';
 
 interface Props {
   servers: MCPServerInfo[];
@@ -30,7 +34,17 @@ const STATUS_COLORS = {
   error: '#FF5555',
 };
 
-export function MCPManager({ servers, onAdd, onAddZenGateway, onEdit, onRemove, onConnect, onDisconnect, onClose, tick = 0 }: Props) {
+export function MCPManager({
+  servers,
+  onAdd,
+  onAddZenGateway,
+  onEdit,
+  onRemove,
+  onConnect,
+  onDisconnect,
+  onClose,
+  tick = 0,
+}: Props) {
   const [filter, setFilter] = useState('');
   const [focusIndex, setFocusIndex] = useState(0);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -49,10 +63,13 @@ export function MCPManager({ servers, onAdd, onAddZenGateway, onEdit, onRemove, 
     const connected = servers.filter(
       (s) =>
         s.status === 'connected' &&
-        (s.name.toLowerCase().includes(query) || s.tools.some((t) => t.name.toLowerCase().includes(query))),
+        (s.name.toLowerCase().includes(query) ||
+          s.tools.some((t) => t.name.toLowerCase().includes(query))),
     );
 
-    const disconnected = servers.filter((s) => s.status !== 'connected' && s.name.toLowerCase().includes(query));
+    const disconnected = servers.filter(
+      (s) => s.status !== 'connected' && s.name.toLowerCase().includes(query),
+    );
 
     // Add configured but not loaded servers
     const configuredNames = new Set(servers.map((s) => s.name));
@@ -153,14 +170,24 @@ export function MCPManager({ servers, onAdd, onAddZenGateway, onEdit, onRemove, 
 
   const scrollTop = Math.max(
     0,
-    Math.min(focusIndex - Math.floor(VISIBLE_HEIGHT / 2), Math.max(0, allList.length - VISIBLE_HEIGHT)),
+    Math.min(
+      focusIndex - Math.floor(VISIBLE_HEIGHT / 2),
+      Math.max(0, allList.length - VISIBLE_HEIGHT),
+    ),
   );
   const visibleItems = allList.slice(scrollTop, scrollTop + VISIBLE_HEIGHT);
   const hiddenAbove = scrollTop;
   const hiddenBelow = Math.max(0, allList.length - scrollTop - visibleItems.length);
 
   return (
-    <Box borderStyle="single" borderColor="#00E5FF" flexDirection="column" paddingX={1} paddingY={1} marginY={1}>
+    <Box
+      borderStyle="single"
+      borderColor="#00E5FF"
+      flexDirection="column"
+      paddingX={1}
+      paddingY={1}
+      marginY={1}
+    >
       {/* Title */}
       <Box position="absolute" marginTop={-1} marginLeft={2} backgroundColor="black" paddingX={1}>
         <Text color="#00E5FF" bold>

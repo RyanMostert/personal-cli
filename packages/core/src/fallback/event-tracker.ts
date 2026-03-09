@@ -93,7 +93,12 @@ export class AgentEventTracker {
     });
   }
 
-  trackFallbackSuccess(toolName: string, strategy: string, output: string, duration: number): AgentEvent {
+  trackFallbackSuccess(
+    toolName: string,
+    strategy: string,
+    output: string,
+    duration: number,
+  ): AgentEvent {
     return this.track({
       type: 'tool_fallback_success',
       data: { toolName, strategy, output },
@@ -102,7 +107,12 @@ export class AgentEventTracker {
     });
   }
 
-  trackFallbackFailure(toolName: string, strategy: string, error: string, duration: number): AgentEvent {
+  trackFallbackFailure(
+    toolName: string,
+    strategy: string,
+    error: string,
+    duration: number,
+  ): AgentEvent {
     return this.track({
       type: 'tool_fallback_failure',
       data: { toolName, strategy },
@@ -175,7 +185,9 @@ export class AgentEventTracker {
   }
 
   getToolSuccessRate(): { total: number; success: number; rate: number } {
-    const toolCalls = this.events.filter((e) => e.type === 'tool_call_success' || e.type === 'tool_call_failure');
+    const toolCalls = this.events.filter(
+      (e) => e.type === 'tool_call_success' || e.type === 'tool_call_failure',
+    );
 
     const success = toolCalls.filter((e) => e.success).length;
     const total = toolCalls.length;

@@ -85,14 +85,24 @@ export function PluginManager({ plugins, onAdd, onEdit, onRemove, onClose, tick 
 
   const scrollTop = Math.max(
     0,
-    Math.min(focusIndex - Math.floor(VISIBLE_HEIGHT / 2), Math.max(0, filtered.length - VISIBLE_HEIGHT)),
+    Math.min(
+      focusIndex - Math.floor(VISIBLE_HEIGHT / 2),
+      Math.max(0, filtered.length - VISIBLE_HEIGHT),
+    ),
   );
   const visibleItems = filtered.slice(scrollTop, scrollTop + VISIBLE_HEIGHT);
   const hiddenAbove = scrollTop;
   const hiddenBelow = Math.max(0, filtered.length - scrollTop - visibleItems.length);
 
   return (
-    <Box borderStyle="single" borderColor="#AA00FF" flexDirection="column" paddingX={1} paddingY={1} marginY={1}>
+    <Box
+      borderStyle="single"
+      borderColor="#AA00FF"
+      flexDirection="column"
+      paddingX={1}
+      paddingY={1}
+      marginY={1}
+    >
       {/* Title */}
       <Box position="absolute" marginTop={-1} marginLeft={2} backgroundColor="black" paddingX={1}>
         <Text color="#AA00FF" bold>
@@ -141,7 +151,11 @@ export function PluginManager({ plugins, onAdd, onEdit, onRemove, onClose, tick 
           const focused = realIdx === focusIndex;
 
           return (
-            <Box key={p.manifest.name} paddingLeft={2} backgroundColor={focused ? '#161b22' : undefined}>
+            <Box
+              key={p.manifest.name}
+              paddingLeft={2}
+              backgroundColor={focused ? '#161b22' : undefined}
+            >
               <Text color={focused ? '#FF00AA' : '#484F58'}>{focused ? '❯❯ ' : '   '}</Text>
 
               <Box flexDirection="row" justifyContent="space-between" flexGrow={1}>

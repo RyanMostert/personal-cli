@@ -21,7 +21,9 @@ export function getProviderEntries(): ProviderInfo[] {
 
     let hasKey = false;
     try {
-      hasKey = !!getProviderKey(p.id as string) || (!!(p as any).envVar && !!process.env[(p as any).envVar]);
+      hasKey =
+        !!getProviderKey(p.id as string) ||
+        (!!(p as any).envVar && !!process.env[(p as any).envVar]);
     } catch {
       hasKey = false;
     }

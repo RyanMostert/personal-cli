@@ -40,13 +40,19 @@ export function StreamingMessage({ text, thought, tokenCount }: Props) {
             {/* Inline streaming stats — shown while text is actively arriving */}
             <Box flexDirection="row" marginTop={0}>
               <BlinkCursor />
-              <Text color={theme.dim} italic>  ~{approxTokens} tokens</Text>
+              <Text color={theme.dim} italic>
+                {' '}
+                ~{approxTokens} tokens
+              </Text>
             </Box>
           </Box>
         ) : !thought ? (
           <Box flexDirection="row" alignItems="center">
             <BlinkCursor />
-            <Text color={theme.dim} italic>  receiving…</Text>
+            <Text color={theme.dim} italic>
+              {' '}
+              receiving…
+            </Text>
           </Box>
         ) : null}
       </Box>

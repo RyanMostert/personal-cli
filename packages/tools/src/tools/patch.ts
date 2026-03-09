@@ -122,12 +122,21 @@ function applyHunk(
     }
   }
 
-  return { success: false, newLines: lines, offsetChange: 0, error: 'Context not found (even with fuzzy matching)' };
+  return {
+    success: false,
+    newLines: lines,
+    offsetChange: 0,
+    error: 'Context not found (even with fuzzy matching)',
+  };
 }
 
-function checkMatch(fileLines: string[], startIdx: number, hunkLines: string[], fuzzy: boolean): boolean {
+function checkMatch(
+  fileLines: string[],
+  startIdx: number,
+  hunkLines: string[],
+  fuzzy: boolean,
+): boolean {
   let filePtr = startIdx;
-  let hunkLinesMatched = 0;
 
   for (const hLine of hunkLines) {
     if (hLine.startsWith('+')) continue; // Skip additions when matching context
@@ -144,7 +153,6 @@ function checkMatch(fileLines: string[], startIdx: number, hunkLines: string[], 
     }
 
     filePtr++;
-    hunkLinesMatched++;
   }
   return true;
 }

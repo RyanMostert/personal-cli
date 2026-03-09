@@ -155,7 +155,13 @@ interface Props {
 }
 
 // Pure display component — all key handling lives in app.tsx useInput.
-export function CommandAutocomplete({ filtered, selectedIndex, visible, input, showSuggestions }: Props) {
+export function CommandAutocomplete({
+  filtered,
+  selectedIndex,
+  visible,
+  input,
+  showSuggestions,
+}: Props) {
   if (!visible) return null;
 
   const suggestions = showSuggestions && input ? getSuggestions(input) : [];
@@ -166,16 +172,27 @@ export function CommandAutocomplete({ filtered, selectedIndex, visible, input, s
       <Box flexDirection="row">
         {/* Command List */}
         {filtered.length > 0 && (
-          <Box borderStyle="single" borderColor="#58A6FF" flexDirection="column" paddingX={1} minWidth={40}>
+          <Box
+            borderStyle="single"
+            borderColor="#58A6FF"
+            flexDirection="column"
+            paddingX={1}
+            minWidth={40}
+          >
             {filtered.map((cmd, index) => (
               <Box key={cmd.cmd}>
                 <Text color={index === selectedIndex ? '#58A6FF' : '#8C959F'}>
                   {index === selectedIndex ? '▶ ' : '  '}
                 </Text>
-                <Text color={index === selectedIndex ? '#C9D1D9' : '#8C959F'} bold={index === selectedIndex}>
+                <Text
+                  color={index === selectedIndex ? '#C9D1D9' : '#8C959F'}
+                  bold={index === selectedIndex}
+                >
                   {cmd.cmd.padEnd(12)}
                 </Text>
-                <Text color={index === selectedIndex ? '#C9D1D9' : '#484F58'}>{cmd.description.slice(0, 30)}...</Text>
+                <Text color={index === selectedIndex ? '#C9D1D9' : '#484F58'}>
+                  {cmd.description.slice(0, 30)}...
+                </Text>
               </Box>
             ))}
           </Box>
@@ -191,7 +208,13 @@ export function CommandAutocomplete({ filtered, selectedIndex, visible, input, s
             marginLeft={1}
             flexGrow={1}
           >
-            <Box position="absolute" marginTop={-1} marginLeft={1} backgroundColor="black" paddingX={1}>
+            <Box
+              position="absolute"
+              marginTop={-1}
+              marginLeft={1}
+              backgroundColor="black"
+              paddingX={1}
+            >
               <Text color="#D29922" bold>
                 {' '}
                 💡 INTELLIGENCE:HINT{' '}
