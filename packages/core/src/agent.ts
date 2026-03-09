@@ -22,6 +22,7 @@ import {
 } from './persistence/conversations.js';
 import {
   createTools,
+  type CreateToolsOptions,
   type PermissionCallback,
   type QuestionCallback,
   loadPlugins,
@@ -123,14 +124,18 @@ export class Agent {
   }
 
   private buildTools() {
-    return createTools(this.mode, this.permissionFn, {
+    const opts: CreateToolsOptions = {
       onWrite: (path, before, after) => {
         if (before !== null) this.undoStack.push({ path, before, after });
       },
       questionFn: this.questionFn,
       plugins: this.loadedPlugins,
-      onTodoUpdate: (todos) => { this.pendingTodoUpdates = todos; },
-    });
+      onTodoUpdate: (todos: TodoItem[]) => {
+        this.pendingTodoUpdates = todos;
+      },
+    };
+
+    return createTools(this.mode, this.permissionFn, opts);
   }
 
   getMessages(): Message[] {
