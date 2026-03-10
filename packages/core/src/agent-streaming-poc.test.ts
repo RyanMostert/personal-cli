@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('ai', async (importOriginal) => {
   const actual = await importOriginal();
   return {
-    ...actual,
+    ...(actual as any),
     streamText: (opts: any) => {
       const fullStream = (async function* () {
         yield { type: 'text-delta', text: 'Hello' };
