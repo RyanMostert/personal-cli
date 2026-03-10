@@ -36,6 +36,8 @@ interface AgentState {
   attachedFiles: Attachment[];
   mode: AgentMode;
   todos: TodoItem[];
+  // Currently active model/provider
+  activeModel: { provider: ProviderName; modelId: string };
 }
 
 export function useAgent() {
@@ -45,6 +47,8 @@ export function useAgent() {
   // Split streamingText and streamingThought into isolated state to prevent re-renders of the main state tree
   const [streamingText, setStreamingText] = useState('');
   const [streamingThought, setStreamingThought] = useState('');
+
+  const initialModel = getDefaultModel(loadConfig(), loadSettings());
 
   const [state, setState] = useState<AgentState>({
     messages: [],
@@ -59,6 +63,10 @@ export function useAgent() {
     attachedFiles: [],
     mode: loadSettings().defaultMode ?? 'ask',
     todos: [],
+    activeModel: {
+      provider: initialModel.provider as ProviderName,
+      modelId: initialModel.modelId,
+    },
   });
 
   const permissionCallback = useCallback((toolName: string, args?: Record<string, unknown>) => {
@@ -112,14 +120,17 @@ export function useAgent() {
         permissionFn: permissionCallback,
         questionFn: questionCallback,
       });
+
+      // Ensure UI reflects the agent's active model as soon as it's created
+      try {
+        setState((prev) => ({ ...prev, activeModel: agentRef.current!.getActiveModel() }));
+      } catch {
+        // ignore
+      }
     }
     return agentRef.current;
   }, [permissionCallback]);
 
-  const activeModel = agentRef.current?.getActiveModel() ?? {
-    provider: 'opencode-zen',
-    modelId: 'kimi-k2.5-free',
-  };
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -280,7 +291,8 @@ export function useAgent() {
     ...state,
     streamingText,
     streamingThought,
-    activeModel,
+    // Expose reactive activeModel from state so UI updates correctly
+    activeModel: state.activeModel,
     sendMessage,
     abort,
     addSystemMessage: useCallback(
@@ -325,7 +337,8 @@ export function useAgent() {
             error('Failed to record recent model and log the error');
           }
         }
-        setState((prev) => ({ ...prev }));
+        // Update activeModel in state so consumers react to the change
+        setState((prev) => ({ ...prev, activeModel: agent.getActiveModel() }));
       },
       [getAgent],
     ),
