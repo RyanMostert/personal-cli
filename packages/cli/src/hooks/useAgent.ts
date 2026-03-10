@@ -1,6 +1,22 @@
 import { useState, useCallback, useRef } from 'react';
-import { Agent, ProviderManager, loadConfig, getDefaultModel, loadSettings } from '@personal-cli/core';
-import type { Message, StreamEvent, ToolCallInfo, AgentMode, ProviderName, Attachment, TodoItem } from '@personal-cli/shared';
+import {
+  Agent,
+  ProviderManager,
+  loadConfig,
+  getDefaultModel,
+  loadSettings,
+  addRecentModel,
+  saveSettings,
+} from '@personal-cli/core';
+import type {
+  Message,
+  StreamEvent,
+  ToolCallInfo,
+  AgentMode,
+  ProviderName,
+  Attachment,
+  TodoItem,
+} from '@personal-cli/shared';
 import { DEFAULT_TOKEN_BUDGET, loadAttachment } from '@personal-cli/shared';
 import type { PendingPermission } from '../components/PermissionPrompt.js';
 import type { PendingQuestion } from '../components/QuestionPrompt.js';
@@ -79,14 +95,13 @@ export function useAgent() {
   const getAgent = useCallback((): Agent => {
     if (!agentRef.current) {
       const config = loadConfig();
-      const { provider, modelId } = getDefaultModel(config);
+      const settings = loadSettings();
+      const { provider, modelId } = getDefaultModel(config, settings);
 
       const manager = new ProviderManager({
         provider: provider as ConstructorParameters<typeof ProviderManager>[0]['provider'],
         modelId,
       });
-
-      const settings = loadSettings();
 
       agentRef.current = new Agent({
         providerManager: manager,
@@ -282,6 +297,27 @@ export function useAgent() {
       (provider: ProviderName, modelId: string) => {
         const agent = getAgent();
         agent.switchModel(provider, modelId);
+        // Record as recent and persist last-used provider so next startup selects the same provider
+        try {
+          addRecentModel(provider, modelId);
+          // Persist provider, model, and update per-provider lastUsedModels map
+          try {
+            const current = loadSettings();
+            const lastUsedModels = { ...(current.lastUsedModels ?? {}), [provider]: modelId };
+            saveSettings({ defaultProvider: provider, defaultModel: modelId, lastUsedModels });
+          } catch (err) {
+            // Log errors so failures are visible in logs but don't disrupt the UI
+            try {
+              // eslint-disable-next-line no-console
+              console.error('Failed to persist model selection', err);
+            } catch {}
+          }
+        } catch (err) {
+          try {
+            // eslint-disable-next-line no-console
+            console.error('Failed to record recent model', err);
+          } catch {}
+        }
         setState((prev) => ({ ...prev }));
       },
       [getAgent],

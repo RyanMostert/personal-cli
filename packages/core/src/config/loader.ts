@@ -5,12 +5,14 @@ import { parse as parseYaml } from 'yaml';
 import { ProvidersConfigSchema, AgentConfigSchema, MCPConfigSchema, type AppConfig } from '@personal-cli/shared';
 export type { AppConfig };
 import { CONFIG_DIR, CONFIG_PROVIDERS_FILE, DEFAULT_PROVIDER, DEFAULT_MODEL } from '@personal-cli/shared';
+import { getRecentModels } from './prefs.js';
 
 const settingsPath = join(homedir(), CONFIG_DIR, 'settings.json');
 
 export interface UserSettings {
   defaultProvider?: string;
   defaultModel?: string;
+  lastUsedModels?: Record<string, string>;
   defaultMode?: 'ask' | 'plan' | 'auto' | 'build';
   maxSteps?: number;
   tokenBudget?: number;
@@ -78,11 +80,32 @@ export function loadConfig(): AppConfig {
     mcp: MCPConfigSchema.parse(mcp),
   };
 }
-
-export function getDefaultModel(config: AppConfig): { provider: string; modelId: string } {
+// Determine the model to use on startup.
+// Priority: user settings favorite -> recent (prefs) -> provider defaults -> global default
+export function getDefaultModel(config: AppConfig, userSettings?: UserSettings): { provider: string; modelId: string } {
   const defaults = config.providers?.defaults;
-  return {
-    provider: defaults?.provider ?? DEFAULT_PROVIDER,
-    modelId: defaults?.model ?? DEFAULT_MODEL,
-  };
+
+  const settings = userSettings ?? loadSettings();
+
+  // Resolve provider: user setting > provider default > global default
+  const provider = settings.defaultProvider ?? defaults?.provider ?? DEFAULT_PROVIDER;
+
+  // Favourite (explicit) model: user setting or provider default
+  const favourite = settings.defaultModel ?? defaults?.model ?? '';
+
+  // Last used model for this provider can be stored in settings (preferred),
+  // otherwise fall back to recent prefs, then provider defaults, then global default
+  const lastUsedFromSettings = settings.lastUsedModels?.[provider] ?? '';
+  const recent = getRecentModels();
+  const lastForProvider =
+    (lastUsedFromSettings || recent.find((r) => r.provider === provider)?.modelId) ?? recent[0]?.modelId ?? '';
+
+  const modelId =
+    favourite && favourite !== ''
+      ? favourite
+      : lastForProvider && lastForProvider !== ''
+        ? lastForProvider
+        : (defaults?.model ?? DEFAULT_MODEL);
+
+  return { provider, modelId };
 }

@@ -20,7 +20,7 @@ export class ConfigStore {
   }
 
   getDefaultModel(cfg?: AppConfig) {
-    return coreGetDefaultModel(cfg ?? this.loadConfig());
+    return coreGetDefaultModel(cfg ?? this.loadConfig(), this.loadSettings());
   }
 
   // Auth helpers
@@ -69,7 +69,7 @@ export class InMemoryConfigStore extends ConfigStore {
   }
 
   loadConfig() {
-    return (this._config ?? ({} as AppConfig));
+    return this._config ?? ({} as AppConfig);
   }
 
   readAuth() {
