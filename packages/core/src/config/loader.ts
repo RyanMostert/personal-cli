@@ -15,6 +15,7 @@ import {
   DEFAULT_PROVIDER,
   DEFAULT_MODEL,
 } from '@personal-cli/shared';
+import { getRecentModels } from './prefs';
 
 const settingsPath = join(homedir(), CONFIG_DIR, 'settings.json');
 

@@ -21,6 +21,7 @@ import { DEFAULT_TOKEN_BUDGET, loadAttachment } from '@personal-cli/shared';
 import type { PendingPermission } from '../components/PermissionPrompt.js';
 import type { PendingQuestion } from '../components/QuestionPrompt.js';
 import { promises as fs } from 'fs';
+import { error } from 'console';
 
 interface AgentState {
   messages: Message[];
@@ -312,13 +313,17 @@ export function useAgent() {
             try {
               // eslint-disable-next-line no-console
               console.error('Failed to persist model selection', err);
-            } catch {}
+            } catch {
+              error('Failed to persist model selection and log the error');
+            }
           }
         } catch (err) {
           try {
             // eslint-disable-next-line no-console
             console.error('Failed to record recent model', err);
-          } catch {}
+          } catch {
+            error('Failed to record recent model and log the error');
+          }
         }
         setState((prev) => ({ ...prev }));
       },
