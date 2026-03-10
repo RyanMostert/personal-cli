@@ -58,7 +58,9 @@ export function addRecentModel(provider: string, modelId: string): void {
   if (!prefs.recentModels) prefs.recentModels = [];
 
   // Remove if already exists
-  prefs.recentModels = prefs.recentModels.filter((m) => !(m.provider === provider && m.modelId === modelId));
+  prefs.recentModels = prefs.recentModels.filter(
+    (m) => !(m.provider === provider && m.modelId === modelId),
+  );
 
   // Add to front
   prefs.recentModels.unshift({ provider, modelId });

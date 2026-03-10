@@ -276,16 +276,4 @@ defaults:
 - [x] Implement `diagnostics` (LSP/TSC type-aware file errors)
 - [ ] Implement Model Context Protocol (MCP) dynamic client
 - [ ] Implement progressive summarization `/compact`
-
-### Phase 4: Docker Sandbox (Week 5-7)
-
-- [ ] Build base sandbox Docker image
-- [ ] container lifecycle via Dockerode
-- [ ] gVisor runtime integration
-- [ ] Network isolation (deny-by-default egress)
-
-### Phase 8: Distribution (Week 11-12)
-
-- [ ] npm package publishing pipeline
-- [ ] Standalone binary compilation (pkg / bun compile)
-- [ ] `npx personal-cli` quick-start experience
+- [ ] Implement token budget management and auto-summarization

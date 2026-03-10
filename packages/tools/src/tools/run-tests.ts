@@ -51,7 +51,10 @@ function detectRunner(cwd: string): DetectedRunner {
 }
 
 /** Parse test output for pass/fail counts from common runners. */
-function parseResults(output: string, runner: TestRunner): {
+function parseResults(
+  output: string,
+  runner: TestRunner,
+): {
   passed: number;
   failed: number;
   skipped: number;
@@ -63,7 +66,9 @@ function parseResults(output: string, runner: TestRunner): {
 
   if (runner === 'vitest') {
     // Vitest: "Tests  12 passed | 2 failed | 1 skipped (15)"
-    const m = output.match(/Tests\s+(\d+)\s+passed(?:\s+\|\s+(\d+)\s+failed)?(?:\s+\|\s+(\d+)\s+skipped)?/i);
+    const m = output.match(
+      /Tests\s+(\d+)\s+passed(?:\s+\|\s+(\d+)\s+failed)?(?:\s+\|\s+(\d+)\s+skipped)?/i,
+    );
     if (m) {
       passed = parseInt(m[1] ?? '0', 10);
       failed = parseInt(m[2] ?? '0', 10);
@@ -90,7 +95,9 @@ export function createRunTests(permissionFn?: PermissionCallback) {
       filter: z
         .string()
         .optional()
-        .describe('Optional test file path or name pattern to run (e.g. "auth" or "src/auth.test.ts")'),
+        .describe(
+          'Optional test file path or name pattern to run (e.g. "auth" or "src/auth.test.ts")',
+        ),
       cwd: z.string().optional().describe('Working directory (defaults to project root)'),
     }),
     execute: async ({ filter, cwd: cwdArg }) => {

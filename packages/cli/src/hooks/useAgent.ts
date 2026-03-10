@@ -207,7 +207,9 @@ export function useAgent() {
               setState((prev) => ({
                 ...prev,
                 toolCalls: prev.toolCalls.map((tc) =>
-                  tc.toolCallId === event.toolCall!.toolCallId ? { ...tc, result: event.toolCall!.result } : tc,
+                  tc.toolCallId === event.toolCall!.toolCallId
+                    ? { ...tc, result: event.toolCall!.result }
+                    : tc,
                 ),
               }));
               break;

@@ -2,10 +2,19 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { parse as parseYaml } from 'yaml';
-import { ProvidersConfigSchema, AgentConfigSchema, MCPConfigSchema, type AppConfig } from '@personal-cli/shared';
+import {
+  ProvidersConfigSchema,
+  AgentConfigSchema,
+  MCPConfigSchema,
+  type AppConfig,
+} from '@personal-cli/shared';
 export type { AppConfig };
-import { CONFIG_DIR, CONFIG_PROVIDERS_FILE, DEFAULT_PROVIDER, DEFAULT_MODEL } from '@personal-cli/shared';
-import { getRecentModels } from './prefs.js';
+import {
+  CONFIG_DIR,
+  CONFIG_PROVIDERS_FILE,
+  DEFAULT_PROVIDER,
+  DEFAULT_MODEL,
+} from '@personal-cli/shared';
 
 const settingsPath = join(homedir(), CONFIG_DIR, 'settings.json');
 
@@ -58,7 +67,10 @@ function readYamlFile<T>(filePath: string, schema: { parse: (v: unknown) => T })
 export function loadConfig(): AppConfig {
   const globalConfigDir = join(homedir(), CONFIG_DIR);
 
-  const providers = readYamlFile(join(globalConfigDir, CONFIG_PROVIDERS_FILE), ProvidersConfigSchema);
+  const providers = readYamlFile(
+    join(globalConfigDir, CONFIG_PROVIDERS_FILE),
+    ProvidersConfigSchema,
+  );
 
   const agent = AgentConfigSchema.parse({});
 
@@ -82,7 +94,10 @@ export function loadConfig(): AppConfig {
 }
 // Determine the model to use on startup.
 // Priority: user settings favorite -> recent (prefs) -> provider defaults -> global default
-export function getDefaultModel(config: AppConfig, userSettings?: UserSettings): { provider: string; modelId: string } {
+export function getDefaultModel(
+  config: AppConfig,
+  userSettings?: UserSettings,
+): { provider: string; modelId: string } {
   const defaults = config.providers?.defaults;
 
   const settings = userSettings ?? loadSettings();
@@ -98,7 +113,9 @@ export function getDefaultModel(config: AppConfig, userSettings?: UserSettings):
   const lastUsedFromSettings = settings.lastUsedModels?.[provider] ?? '';
   const recent = getRecentModels();
   const lastForProvider =
-    (lastUsedFromSettings || recent.find((r) => r.provider === provider)?.modelId) ?? recent[0]?.modelId ?? '';
+    (lastUsedFromSettings || recent.find((r) => r.provider === provider)?.modelId) ??
+    recent[0]?.modelId ??
+    '';
 
   const modelId =
     favourite && favourite !== ''

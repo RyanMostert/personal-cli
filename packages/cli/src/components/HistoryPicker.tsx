@@ -38,7 +38,10 @@ export function HistoryPicker({ onSelect, onClose }: Props) {
   // Windowing
   const scrollTop = Math.max(
     0,
-    Math.min(focusIndex - Math.floor(VISIBLE_HEIGHT / 2), Math.max(0, items.length - VISIBLE_HEIGHT)),
+    Math.min(
+      focusIndex - Math.floor(VISIBLE_HEIGHT / 2),
+      Math.max(0, items.length - VISIBLE_HEIGHT),
+    ),
   );
   const visible = items.slice(scrollTop, scrollTop + VISIBLE_HEIGHT);
   const hiddenAbove = scrollTop;
@@ -60,7 +63,9 @@ export function HistoryPicker({ onSelect, onClose }: Props) {
         return (
           <Box key={item.id} paddingLeft={1}>
             <Text color={focused ? '#58A6FF' : '#8C959F'}>{focused ? '▶ ' : '  '}</Text>
-            <Text color={focused ? '#C9D1D9' : '#8C959F'}>{item.title.slice(0, 40).padEnd(41)}</Text>
+            <Text color={focused ? '#C9D1D9' : '#8C959F'}>
+              {item.title.slice(0, 40).padEnd(41)}
+            </Text>
             <Text color="#484F58">{relativeDate(item.date).padEnd(10)}</Text>
             <Text color="#484F58">{item.model}</Text>
           </Box>

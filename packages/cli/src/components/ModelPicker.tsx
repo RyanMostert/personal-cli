@@ -1,6 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
-import { MODEL_REGISTRY, type ProviderName, type ModelEntry, type ModelTag } from '@personal-cli/shared';
+import {
+  MODEL_REGISTRY,
+  type ProviderName,
+  type ModelEntry,
+  type ModelTag,
+} from '@personal-cli/shared';
 import fuzzysort from 'fuzzysort';
 import {
   getCopilotModelList,
@@ -14,6 +19,14 @@ import {
   getProviderEntries,
   type CacheStats,
 } from '@personal-cli/core';
+import { TAG_COLORS, VISIBLE_HEIGHT } from '../constants/model-picker-constants.js';
+import {
+  getStaticModels,
+  defaultCollapsedSet,
+  isRecommended,
+  getAvgCost,
+  parseModelFilter,
+} from '../utils/model-picker-helpers.js';
 
 interface Props {
   onSelect: (provider: ProviderName, modelId: string) => void;
@@ -21,49 +34,23 @@ interface Props {
   tick?: number;
 }
 
-const TAG_COLORS: Record<ModelTag, string> = {
-  reasoning: '#BD93F9',
-  coding: '#00E5FF',
-  vision: '#FFB86C',
-  fast: '#50FA7B',
-  large: '#FF00AA',
+type RowHeader = {
+  kind: 'header';
+  provider: string;
+  label: string;
+  collapsed: boolean;
+  modelCount: number;
 };
-
-const VISIBLE_HEIGHT = 14;
-// Providers with more models than this auto-collapse on open
-const COLLAPSE_THRESHOLD = 5;
-
-type RowHeader = { kind: 'header'; provider: string; label: string; collapsed: boolean; modelCount: number };
 type RowModel = { kind: 'model'; model: ModelEntry };
 type Row = RowHeader | RowModel;
-
-function getStaticModels(): ModelEntry[] {
-  return [
-    ...MODEL_REGISTRY.filter((model) => model.provider !== 'github-copilot'),
-    ...getCopilotModelList().map((model) => ({
-      provider: 'github-copilot' as ProviderName,
-      id: model.id,
-      label: model.label,
-      contextWindow: model.contextWindow,
-      inputCostPer1M: null,
-      outputCostPer1M: null,
-      free: true,
-      tags: model.tags,
-    })),
-  ];
-}
-
-function defaultCollapsedSet(models: ModelEntry[]): Set<string> {
-  const counts = new Map<string, number>();
-  for (const m of models) counts.set(m.provider, (counts.get(m.provider) ?? 0) + 1);
-  return new Set([...counts.entries()].filter(([, c]) => c > COLLAPSE_THRESHOLD).map(([p]) => p));
-}
 
 export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
   const staticModels = useMemo(() => getStaticModels(), []);
   const [filter, setFilter] = useState('');
   const [rowFocus, setRowFocus] = useState(0);
-  const [collapsedProviders, setCollapsedProviders] = useState<Set<string>>(() => defaultCollapsedSet(staticModels));
+  const [collapsedProviders, setCollapsedProviders] = useState<Set<string>>(() =>
+    defaultCollapsedSet(staticModels),
+  );
   const [costSavingMode, setCostSavingMode] = useState(false);
   const [cachedModels, setCachedModels] = useState<ModelEntry[]>([]);
   const [cacheStats, setCacheStats] = useState<CacheStats[]>([]);
@@ -83,19 +70,13 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
     }
   }, []);
 
-  // Small heuristic for recommending models in the UI
-  const isRecommended = (m: ModelEntry): boolean => {
-    if (m.free) return true;
-    if (m.tags?.includes('coding')) return true;
-    if (m.inputCostPer1M != null && m.inputCostPer1M < 1) return true;
-    return false;
-  };
-
   // Load cached models on mount
   useEffect(() => {
     const loadCached = async () => {
       // Dynamically derive providers from ProviderFactory; exclude github-copilot to avoid stale cache wins
-      const providers = getProviderEntries().map((p) => p.id).filter((id) => id !== 'github-copilot') as ProviderName[];
+      const providers = getProviderEntries()
+        .map((p) => p.id)
+        .filter((id) => id !== 'github-copilot') as ProviderName[];
       const allCached: ModelEntry[] = [];
 
       for (const provider of providers) {
@@ -114,13 +95,6 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
     loadCached();
   }, []);
 
-  // Calculate average cost for comparison
-  const getAvgCost = (m: ModelEntry): number => {
-    if (m.free) return 0;
-    if (m.inputCostPer1M == null || m.outputCostPer1M == null) return 10; // Unknown = expensive
-    return (m.inputCostPer1M + m.outputCostPer1M) / 2;
-  };
-
   // Parse filter for tags (e.g., "gpt #fast #free")
   const { searchQuery, tags, freeOnly } = useMemo(() => {
     const parts = filter.split(' ').filter(Boolean);
@@ -131,7 +105,8 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
       if (part.startsWith('#')) {
         const tag = part.slice(1);
         if (tag === 'free') isFreeOnly = true;
-        else if (['reasoning', 'coding', 'vision', 'fast', 'large'].includes(tag)) tagSet.add(tag as ModelTag);
+        else if (['reasoning', 'coding', 'vision', 'fast', 'large'].includes(tag))
+          tagSet.add(tag as ModelTag);
       } else {
         queryParts.push(part);
       }
@@ -170,7 +145,8 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
   // Filter models
   const filtered = useMemo(() => {
     let models = allModels;
-    if (tags.size > 0) models = models.filter((m) => Array.from(tags).some((tag) => m.tags?.includes(tag)));
+    if (tags.size > 0)
+      models = models.filter((m) => Array.from(tags).some((tag) => m.tags?.includes(tag)));
     if (freeOnly) models = models.filter((m) => m.free);
     // Cost-saving mode: filter to cheaper models (avg cost <$2/1M tokens)
     if (costSavingMode && !freeOnly) {
@@ -219,7 +195,13 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
     }
     for (const [provider, models] of byProvider) {
       const collapsed = effectiveCollapsed.has(provider);
-      rows.push({ kind: 'header', provider, label: provider, collapsed, modelCount: models.length });
+      rows.push({
+        kind: 'header',
+        provider,
+        label: provider,
+        collapsed,
+        modelCount: models.length,
+      });
       if (!collapsed) {
         for (const m of models) rows.push({ kind: 'model', model: m });
       }
@@ -286,7 +268,10 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
   // Windowing centred on the focused row
   const scrollTop = Math.max(
     0,
-    Math.min(rowFocus - Math.floor(VISIBLE_HEIGHT / 2), Math.max(0, allRows.length - VISIBLE_HEIGHT)),
+    Math.min(
+      rowFocus - Math.floor(VISIBLE_HEIGHT / 2),
+      Math.max(0, allRows.length - VISIBLE_HEIGHT),
+    ),
   );
   const visibleRows = allRows.slice(scrollTop, scrollTop + VISIBLE_HEIGHT);
   const hiddenAbove = scrollTop;
@@ -313,7 +298,14 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
   const formatCtx = (n: number) => (n >= 1_000_000 ? `${n / 1_000_000}M` : `${n / 1_000}k`);
 
   return (
-    <Box borderStyle="single" borderColor="#00E5FF" flexDirection="column" paddingX={1} paddingY={1} marginY={1}>
+    <Box
+      borderStyle="single"
+      borderColor="#00E5FF"
+      flexDirection="column"
+      paddingX={1}
+      paddingY={1}
+      marginY={1}
+    >
       {/* Title */}
       <Box position="absolute" marginTop={-1} marginLeft={2} backgroundColor="black" paddingX={1}>
         <Text color="#00E5FF" bold>
@@ -401,10 +393,17 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
                 {!isRecent && (
                   <Text color={focused ? '#8C959F' : '#484F58'}>
                     {' ─── '}
-                    {row.collapsed ? `${row.modelCount} models  [Enter/Space to expand]` : `[Enter/Space to collapse]`}
+                    {row.collapsed
+                      ? `${row.modelCount} models  [Enter/Space to expand]`
+                      : `[Enter/Space to collapse]`}
                   </Text>
                 )}
-                {hasCache && <Text color={isStale ? '#FFB86C' : '#50FA7B'}> {isStale ? '⚠ cached' : '🔄 cached'}</Text>}
+                {hasCache && (
+                  <Text color={isStale ? '#FFB86C' : '#50FA7B'}>
+                    {' '}
+                    {isStale ? '⚠ cached' : '🔄 cached'}
+                  </Text>
+                )}
               </Box>
             );
           }
@@ -413,7 +412,11 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
           const m = row.model;
           const expensive = isExpensive(m);
           return (
-            <Box key={`m-${i}-${m.provider}-${m.id}`} paddingLeft={2} backgroundColor={focused ? '#161b22' : undefined}>
+            <Box
+              key={`m-${i}-${m.provider}-${m.id}`}
+              paddingLeft={2}
+              backgroundColor={focused ? '#161b22' : undefined}
+            >
               <Text color={focused ? '#FF00AA' : '#484F58'}>{focused ? '❯❯ ' : '   '}</Text>
               <Text color={focused ? 'white' : '#8C959F'} bold={focused}>
                 {m.id.padEnd(40)}
@@ -466,7 +469,10 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
       </Box>
 
       <Box marginTop={1} justifyContent="space-between" paddingX={1}>
-        <Text color="#484F58"> ESC abort · type to filter · #free #fast · $ cheap mode · Ctrl+R refresh </Text>
+        <Text color="#484F58">
+          {' '}
+          ESC abort · type to filter · #free #fast · $ cheap mode · Ctrl+R refresh{' '}
+        </Text>
         <Text color="#00E5FF" bold>
           {' '}
           Enter select/toggle{' '}

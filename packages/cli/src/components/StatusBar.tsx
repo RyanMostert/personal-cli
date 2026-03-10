@@ -100,28 +100,47 @@ export function StatusBar({
       <Box paddingX={1} marginBottom={0}>
         {flashVisible && notification ? (
           <Box>
-            <Text color={
-              notification.level === 'error' ? '#F85149' :
-              notification.level === 'warning' ? '#D29922' :
-              notification.level === 'success' ? '#3FB950' : '#00E5FF'
-            } bold>
+            <Text
+              color={
+                notification.level === 'error'
+                  ? '#F85149'
+                  : notification.level === 'warning'
+                    ? '#D29922'
+                    : notification.level === 'success'
+                      ? '#3FB950'
+                      : '#00E5FF'
+              }
+              bold
+            >
               {'! '}
             </Text>
-            <Text color={
-              notification.level === 'error' ? '#F85149' :
-              notification.level === 'warning' ? '#D29922' :
-              notification.level === 'success' ? '#3FB950' : '#6E7681'
-            }>{notification.title}</Text>
+            <Text
+              color={
+                notification.level === 'error'
+                  ? '#F85149'
+                  : notification.level === 'warning'
+                    ? '#D29922'
+                    : notification.level === 'success'
+                      ? '#3FB950'
+                      : '#6E7681'
+              }
+            >
+              {notification.title}
+            </Text>
           </Box>
-        ) : (isStreaming || activeToolCount > 0 || leaderKeyActive) ? (
+        ) : isStreaming || activeToolCount > 0 || leaderKeyActive ? (
           <Box>
             <Text color="#00E5FF">{spinner} </Text>
             {isStreaming && !activeToolName && <Text color="#6E7681">receiving</Text>}
             {isStreaming && activeToolName && (
-              <Text color="#6E7681">running <Text color="#D29922">{activeToolName}</Text></Text>
+              <Text color="#6E7681">
+                running <Text color="#D29922">{activeToolName}</Text>
+              </Text>
             )}
             {activeToolCount > 0 && !isStreaming && (
-              <Text color="#D29922">{activeToolCount} tool{activeToolCount > 1 ? 's' : ''} active</Text>
+              <Text color="#D29922">
+                {activeToolCount} tool{activeToolCount > 1 ? 's' : ''} active
+              </Text>
             )}
             {leaderKeyActive && <Text color="#FF00AA"> · leader — waiting…</Text>}
           </Box>
@@ -139,21 +158,21 @@ export function StatusBar({
           <Text color="#6E7681">{provider}</Text>
           <Text color="#30363D"> / </Text>
           <Text color="white">{modelId}</Text>
-          <Text color="#484F58">  </Text>
-          <Text color={modeColor[mode] ?? '#6E7681'} bold>{modeLabel[mode] ?? `[${mode.toUpperCase()}]`}</Text>
+          <Text color="#484F58"> </Text>
+          <Text color={modeColor[mode] ?? '#6E7681'} bold>
+            {modeLabel[mode] ?? `[${mode.toUpperCase()}]`}
+          </Text>
           {attachedFiles.length > 0 && (
-            <Text color="#484F58">  {attachedFiles.length} attached</Text>
+            <Text color="#484F58"> {attachedFiles.length} attached</Text>
           )}
-          {mcpServerCount > 0 && (
-            <Text color="#484F58">  {mcpServerCount} mcp</Text>
-          )}
+          {mcpServerCount > 0 && <Text color="#484F58"> {mcpServerCount} mcp</Text>}
         </Box>
 
         <Box>
           <Text color="#484F58">CTX </Text>
           <Text color={tokenColor}>{barStr}</Text>
           <Text color="#484F58"> {Math.round(progress * 100)}%</Text>
-          <Text color="#30363D">  </Text>
+          <Text color="#30363D"> </Text>
           <Text color={cost > 0 ? '#D29922' : '#484F58'}>{costStr}</Text>
         </Box>
       </Box>

@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { join, resolve } from 'path';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { resolve } from 'path';
 
 /** Workspace-scoped memory file (.pcli-memory.json at project root). */
 function getMemoryPath(): string {
@@ -62,9 +62,7 @@ export const memoryRead = tool({
       const keys = Object.keys(store);
       if (keys.length === 0) return { output: 'Memory store is empty.' };
 
-      const formatted = keys
-        .map((k) => `${k}: ${store[k].value}`)
-        .join('\n');
+      const formatted = keys.map((k) => `${k}: ${store[k].value}`).join('\n');
 
       return { output: formatted, count: keys.length };
     } catch (err) {

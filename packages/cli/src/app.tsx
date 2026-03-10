@@ -34,6 +34,8 @@ import {
 import { dispatch, getCommands, tryMatchIntent } from './commands/registry.js';
 import type { CommandContext } from './types/commands.js';
 import { useAgent } from './hooks/useAgent.js';
+import { useZenGateway } from './hooks/useZenGateway.js';
+import { useSidePanel } from './hooks/useSidePanel.js';
 import { useOverlay } from './context/OverlayContext.js';
 import { useSetTheme } from './context/ThemeContext.js';
 import {
@@ -74,50 +76,11 @@ import {
 import { promises as fs, existsSync } from 'fs';
 import { join } from 'path';
 import clipboardy from 'clipboardy';
+import { parseZenGatewayConfig, parseZenGatewayConfigFromEnv } from './utils/zen-config.js';
+import { getToolTextResult } from './utils/tool-result.js';
 
 interface AppProps {
   initialAttachments?: Array<{ path: string; type: 'file' | 'image' }>;
-}
-
-const DEFAULT_ZEN_ENDPOINT = 'https://opencode.ai/zen/v1';
-
-function parseZenGatewayConfig(config?: MCPServerConfig): ZenGatewayConfig | null {
-  const apiKey = config?.env?.OPENCODE_API_KEY || config?.env?.ZEN_API_KEY;
-  if (!apiKey) {
-    return null;
-  }
-
-  const result = ZenGatewayConfigSchema.safeParse({
-    endpoint: config.env?.ZEN_ENDPOINT || DEFAULT_ZEN_ENDPOINT,
-    apiKey,
-    enabled: true,
-  });
-
-  return result.success ? result.data : null;
-}
-
-function parseZenGatewayConfigFromEnv(): ZenGatewayConfig | null {
-  const apiKey = process.env.OPENCODE_API_KEY || process.env.ZEN_API_KEY;
-  if (!apiKey) {
-    return null;
-  }
-
-  const result = ZenGatewayConfigSchema.safeParse({
-    endpoint: process.env.ZEN_ENDPOINT || DEFAULT_ZEN_ENDPOINT,
-    apiKey,
-    enabled: true,
-  });
-
-  return result.success ? result.data : null;
-}
-
-function getTextResult(result: ToolResult): string {
-  const text = result.content.find((item) => item.type === 'text' && typeof item.text === 'string')?.text;
-  if (!text) {
-    throw new Error('Zen Gateway returned an empty response.');
-  }
-
-  return text;
 }
 
 export function App({ initialAttachments = [] }: AppProps) {
@@ -190,97 +153,36 @@ export function App({ initialAttachments = [] }: AppProps) {
 
   // MCP State
   const [mcpManager] = useState(() => new MCPClientManager());
-  const [mcpServers, setMcpServers] = useState<import('@personal-cli/mcp-client').MCPServerInfo[]>([]);
+  const [mcpServers, setMcpServers] = useState<import('@personal-cli/mcp-client').MCPServerInfo[]>(
+    [],
+  );
   const [mcpServerCount, setMcpServerCount] = useState(0);
 
-  // Zen Gateway State
-  const [zenConfig, setZenConfig] = useState<ZenGatewayConfig | null>(() => {
-    const mcpConfigs = loadMCPConfig();
-    return parseZenGatewayConfig(mcpConfigs['zen-gateway']) ?? parseZenGatewayConfigFromEnv();
-  });
-
-  const resolveZenGatewayConfig = useCallback((): ZenGatewayConfig | null => {
-    if (zenConfig) {
-      return zenConfig;
-    }
-
-    const config = parseZenGatewayConfig(loadMCPConfig()['zen-gateway']) ?? parseZenGatewayConfigFromEnv();
-    if (config) {
-      setZenConfig(config);
-    }
-
-    return config;
-  }, [zenConfig]);
-
-  const callZenGatewayTool = useCallback(
-    async <T,>(toolName: 'zen_get_status' | 'zen_list_models', parse: (text: string) => T): Promise<T | null> => {
-      if (!resolveZenGatewayConfig()) {
-        return null;
-      }
-
-      if (!mcpManager.isConnected('zen-gateway')) {
-        throw new Error('Zen Gateway is configured but the MCP server is not connected.');
-      }
-
-      const result = await mcpManager.callTool(`zen-gateway__${toolName}`, {});
-      const text = getTextResult(result);
-      if (result.isError) {
-        throw new Error(text.replace(/^Error:\s*/, ''));
-      }
-
-      return parse(text);
-    },
-    [mcpManager, resolveZenGatewayConfig],
-  );
-
-  const parseZenGatewayStatusResult = useCallback((text: string): ZenGatewayStatus => {
-    const parsed = ZenGatewayStatusSchema.safeParse(JSON.parse(text));
-    if (!parsed.success) {
-      throw new Error('Zen Gateway returned an invalid status response.');
-    }
-
-    return parsed.data;
-  }, []);
-
-  const parseZenGatewayModelsResult = useCallback((text: string): ZenModel[] => {
-    const parsed = ZenModelSchema.array().safeParse(JSON.parse(text));
-    if (!parsed.success) {
-      throw new Error('Zen Gateway returned an invalid models response.');
-    }
-
-    return parsed.data;
-  }, []);
-
-  const syncZenConfigFromMcp = useCallback((config: MCPServerConfig): void => {
-    const parsedConfig = parseZenGatewayConfig(config);
-    if (parsedConfig) {
-      setZenConfig(parsedConfig);
-    } else {
-      setZenConfig(null);
-    }
-  }, []);
-
-  const saveZenConfigFromMcp = useCallback((config: MCPServerConfig): void => {
-    const parsedConfig = parseZenGatewayConfig(config);
-    if (parsedConfig) {
-      setZenConfig(parsedConfig);
-      return;
-    }
-
-    const envConfig = parseZenGatewayConfigFromEnv();
-    if (envConfig) {
-      setZenConfig(envConfig);
-      return;
-    }
-
-    setZenConfig(null);
-  }, []);
+  // Zen Gateway
+  const {
+    zenConfig,
+    setZenConfig,
+    resolveZenGatewayConfig,
+    callZenGatewayTool,
+    parseZenGatewayStatusResult,
+    parseZenGatewayModelsResult,
+    syncZenConfigFromMcp,
+    saveZenConfigFromMcp,
+  } = useZenGateway(mcpManager);
 
   const [cmdSelectedIdx, setCmdSelectedIdx] = useState(0);
   const [fileAutoFiles, setFileAutoFiles] = useState<string[]>([]);
   const [fileAutoSelectedIdx, setFileAutoSelectedIdx] = useState(0);
 
   const { exit } = useApp();
+
+  // Side Panel
+  const { openFileInPanel, handleSaveFile, handleExplainChange } = useSidePanel(
+    setSidePanel,
+    addSystemMessage,
+    synthesizeAnswer,
+    pendingPermission,
+  );
 
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -292,25 +194,33 @@ export function App({ initialAttachments = [] }: AppProps) {
   }, [isGameOver]);
 
   const isPickingProvider = overlay.type === 'provider-manager';
-  const pendingProviderAdd = overlay.type === 'provider-wizard' ? (overlay.props?.providerId as string) : null;
+  const pendingProviderAdd =
+    overlay.type === 'provider-wizard' ? (overlay.props?.providerId as string) : null;
   const showHistory = overlay.type === 'history';
   const showFileExplorer = overlay.type === 'file-explorer';
   const showKeyHelp = overlay.type === 'key-help';
   const showKeybindManager = overlay.type === 'keybind-manager';
   const isManagingMCP = overlay.type === 'mcp-manager';
-  const mcpWizardMode = overlay.type === 'mcp-wizard' ? (overlay.props?.mode as 'add' | 'edit') : null;
-  const mcpWizardServer = overlay.type === 'mcp-wizard' ? (overlay.props?.serverName as string) : null;
-  const mcpWizardServerType = overlay.type === 'mcp-wizard' ? (overlay.props?.serverType as 'zen-gateway' | 'custom') : null;
+  const mcpWizardMode =
+    overlay.type === 'mcp-wizard' ? (overlay.props?.mode as 'add' | 'edit') : null;
+  const mcpWizardServer =
+    overlay.type === 'mcp-wizard' ? (overlay.props?.serverName as string) : null;
+  const mcpWizardServerType =
+    overlay.type === 'mcp-wizard' ? (overlay.props?.serverType as 'zen-gateway' | 'custom') : null;
 
   const isManagingPlugins = overlay.type === 'plugin-manager';
-  const pluginWizardMode = overlay.type === 'plugin-wizard' ? (overlay.props?.mode as 'add' | 'edit') : null;
-  const pluginWizardName = overlay.type === 'plugin-wizard' ? (overlay.props?.pluginName as string) : null;
+  const pluginWizardMode =
+    overlay.type === 'plugin-wizard' ? (overlay.props?.mode as 'add' | 'edit') : null;
+  const pluginWizardName =
+    overlay.type === 'plugin-wizard' ? (overlay.props?.pluginName as string) : null;
   const isOnboarding = overlay.type === 'onboarding';
-  const [activePlugins, setActivePlugins] = useState<import('@personal-cli/tools').LoadedPlugin[]>([]);
+  const [activePlugins, setActivePlugins] = useState<import('@personal-cli/tools').LoadedPlugin[]>(
+    [],
+  );
 
   useEffect(() => {
     setInputHistory(loadPromptHistory());
-    
+
     // Trigger onboarding if no providers are configured
     const auth = readAuth();
     if (Object.keys(auth).length === 0 && messages.length === 0) {
@@ -360,7 +270,12 @@ export function App({ initialAttachments = [] }: AppProps) {
   }, [streamingThought, isStreaming, sidePanel?.type]);
 
   const handleCreatePlugin = useCallback(
-    async (data: { name: string; version: string; description: string; createTemplate: boolean }) => {
+    async (data: {
+      name: string;
+      version: string;
+      description: string;
+      createTemplate: boolean;
+    }) => {
       try {
         const { getPluginDir } = await import('@personal-cli/tools');
         const pluginDir = getPluginDir();
@@ -401,7 +316,9 @@ export const helloWorld = async ({ name = 'World' }) => {
         setActivePlugins(plugins);
         close();
       } catch (err) {
-        addSystemMessage(`✗ Failed to create plugin: ${err instanceof Error ? err.message : String(err)}`);
+        addSystemMessage(
+          `✗ Failed to create plugin: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
     },
     [addSystemMessage, close, loadPlugins],
@@ -420,58 +337,13 @@ export const helloWorld = async ({ name = 'World' }) => {
           setActivePlugins(plugins);
         }
       } catch (err) {
-        addSystemMessage(`✗ Failed to delete plugin: ${err instanceof Error ? err.message : String(err)}`);
+        addSystemMessage(
+          `✗ Failed to delete plugin: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
     },
     [addSystemMessage, loadPlugins],
   );
-
-  const openFileInPanel = useCallback(
-    async (fp: string) => {
-      try {
-        const content = await fs.readFile(fp, 'utf-8');
-        recordAccess(fp);
-        setSidePanel({ type: 'file', path: fp, content });
-      } catch {
-        addSystemMessage(`Error: could not open ${fp}`);
-      }
-    },
-    [addSystemMessage],
-  );
-
-  const handleSaveFile = useCallback(
-    async (path: string, content: string) => {
-      try {
-        await fs.writeFile(path, content, 'utf-8');
-        addSystemMessage(`✓ Saved changes to ${path}`);
-        setSidePanel((prev) => (prev && prev.path === path ? { ...prev, content } : prev));
-      } catch (err) {
-        addSystemMessage(`✗ Failed to save ${path}: ${err instanceof Error ? err.message : String(err)}`);
-      }
-    },
-    [addSystemMessage],
-  );
-
-  const handleExplainChange = useCallback(async () => {
-    if (!pendingPermission) return;
-    const { toolName, args } = pendingPermission;
-    if (toolName !== 'edit_file' && toolName !== 'patch') return;
-
-    setSidePanel({ type: 'thoughts', thought: 'Analysing proposed changes...' });
-
-    const diffText =
-      toolName === 'edit_file'
-        ? `File: ${args?.path}\nSearch: ${args?.search}\nReplace: ${args?.replace}`
-        : `Patch: ${args?.patch}`;
-
-    try {
-      const topic = `Explain what these code changes do in plain English. Focus on the impact and intent:\n\n${diffText}`;
-      const explanation = await synthesizeAnswer(topic);
-      setSidePanel({ type: 'thoughts', thought: explanation });
-    } catch (err) {
-      setSidePanel({ type: 'thoughts', thought: 'Error generating explanation.' });
-    }
-  }, [pendingPermission, synthesizeAnswer]);
 
   const showCommandAutocomplete =
     inputValue.startsWith('/') &&
@@ -484,7 +356,12 @@ export const helloWorld = async ({ name = 'World' }) => {
 
   const fileMatch = inputValue.match(/(@|\/add\s|\/open\s)([^\s]*)$/);
   const showFileAutocomplete =
-    !!fileMatch && !isPickingModel && !isPickingProvider && !showHistory && !pendingProviderAdd && !isStreaming;
+    !!fileMatch &&
+    !isPickingModel &&
+    !isPickingProvider &&
+    !showHistory &&
+    !pendingProviderAdd &&
+    !isStreaming;
   const fileTrigger = fileMatch?.[1] ?? '';
   const fileQuery = fileMatch?.[2] ?? '';
 
@@ -675,13 +552,17 @@ export const helloWorld = async ({ name = 'World' }) => {
           recordAccess(sel);
           if (fileTrigger === '@') {
             setInputValue((v) => v.replace(/@[^\s]*$/, ''));
-            attachFile(sel).then((ok) => addSystemMessage(ok ? `Attached: ${sel}` : `Error: could not read ${sel}`));
+            attachFile(sel).then((ok) =>
+              addSystemMessage(ok ? `Attached: ${sel}` : `Error: could not read ${sel}`),
+            );
           } else if (fileTrigger.trimEnd() === '/open') {
             setInputValue('');
             openFileInPanel(sel);
           } else if (fileTrigger.trimEnd() === '/add') {
             setInputValue('');
-            attachFile(sel).then((ok) => addSystemMessage(ok ? `Attached: ${sel}` : `Error: could not read ${sel}`));
+            attachFile(sel).then((ok) =>
+              addSystemMessage(ok ? `Attached: ${sel}` : `Error: could not read ${sel}`),
+            );
           } else {
             setInputValue((v) => v.replace(/([^\s]*)$/, sel));
           }
@@ -878,7 +759,9 @@ export const helloWorld = async ({ name = 'World' }) => {
       }
       if (trimmed === '/telemetry') {
         const isEnabled = getTelemetryEnabled();
-        addSystemMessage(`Telemetry is currently ${isEnabled ? 'ON' : 'OFF'}. Use /telemetry [on|off] to change.`);
+        addSystemMessage(
+          `Telemetry is currently ${isEnabled ? 'ON' : 'OFF'}. Use /telemetry [on|off] to change.`,
+        );
         setInputValue('');
         return;
       }
@@ -901,7 +784,10 @@ export const helloWorld = async ({ name = 'World' }) => {
       if (trimmed === '/tools') {
         const tools = getTools();
         const toolList = tools
-          .map((t) => `  ⚡ [${t.name.toUpperCase()}] — ${t.description || 'No description available'}`)
+          .map(
+            (t) =>
+              `  ⚡ [${t.name.toUpperCase()}] — ${t.description || 'No description available'}`,
+          )
           .join('\n');
         addSystemMessage(`Active Neuro-Tools:\n${toolList}`);
         setInputValue('');
@@ -927,8 +813,12 @@ export const helloWorld = async ({ name = 'World' }) => {
           setInputValue('');
           refreshAllProviders().then((results) => {
             const successCount = results.filter((r) => r.success).length;
-            const totalModels = results.filter((r) => r.success).reduce((sum, r) => sum + r.modelCount, 0);
-            addSystemMessage(`✓ Refreshed ${successCount}/${results.length} providers (${totalModels} models)`);
+            const totalModels = results
+              .filter((r) => r.success)
+              .reduce((sum, r) => sum + r.modelCount, 0);
+            addSystemMessage(
+              `✓ Refreshed ${successCount}/${results.length} providers (${totalModels} models)`,
+            );
             results
               .filter((r) => !r.success)
               .forEach((r) => {
@@ -958,7 +848,9 @@ export const helloWorld = async ({ name = 'World' }) => {
           switchModel(parts[0] as ProviderName, parts.slice(1).join('/'));
           addSystemMessage(`Switched to ${parts[0]}/${parts.slice(1).join('/')}`);
         } else {
-          addSystemMessage('Usage: /model <provider/modelId>  or  /model to browse  or  /model refresh [provider]');
+          addSystemMessage(
+            'Usage: /model <provider/modelId>  or  /model to browse  or  /model refresh [provider]',
+          );
         }
         setInputValue('');
         return;
@@ -1035,7 +927,9 @@ export const helloWorld = async ({ name = 'World' }) => {
                   setMcpServers(mcpManager.getAllServerInfo());
                   setMcpServerCount(mcpManager.getConnectedServers().length);
                 } catch (error) {
-                  addSystemMessage(`Failed to connect: ${error instanceof Error ? error.message : String(error)}`);
+                  addSystemMessage(
+                    `Failed to connect: ${error instanceof Error ? error.message : String(error)}`,
+                  );
                 }
               } else {
                 addSystemMessage(`No configuration found for: ${serverName}`);
@@ -1159,7 +1053,9 @@ export const helloWorld = async ({ name = 'World' }) => {
       }
       if (trimmed.startsWith('/export')) {
         const p = trimmed.slice(7).trim() || undefined;
-        addSystemMessage(`Exported to: ${exportConversation(messages, activeModel, tokensUsed, cost, p)}`);
+        addSystemMessage(
+          `Exported to: ${exportConversation(messages, activeModel, tokensUsed, cost, p)}`,
+        );
         setInputValue('');
         return;
       }
@@ -1176,7 +1072,9 @@ export const helloWorld = async ({ name = 'World' }) => {
         return;
       }
       if (trimmed === '/theme') {
-        addSystemMessage('Themes: default  dracula  tokyo-night  nord  gruvbox\nUsage: /theme <name>');
+        addSystemMessage(
+          'Themes: default  dracula  tokyo-night  nord  gruvbox\nUsage: /theme <name>',
+        );
         setInputValue('');
         return;
       }
@@ -1248,7 +1146,12 @@ export const helloWorld = async ({ name = 'World' }) => {
 
   if (isGameOver) {
     return (
-      <GameOverScreen tokensUsed={tokensUsed} cost={cost} messageCount={messages.length} onComplete={() => exit()} />
+      <GameOverScreen
+        tokensUsed={tokensUsed}
+        cost={cost}
+        messageCount={messages.length}
+        onComplete={() => exit()}
+      />
     );
   }
 
@@ -1275,12 +1178,16 @@ export const helloWorld = async ({ name = 'World' }) => {
           } else if (attachment.type === 'path') {
             const ok = await attachFile(attachment.path);
             addSystemMessage(
-              ok ? `Attached (Paste/Drop): ${attachment.path}` : `Error: could not attach ${attachment.path}`,
+              ok
+                ? `Attached (Paste/Drop): ${attachment.path}`
+                : `Error: could not attach ${attachment.path}`,
             );
           } else {
             const ok = await attachFile(attachment.path);
             addSystemMessage(
-              ok ? `Attached Image (Clipboard): ${attachment.name}` : `Error: could not attach clipboard image`,
+              ok
+                ? `Attached Image (Clipboard): ${attachment.name}`
+                : `Error: could not attach clipboard image`,
             );
           }
         }}
@@ -1368,7 +1275,9 @@ export const helloWorld = async ({ name = 'World' }) => {
               <MCPManager
                 servers={mcpServers}
                 onAdd={() => open('mcp-wizard', { mode: 'add' })}
-                onAddZenGateway={() => open('mcp-wizard', { mode: 'add', serverType: 'zen-gateway' })}
+                onAddZenGateway={() =>
+                  open('mcp-wizard', { mode: 'add', serverType: 'zen-gateway' })
+                }
                 onEdit={(name) => open('mcp-wizard', { mode: 'edit', serverName: name })}
                 onRemove={async (name) => {
                   await mcpManager.disconnectServer(name);
@@ -1387,7 +1296,9 @@ export const helloWorld = async ({ name = 'World' }) => {
                     setMcpServers(mcpManager.getAllServerInfo());
                     setMcpServerCount(mcpManager.getConnectedServers().length);
                   } catch (error) {
-                    addSystemMessage(`Failed to connect: ${error instanceof Error ? error.message : String(error)}`);
+                    addSystemMessage(
+                      `Failed to connect: ${error instanceof Error ? error.message : String(error)}`,
+                    );
                   }
                 }}
                 onDisconnect={async (name) => {
@@ -1428,12 +1339,12 @@ export const helloWorld = async ({ name = 'World' }) => {
                 serverType={mcpWizardServerType || 'custom'}
                 onSave={async (name, config) => {
                   saveMCPConfig(name, config);
-                  
+
                   // If this is the Zen Gateway, sync CLI state from the saved MCP config
                   if (name === 'zen-gateway') {
                     saveZenConfigFromMcp(config);
                   }
-                  
+
                   if (config.enabled !== false) {
                     try {
                       await mcpManager.connectServer(name, config);
@@ -1446,7 +1357,9 @@ export const helloWorld = async ({ name = 'World' }) => {
                       );
                     }
                   } else {
-                    addSystemMessage(`MCP server ${mcpWizardMode === 'add' ? 'added' : 'updated'}: ${name}`);
+                    addSystemMessage(
+                      `MCP server ${mcpWizardMode === 'add' ? 'added' : 'updated'}: ${name}`,
+                    );
                   }
                   setMcpServers(mcpManager.getAllServerInfo());
                   setMcpServerCount(mcpManager.getConnectedServers().length);
@@ -1486,12 +1399,15 @@ export const helloWorld = async ({ name = 'World' }) => {
                     onFocus={() => setFocusedToolCallId(tc.toolCallId)}
                   />
                 ))}
-                {isStreaming && <StreamingMessage text={streamingText} thought={streamingThought} />}
+                {isStreaming && (
+                  <StreamingMessage text={streamingText} thought={streamingThought} />
+                )}
                 {pendingPermission && (
                   <PermissionPrompt
                     permission={pendingPermission}
                     onExplain={
-                      pendingPermission.toolName === 'edit_file' || pendingPermission.toolName === 'patch'
+                      pendingPermission.toolName === 'edit_file' ||
+                      pendingPermission.toolName === 'patch'
                         ? handleExplainChange
                         : undefined
                     }
@@ -1550,7 +1466,11 @@ export const helloWorld = async ({ name = 'World' }) => {
           leaderKeyActive={leaderKeyActive}
         />
 
-        <CommandAutocomplete filtered={cmdFiltered} selectedIndex={cmdSelectedIdx} visible={showCommandAutocomplete} />
+        <CommandAutocomplete
+          filtered={cmdFiltered}
+          selectedIndex={cmdSelectedIdx}
+          visible={showCommandAutocomplete}
+        />
         <FileAutocomplete
           query={fileQuery}
           visible={showFileAutocomplete}
@@ -1573,4 +1493,3 @@ export const helloWorld = async ({ name = 'World' }) => {
     </>
   );
 }
-

@@ -92,23 +92,25 @@ await server.start();
 ## Available MCP Tools
 
 ### zen_chat
+
 Send a chat completion request to the Zen Gateway.
 
 **Input:**
+
 ```json
 {
   "model": "gpt-4",
-  "messages": [
-    { "role": "user", "content": "Hello!" }
-  ],
+  "messages": [{ "role": "user", "content": "Hello!" }],
   "maxTokens": 1000
 }
 ```
 
 ### zen_list_models
+
 List all available models from Zen Gateway.
 
 ### zen_get_status
+
 Check Zen Gateway connection status.
 
 ## Available MCP Resources
@@ -119,6 +121,7 @@ Check Zen Gateway connection status.
 ## Error Handling
 
 The server handles common error scenarios:
+
 - **401 Unauthorized**: Invalid API key
 - **429 Too Many Requests**: Rate limiting
 - **Network Errors**: Connection issues with the gateway
@@ -126,12 +129,15 @@ The server handles common error scenarios:
 ## Configuration
 
 When used with personal-cli, the configuration is stored in:
+
 ```
 ~/.personal-cli/mcp.json
 ```
+
 (Windows: `%USERPROFILE%\.personal-cli\mcp.json`)
 
 Example configuration:
+
 ```json
 {
   "zen-gateway": {
@@ -168,4 +174,3 @@ When integrated with personal-cli, you can use:
 ## License
 
 MIT
-

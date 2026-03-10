@@ -55,9 +55,12 @@ async function extractOutline(filePath: string, content: string): Promise<string
         }
       }
     } else if (ext === 'py') {
-      if (/^class\s+\w+/.test(line)) items.push({ line: index + 1, type: 'class', signature: line });
-      else if (/^\s+def\s+\w+/.test(line)) items.push({ line: index + 1, type: 'method', signature: line });
-      else if (/^def\s+\w+/.test(line)) items.push({ line: index + 1, type: 'function', signature: line });
+      if (/^class\s+\w+/.test(line))
+        items.push({ line: index + 1, type: 'class', signature: line });
+      else if (/^\s+def\s+\w+/.test(line))
+        items.push({ line: index + 1, type: 'method', signature: line });
+      else if (/^def\s+\w+/.test(line))
+        items.push({ line: index + 1, type: 'function', signature: line });
     }
   });
 
@@ -65,7 +68,9 @@ async function extractOutline(filePath: string, content: string): Promise<string
     return `<file name="${filePath}">\nNo distinct semantic structures found.\n</file>`;
   }
 
-  const formattedItems = items.map((i) => `${i.line.toString().padStart(4, ' ')}: ${i.signature}`).join('\n');
+  const formattedItems = items
+    .map((i) => `${i.line.toString().padStart(4, ' ')}: ${i.signature}`)
+    .join('\n');
   return `<file name="${filePath}">\n${formattedItems}\n</file>`;
 }
 
@@ -73,12 +78,18 @@ export const semanticSearch = tool({
   description:
     'AST-aware semantic outline search (mgrep style). Efficiently extracts definitions, classes, functions, and interfaces from files without reading their full contents. Perfect for understanding large codebases using up to 4x fewer tokens.',
   inputSchema: z.object({
-    patterns: z.array(z.string().describe('Exact file path or glob pattern to analyze (e.g., "src/**/*.ts")')),
+    patterns: z.array(
+      z.string().describe('Exact file path or glob pattern to analyze (e.g., "src/**/*.ts")'),
+    ),
   }),
   execute: async ({ patterns }) => {
     try {
       const cwd = process.cwd();
-      const resolvedFiles = await fg(patterns, { cwd, absolute: true, ignore: ['**/node_modules/**', '**/.git/**'] });
+      const resolvedFiles = await fg(patterns, {
+        cwd,
+        absolute: true,
+        ignore: ['**/node_modules/**', '**/.git/**'],
+      });
 
       if (resolvedFiles.length === 0) {
         return { error: 'No files matched the provided paths/patterns.' };

@@ -84,7 +84,9 @@ export function InputBox({
             value={value}
             onChange={onChange}
             onSubmit={onSubmit}
-            placeholder={isStreaming ? 'esc to stop...' : isDisabled ? 'waiting...' : 'type /help for commands'}
+            placeholder={
+              isStreaming ? 'esc to stop...' : isDisabled ? 'waiting...' : 'type /help for commands'
+            }
             focus={!isDisabled && !isStreaming}
           />
         </Box>

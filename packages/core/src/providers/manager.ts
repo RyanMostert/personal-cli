@@ -66,7 +66,11 @@ const filterPingsFetch: typeof globalThis.fetch = async (url, init) => {
 interface ProviderDef {
   id: ProviderName;
   envVar?: string;
-  create: (options: { apiKey?: string; baseUrl?: string; modelId: string }) => Promise<LanguageModel>;
+  create: (options: {
+    apiKey?: string;
+    baseUrl?: string;
+    modelId: string;
+  }) => Promise<LanguageModel>;
 }
 
 const PROVIDER_REGISTRY: ProviderDef[] = [
@@ -242,9 +246,11 @@ const PROVIDER_REGISTRY: ProviderDef[] = [
       // @ts-ignore - optional peer dep
       const { GoogleAuth } = await import('google-auth-library');
 
-      const project = process.env.GOOGLE_CLOUD_PROJECT ?? process.env.GCP_PROJECT ?? process.env.GCLOUD_PROJECT;
+      const project =
+        process.env.GOOGLE_CLOUD_PROJECT ?? process.env.GCP_PROJECT ?? process.env.GCLOUD_PROJECT;
 
-      const location = process.env.GOOGLE_CLOUD_LOCATION ?? process.env.VERTEX_LOCATION ?? 'us-central1';
+      const location =
+        process.env.GOOGLE_CLOUD_LOCATION ?? process.env.VERTEX_LOCATION ?? 'us-central1';
 
       const auth = new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
 

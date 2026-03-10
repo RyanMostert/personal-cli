@@ -41,7 +41,8 @@ export const readFile = tool({
       let content = lines.map((l, i) => `${(startLine ?? 1) + i}: ${l}`).join('\n');
 
       if (content.length > TOOL_OUTPUT_MAX_CHARS) {
-        content = content.slice(0, TOOL_OUTPUT_MAX_CHARS) + `\n... (truncated, ${totalLines} total lines)`;
+        content =
+          content.slice(0, TOOL_OUTPUT_MAX_CHARS) + `\n... (truncated, ${totalLines} total lines)`;
       }
 
       return { output: content, totalLines };

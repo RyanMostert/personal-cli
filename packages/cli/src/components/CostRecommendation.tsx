@@ -36,8 +36,15 @@ function findCheaperAlternatives(current: ModelEntry, limit: number = 3): ModelE
     .slice(0, limit);
 }
 
-export function CostRecommendation({ currentProvider, currentModelId, currentCost, onSelect }: Props) {
-  const current = MODEL_REGISTRY.find((m) => m.provider === currentProvider && m.id === currentModelId);
+export function CostRecommendation({
+  currentProvider,
+  currentModelId,
+  currentCost,
+  onSelect,
+}: Props) {
+  const current = MODEL_REGISTRY.find(
+    (m) => m.provider === currentProvider && m.id === currentModelId,
+  );
 
   if (!current) return null;
 

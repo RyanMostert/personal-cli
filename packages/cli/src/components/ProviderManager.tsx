@@ -12,7 +12,13 @@ interface Props {
 
 const VISIBLE_HEIGHT = 14;
 
-export function ProviderManager({ configuredProviders, onAdd, onRemove, onClose, tick = 0 }: Props) {
+export function ProviderManager({
+  configuredProviders,
+  onAdd,
+  onRemove,
+  onClose,
+  tick = 0,
+}: Props) {
   const [filter, setFilter] = useState('');
   const [focusIndex, setFocusIndex] = useState(0);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -110,14 +116,24 @@ export function ProviderManager({ configuredProviders, onAdd, onRemove, onClose,
   // Windowing
   const scrollTop = Math.max(
     0,
-    Math.min(focusIndex - Math.floor(VISIBLE_HEIGHT / 2), Math.max(0, allList.length - VISIBLE_HEIGHT)),
+    Math.min(
+      focusIndex - Math.floor(VISIBLE_HEIGHT / 2),
+      Math.max(0, allList.length - VISIBLE_HEIGHT),
+    ),
   );
   const visibleItems = allList.slice(scrollTop, scrollTop + VISIBLE_HEIGHT);
   const hiddenAbove = scrollTop;
   const hiddenBelow = Math.max(0, allList.length - scrollTop - visibleItems.length);
 
   return (
-    <Box borderStyle="single" borderColor="#00E5FF" flexDirection="column" paddingX={1} paddingY={1} marginY={1}>
+    <Box
+      borderStyle="single"
+      borderColor="#00E5FF"
+      flexDirection="column"
+      paddingX={1}
+      paddingY={1}
+      marginY={1}
+    >
       {/* Title */}
       <Box position="absolute" marginTop={-1} marginLeft={2} backgroundColor="black" paddingX={1}>
         <Text color="#00E5FF" bold>
@@ -174,7 +190,11 @@ export function ProviderManager({ configuredProviders, onAdd, onRemove, onClose,
                   <Text color={focused ? 'white' : '#8C959F'} bold={focused}>
                     {p.label.toUpperCase()}
                   </Text>
-                  {isConfigured ? <Text color="#3FB950"> [CONNECTED] </Text> : <Text color="#484F58"> [{p.id}] </Text>}
+                  {isConfigured ? (
+                    <Text color="#3FB950"> [CONNECTED] </Text>
+                  ) : (
+                    <Text color="#484F58"> [{p.id}] </Text>
+                  )}
                 </Box>
 
                 <Box>

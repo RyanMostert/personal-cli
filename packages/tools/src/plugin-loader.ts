@@ -1,5 +1,5 @@
 import { readdirSync, existsSync, readFileSync, mkdirSync, writeFileSync, unlinkSync } from 'fs';
-import { join, extname } from 'path';
+import { join } from 'path';
 import { homedir } from 'os';
 import { pathToFileURL } from 'url';
 import type { LoadedPlugin, PluginManifest, ToolSchema } from './types.js';
@@ -311,7 +311,8 @@ export function getBuiltInToolSchemas(): ToolSchema[] {
     // ── Notifications ───────────────────────────────────────────────────────
     {
       name: 'notifyUser',
-      description: 'Notify the user when a long-running task completes (terminal bell + status-bar flash)',
+      description:
+        'Notify the user when a long-running task completes (terminal bell + status-bar flash)',
       category: 'utility',
       args: {
         title: { type: 'string', required: true },

@@ -33,7 +33,9 @@ export const mcpCommands: Command[] = [
                 : `❌ **Zen Gateway Not Connected**\n📍 Endpoint: ${status.endpoint}\n⚠️ Error: ${status.lastError}`;
               ctx.addSystemMessage(msg);
             } else {
-              ctx.addSystemMessage('❌ Zen Gateway is not configured. Run `/zen add` to set it up.');
+              ctx.addSystemMessage(
+                '❌ Zen Gateway is not configured. Run `/zen add` to set it up.',
+              );
             }
           } catch (error) {
             ctx.addSystemMessage(
@@ -57,9 +59,13 @@ export const mcpCommands: Command[] = [
               }
               ctx.addSystemMessage(msg);
             } else if (models) {
-              ctx.addSystemMessage('No models available. Make sure Zen Gateway is properly configured.');
+              ctx.addSystemMessage(
+                'No models available. Make sure Zen Gateway is properly configured.',
+              );
             } else {
-              ctx.addSystemMessage('❌ Zen Gateway is not configured. Run `/zen add` to set it up.');
+              ctx.addSystemMessage(
+                '❌ Zen Gateway is not configured. Run `/zen add` to set it up.',
+              );
             }
           } catch (error) {
             ctx.addSystemMessage(

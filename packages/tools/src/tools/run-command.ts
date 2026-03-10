@@ -8,7 +8,8 @@ const execAsync = promisify(exec);
 
 export function createRunCommand(permissionFn?: PermissionCallback) {
   return tool({
-    description: 'Execute a shell command. Use this for testing, building, or gathering system diagnostics.',
+    description:
+      'Execute a shell command. Use this for testing, building, or gathering system diagnostics.',
     inputSchema: z.object({
       command: z.string().describe('The shell command to run'),
       cwd: z.string().optional().describe('Working directory for the command'),
@@ -34,7 +35,9 @@ export function createRunCommand(permissionFn?: PermissionCallback) {
         // Truncate if output is massive to avoid token budget issues
         const limit = 20000;
         const finalOutput =
-          output.length > limit ? output.slice(0, limit) + '\n\n[OUTPUT_TRUNCATED_DUE_TO_SIZE]' : output;
+          output.length > limit
+            ? output.slice(0, limit) + '\n\n[OUTPUT_TRUNCATED_DUE_TO_SIZE]'
+            : output;
 
         return {
           output: finalOutput || '(Command completed with no output)',

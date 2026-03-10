@@ -54,15 +54,31 @@ describe('parseStream', () => {
   });
 
   it('normalises tool-call parts', async () => {
-    const part = { type: 'tool-call', toolCallId: 'c1', toolName: 'run_command', args: { cmd: 'ls' } };
+    const part = {
+      type: 'tool-call',
+      toolCallId: 'c1',
+      toolName: 'run_command',
+      args: { cmd: 'ls' },
+    };
     const events = await collect(parseStream(toAsyncIterable([part])));
-    expect(events[0]).toMatchObject({ type: 'tool-call-start', toolCall: { toolCallId: 'c1', toolName: 'run_command' } });
+    expect(events[0]).toMatchObject({
+      type: 'tool-call-start',
+      toolCall: { toolCallId: 'c1', toolName: 'run_command' },
+    });
   });
 
   it('normalises tool-result parts', async () => {
-    const part = { type: 'tool-result', toolCallId: 'c1', toolName: 'run_command', result: 'file1.ts' };
+    const part = {
+      type: 'tool-result',
+      toolCallId: 'c1',
+      toolName: 'run_command',
+      result: 'file1.ts',
+    };
     const events = await collect(parseStream(toAsyncIterable([part])));
-    expect(events[0]).toMatchObject({ type: 'tool-call-result', toolCall: { toolCallId: 'c1', result: 'file1.ts' } });
+    expect(events[0]).toMatchObject({
+      type: 'tool-call-result',
+      toolCall: { toolCallId: 'c1', result: 'file1.ts' },
+    });
   });
 
   it('normalises finish and step-finish parts', async () => {
@@ -71,7 +87,10 @@ describe('parseStream', () => {
       { type: 'step-finish' },
     ];
     const events = await collect(parseStream(toAsyncIterable(parts)));
-    expect(events[0]).toMatchObject({ type: 'finish', usage: { promptTokens: 10, completionTokens: 5 } });
+    expect(events[0]).toMatchObject({
+      type: 'finish',
+      usage: { promptTokens: 10, completionTokens: 5 },
+    });
     expect(events[1]).toMatchObject({ type: 'finish' });
   });
 
@@ -88,12 +107,16 @@ describe('parseStream', () => {
   });
 
   it('coerces unknown objects with .text field to text-delta', async () => {
-    const events = await collect(parseStream(toAsyncIterable([{ type: 'unknown', text: 'hi' } as any])));
+    const events = await collect(
+      parseStream(toAsyncIterable([{ type: 'unknown', text: 'hi' } as any])),
+    );
     expect(events[0]).toEqual({ type: 'text-delta', delta: 'hi' });
   });
 
   it('emits system event for truly unknown parts', async () => {
-    const events = await collect(parseStream(toAsyncIterable([{ type: 'mystery', foo: 'bar' } as any])));
+    const events = await collect(
+      parseStream(toAsyncIterable([{ type: 'mystery', foo: 'bar' } as any])),
+    );
     expect(events[0]).toMatchObject({ type: 'system' });
     expect((events[0] as any).message).toContain('Unknown stream part');
   });

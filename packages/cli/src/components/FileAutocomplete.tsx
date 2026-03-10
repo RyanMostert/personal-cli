@@ -10,7 +10,15 @@ interface Props {
   onFilesChange: (files: string[]) => void;
 }
 
-const GLOB_IGNORE = ['node_modules/**', '.git/**', 'dist/**', 'build/**', '.turbo/**', '*.lock', 'pnpm-lock*'];
+const GLOB_IGNORE = [
+  'node_modules/**',
+  '.git/**',
+  'dist/**',
+  'build/**',
+  '.turbo/**',
+  '*.lock',
+  'pnpm-lock*',
+];
 
 export function FileAutocomplete({ query, visible, selectedIndex, onFilesChange }: Props) {
   const [files, setFiles] = useState<string[]>([]);
@@ -55,7 +63,9 @@ export function FileAutocomplete({ query, visible, selectedIndex, onFilesChange 
         // Cap at 50 before sorting so getBatchFrecency stays fast
         const capped = matches.slice(0, 50);
         const scores = getBatchFrecency(capped);
-        const sorted = capped.sort((a, b) => (scores.get(b) ?? 0) - (scores.get(a) ?? 0)).slice(0, 8);
+        const sorted = capped
+          .sort((a, b) => (scores.get(b) ?? 0) - (scores.get(a) ?? 0))
+          .slice(0, 8);
 
         setFiles(sorted);
         onFilesChange(sorted);
@@ -75,7 +85,7 @@ export function FileAutocomplete({ query, visible, selectedIndex, onFilesChange 
       cancelled = true;
       clearTimeout(t);
     };
-  }, [cleanQuery, visible]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cleanQuery, visible]);
 
   if (!visible) return null;
 
@@ -87,14 +97,20 @@ export function FileAutocomplete({ query, visible, selectedIndex, onFilesChange 
         {isLoading ? (
           <Text color="#8C959F"> Searching for {label}…</Text>
         ) : files.length === 0 ? (
-          <Text color="#8C959F"> {cleanQuery === '' ? 'No recent files' : `No files match ${label}`}</Text>
+          <Text color="#8C959F">
+            {' '}
+            {cleanQuery === '' ? 'No recent files' : `No files match ${label}`}
+          </Text>
         ) : (
           files.map((file, index) => (
             <Box key={file}>
               <Text color={index === selectedIndex ? '#58A6FF' : '#8C959F'}>
                 {index === selectedIndex ? '▶ ' : '  '}
               </Text>
-              <Text color={index === selectedIndex ? '#C9D1D9' : '#8C959F'} bold={index === selectedIndex}>
+              <Text
+                color={index === selectedIndex ? '#C9D1D9' : '#8C959F'}
+                bold={index === selectedIndex}
+              >
                 {file}
               </Text>
             </Box>

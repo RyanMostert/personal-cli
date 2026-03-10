@@ -11,28 +11,48 @@ interface Props {
   onClose: () => void;
 }
 
-type FormField = 'name' | 'transport' | 'command' | 'args' | 'env' | 'url' | 'headers' | 'timeout' | 'trust';
+type FormField =
+  | 'name'
+  | 'transport'
+  | 'command'
+  | 'args'
+  | 'env'
+  | 'url'
+  | 'headers'
+  | 'timeout'
+  | 'trust';
 
 const TRANSPORTS = ['stdio', 'sse', 'http'] as const;
 
-export function MCPWizard({ mode, serverName: initialName, existingConfig, serverType, onSave, onClose }: Props) {
+export function MCPWizard({
+  mode,
+  serverName: initialName,
+  existingConfig,
+  serverType,
+  onSave,
+  onClose,
+}: Props) {
   const isZenGateway = serverType === 'zen-gateway';
   const zenEndpoint = process.env.ZEN_ENDPOINT || 'https://opencode.ai/zen/v1';
   const zenApiKey = process.env.OPENCODE_API_KEY || process.env.ZEN_API_KEY || '';
-  
+
   const [focusField, setFocusField] = useState<FormField>('name');
   const [name, setName] = useState(initialName || (isZenGateway ? 'zen-gateway' : ''));
-  const [transport, setTransport] = useState<(typeof TRANSPORTS)[number]>(existingConfig?.transport || (isZenGateway ? 'stdio' : 'stdio'));
+  const [transport, setTransport] = useState<(typeof TRANSPORTS)[number]>(
+    existingConfig?.transport || (isZenGateway ? 'stdio' : 'stdio'),
+  );
   const [command, setCommand] = useState(existingConfig?.command || (isZenGateway ? 'node' : ''));
-  const [args, setArgs] = useState(existingConfig?.args?.join(', ') || (isZenGateway ? './packages/zen-mcp-server/dist/main.js' : ''));
-  const initialEnv =
-    existingConfig?.env
-      ? Object.entries(existingConfig.env)
-          .map(([k, v]) => `${k}=${v}`)
-          .join('\n')
-      : isZenGateway
-        ? `OPENCODE_API_KEY=${zenApiKey}\nZEN_ENDPOINT=${zenEndpoint}`
-        : '';
+  const [args, setArgs] = useState(
+    existingConfig?.args?.join(', ') ||
+      (isZenGateway ? './packages/zen-mcp-server/dist/main.js' : ''),
+  );
+  const initialEnv = existingConfig?.env
+    ? Object.entries(existingConfig.env)
+        .map(([k, v]) => `${k}=${v}`)
+        .join('\n')
+    : isZenGateway
+      ? `OPENCODE_API_KEY=${zenApiKey}\nZEN_ENDPOINT=${zenEndpoint}`
+      : '';
   const [env, setEnv] = useState(initialEnv);
   const [envCursor, setEnvCursor] = useState(() => {
     if (isZenGateway && !existingConfig?.env) {
@@ -146,7 +166,7 @@ export function MCPWizard({ mode, serverName: initialName, existingConfig, serve
         }
         return;
       }
-      
+
       const currentIndex = fields.indexOf(focusField);
       if (currentIndex < fields.length - 1) {
         setFocusField(fields[currentIndex + 1]);
@@ -273,7 +293,13 @@ export function MCPWizard({ mode, serverName: initialName, existingConfig, serve
 
   const scanLine = '░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░';
 
-  const renderField = (field: FormField, label: string, value: string, isFocused: boolean, multiline = false) => {
+  const renderField = (
+    field: FormField,
+    label: string,
+    value: string,
+    isFocused: boolean,
+    multiline = false,
+  ) => {
     if (multiline && field === 'env') {
       // Render env field with cursor
       const clampedEnvCursor = Math.min(envCursor, value.length);
@@ -320,7 +346,9 @@ export function MCPWizard({ mode, serverName: initialName, existingConfig, serve
               value.split('\n').map((line, i) => (
                 <Text key={i} color={isFocused ? 'white' : '#8C959F'}>
                   {line || ' '}
-                  {isFocused && i === value.split('\n').length - 1 && <Text color="#00E5FF">_</Text>}
+                  {isFocused && i === value.split('\n').length - 1 && (
+                    <Text color="#00E5FF">_</Text>
+                  )}
                 </Text>
               ))
             ) : (
@@ -328,7 +356,9 @@ export function MCPWizard({ mode, serverName: initialName, existingConfig, serve
             )
           ) : (
             <Box>
-              <Text color={isFocused ? 'white' : '#8C959F'}>{value || (isFocused ? '_' : '<empty>')}</Text>
+              <Text color={isFocused ? 'white' : '#8C959F'}>
+                {value || (isFocused ? '_' : '<empty>')}
+              </Text>
               {isFocused && value && <Text color="#00E5FF">_</Text>}
             </Box>
           )}
@@ -338,7 +368,14 @@ export function MCPWizard({ mode, serverName: initialName, existingConfig, serve
   };
 
   return (
-    <Box flexDirection="column" paddingX={2} paddingY={1} marginY={1} borderStyle="single" borderColor="#00E5FF">
+    <Box
+      flexDirection="column"
+      paddingX={2}
+      paddingY={1}
+      marginY={1}
+      borderStyle="single"
+      borderColor="#00E5FF"
+    >
       {/* Header */}
       <Box position="absolute" marginTop={-1} marginLeft={2} backgroundColor="black" paddingX={1}>
         <Text color="#00E5FF" bold>
@@ -379,7 +416,13 @@ export function MCPWizard({ mode, serverName: initialName, existingConfig, serve
             <>
               {renderField('command', 'COMMAND (executable)', command, focusField === 'command')}
               {renderField('args', 'ARGUMENTS (comma-separated)', args, focusField === 'args')}
-              {renderField('env', 'ENVIRONMENT (KEY=VALUE per line)', env, focusField === 'env', true)}
+              {renderField(
+                'env',
+                'ENVIRONMENT (KEY=VALUE per line)',
+                env,
+                focusField === 'env',
+                true,
+              )}
             </>
           )}
 
@@ -387,7 +430,13 @@ export function MCPWizard({ mode, serverName: initialName, existingConfig, serve
           {transport !== 'stdio' && (
             <>
               {renderField('url', 'ENDPOINT URL', url, focusField === 'url')}
-              {renderField('headers', 'HEADERS (KEY=VALUE per line)', headers, focusField === 'headers', true)}
+              {renderField(
+                'headers',
+                'HEADERS (KEY=VALUE per line)',
+                headers,
+                focusField === 'headers',
+                true,
+              )}
             </>
           )}
 
@@ -422,7 +471,13 @@ export function MCPWizard({ mode, serverName: initialName, existingConfig, serve
         </Box>
 
         {/* Side Panel */}
-        <Box flexDirection="column" marginLeft={4} width={15} borderStyle="single" borderColor="#484F58">
+        <Box
+          flexDirection="column"
+          marginLeft={4}
+          width={15}
+          borderStyle="single"
+          borderColor="#484F58"
+        >
           <Text color="#484F58"> SYS_SCAN </Text>
           <Text color="#00E5FF">{scanLine.slice(0, 10)}</Text>
           <Text color="#484F58"> [OK] 100% </Text>
@@ -434,12 +489,11 @@ export function MCPWizard({ mode, serverName: initialName, existingConfig, serve
         <Text color="#484F58"> ESC:ABORT │ TAB:NEXT FIELD │ CTRL+S:SAVE </Text>
         <Text color="#00E5FF" bold>
           {' '}
-          {(focusField === 'env' || focusField === 'headers') 
-            ? 'ENTER:NEW_LINE │ CTRL+S:SAVE' 
+          {focusField === 'env' || focusField === 'headers'
+            ? 'ENTER:NEW_LINE │ CTRL+S:SAVE'
             : `ENTER:${focusField === fields[fields.length - 1] ? 'SAVE_CONFIG' : 'NEXT_FIELD'}`}{' '}
         </Text>
       </Box>
     </Box>
   );
 }
-

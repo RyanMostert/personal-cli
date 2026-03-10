@@ -3,10 +3,14 @@
 if (!process.env.__PCLI_HEAPED__) {
   const { spawnSync } = await import('child_process');
   process.env.__PCLI_HEAPED__ = '1';
-  const result = spawnSync(process.execPath, ['--max-old-space-size=8192', ...process.argv.slice(1)], {
-    stdio: 'inherit',
-    env: process.env,
-  });
+  const result = spawnSync(
+    process.execPath,
+    ['--max-old-space-size=8192', ...process.argv.slice(1)],
+    {
+      stdio: 'inherit',
+      env: process.env,
+    },
+  );
   process.exit(result.status ?? 0);
 }
 
@@ -31,8 +35,18 @@ program
   .name(APP_NAME)
   .description('A multi-provider, token-efficient CLI AI agent')
   .version(APP_VERSION)
-  .option('-f, --file <path>', 'attach a file to the conversation (can be used multiple times)', collect, [])
-  .option('-i, --image <path>', 'attach an image to the conversation (can be used multiple times)', collect, [])
+  .option(
+    '-f, --file <path>',
+    'attach a file to the conversation (can be used multiple times)',
+    collect,
+    [],
+  )
+  .option(
+    '-i, --image <path>',
+    'attach an image to the conversation (can be used multiple times)',
+    collect,
+    [],
+  )
   .action(async (options) => {
     // Process attached files from CLI arguments
     const attachments: Array<{ path: string; type: 'file' | 'image' }> = [];

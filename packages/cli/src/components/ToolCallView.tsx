@@ -27,34 +27,34 @@ function formatDuration(ms: number): string {
 
 /** ASCII icon per tool — no emoji to avoid terminal width issues. */
 const TOOL_ICONS: Record<string, string> = {
-  readFile:      'R',
-  writeFile:     'W',
-  editFile:      'E',
-  patch:         'P',
-  batchEdit:     'B',
-  listDir:       'L',
-  globFiles:     'G',
-  searchFiles:   'S',
-  semanticSearch:'S',
-  runCommand:    '$',
-  runTests:      'T',
-  webFetch:      '@',
-  webSearch:     '?',
-  gitStatus:     'g',
-  gitDiff:       'g',
-  gitLog:        'g',
-  gitCommit:     'g',
-  todoWrite:     '#',
-  todoRead:      '#',
-  moveFile:      'M',
-  copyFile:      'C',
-  deleteFile:    'D',
-  memoryWrite:   '*',
-  memoryRead:    '*',
-  memoryDelete:  '*',
-  notifyUser:    '!',
-  diagnostics:   'd',
-  question:      '?',
+  readFile: 'R',
+  writeFile: 'W',
+  editFile: 'E',
+  patch: 'P',
+  batchEdit: 'B',
+  listDir: 'L',
+  globFiles: 'G',
+  searchFiles: 'S',
+  semanticSearch: 'S',
+  runCommand: '$',
+  runTests: 'T',
+  webFetch: '@',
+  webSearch: '?',
+  gitStatus: 'g',
+  gitDiff: 'g',
+  gitLog: 'g',
+  gitCommit: 'g',
+  todoWrite: '#',
+  todoRead: '#',
+  moveFile: 'M',
+  copyFile: 'C',
+  deleteFile: 'D',
+  memoryWrite: '*',
+  memoryRead: '*',
+  memoryDelete: '*',
+  notifyUser: '!',
+  diagnostics: 'd',
+  question: '?',
 };
 
 /** Return the single most useful arg to show inline in the header. */
@@ -111,7 +111,12 @@ function getPrimaryArg(toolName: string, args: Record<string, unknown> | undefin
 }
 
 /** Extract a human-readable one-line summary from any tool result. */
-function summarizeResult(result: unknown): { text: string; isError: boolean; lineCount?: number; fullLength?: number } {
+function summarizeResult(result: unknown): {
+  text: string;
+  isError: boolean;
+  lineCount?: number;
+  fullLength?: number;
+} {
   if (result == null) return { text: 'done', isError: false };
 
   // Helper to get first meaningful line
@@ -175,7 +180,11 @@ function summarizeResult(result: unknown): { text: string; isError: boolean; lin
 
     // Generic array
     if (Array.isArray(result)) {
-      return { text: `${(result as unknown[]).length} items`, isError: false, lineCount: (result as unknown[]).length };
+      return {
+        text: `${(result as unknown[]).length} items`,
+        isError: false,
+        lineCount: (result as unknown[]).length,
+      };
     }
 
     // Fall back to compact JSON
@@ -188,10 +197,12 @@ function summarizeResult(result: unknown): { text: string; isError: boolean; lin
   return {
     text: firstLine.slice(0, 100) + (firstLine.length > 100 ? '…' : ''),
     isError: false,
-    lineCount: s.split('\n').filter((line) => line.trim().length > 0).length > 1 ? s.split('\n').length : undefined,
+    lineCount:
+      s.split('\n').filter((line) => line.trim().length > 0).length > 1
+        ? s.split('\n').length
+        : undefined,
   };
 }
-
 
 export function ToolCallView({
   tool,
@@ -224,14 +235,15 @@ export function ToolCallView({
     return () => clearInterval(interval);
   }, [isRunFinished, startTime]);
 
-  const duration = isRunFinished ? elapsed || (Date.now() - startTime) : Date.now() - startTime;
+  const duration = isRunFinished ? elapsed || Date.now() - startTime : Date.now() - startTime;
   const statusColor = isError ? theme.error : isRunFinished ? theme.success : theme.warning;
 
   // For runTests, show pass/fail counts in the result line
   const isRunTests = tool.toolName === 'runTests';
-  const testResult = isRunTests && typeof tool.result === 'object' && tool.result !== null
-    ? (tool.result as Record<string, unknown>)
-    : null;
+  const testResult =
+    isRunTests && typeof tool.result === 'object' && tool.result !== null
+      ? (tool.result as Record<string, unknown>)
+      : null;
 
   return (
     <Box marginY={0} paddingLeft={1} flexDirection="column">
@@ -248,7 +260,8 @@ export function ToolCallView({
         </Text>
         {primaryArg && (
           <Text color={theme.muted}>
-            {' '}<Text color={theme.dim}>›</Text>{' '}
+            {' '}
+            <Text color={theme.dim}>›</Text>{' '}
             <Text color={isRunFinished ? theme.dim : theme.primary}>
               {primaryArg.length > 60 ? `${primaryArg.slice(0, 57)}…` : primaryArg}
             </Text>
@@ -256,7 +269,10 @@ export function ToolCallView({
         )}
         <Text color={theme.dim}> {formatDuration(duration)}</Text>
         {focused && (
-          <Text color="#FF00AA" bold> ◀</Text>
+          <Text color="#FF00AA" bold>
+            {' '}
+            ◀
+          </Text>
         )}
       </Box>
 
@@ -268,10 +284,10 @@ export function ToolCallView({
             <Text color={theme.success}>✔ {testResult.passed} passed</Text>
           )}
           {typeof testResult.failed === 'number' && testResult.failed > 0 && (
-            <Text color={theme.error}>  ✖ {testResult.failed} failed</Text>
+            <Text color={theme.error}> ✖ {testResult.failed} failed</Text>
           )}
           {typeof testResult.skipped === 'number' && testResult.skipped > 0 && (
-            <Text color={theme.dim}>  ⊘ {testResult.skipped} skipped</Text>
+            <Text color={theme.dim}> ⊘ {testResult.skipped} skipped</Text>
           )}
         </Box>
       )}
@@ -292,7 +308,10 @@ export function ToolCallView({
               <Text color={theme.dim}> [{resultSummary.lineCount}L]</Text>
             )}
             {!expanded && focused && (
-              <Text color={theme.primary} bold> (ENTER)</Text>
+              <Text color={theme.primary} bold>
+                {' '}
+                (ENTER)
+              </Text>
             )}
           </Box>
         </Box>
