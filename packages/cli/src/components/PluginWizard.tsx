@@ -102,23 +102,14 @@ export function PluginWizard({ mode, pluginName: initialName, onSave, onClose }:
         {label}
       </Text>
       <Box>
-        <Text color={isFocused ? 'white' : '#8C959F'}>
-          {value || (isFocused ? '_' : '<empty>')}
-        </Text>
+        <Text color={isFocused ? 'white' : '#8C959F'}>{value || (isFocused ? '_' : '<empty>')}</Text>
         {isFocused && value && <Text color="#AA00FF">_</Text>}
       </Box>
     </Box>
   );
 
   return (
-    <Box
-      flexDirection="column"
-      paddingX={2}
-      paddingY={1}
-      marginY={1}
-      borderStyle="single"
-      borderColor="#AA00FF"
-    >
+    <Box flexDirection="column" paddingX={2} paddingY={1} marginY={1} borderStyle="single" borderColor="#AA00FF">
       <Box position="absolute" marginTop={-1} marginLeft={2} backgroundColor="black" paddingX={1}>
         <Text color="#AA00FF" bold>
           {isEditing ? 'RECONFIGURING_MODULE' : 'INITIALIZING_NEW_MODULE'}

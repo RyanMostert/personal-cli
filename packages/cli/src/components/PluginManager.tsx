@@ -85,24 +85,14 @@ export function PluginManager({ plugins, onAdd, onEdit, onRemove, onClose, tick 
 
   const scrollTop = Math.max(
     0,
-    Math.min(
-      focusIndex - Math.floor(VISIBLE_HEIGHT / 2),
-      Math.max(0, filtered.length - VISIBLE_HEIGHT),
-    ),
+    Math.min(focusIndex - Math.floor(VISIBLE_HEIGHT / 2), Math.max(0, filtered.length - VISIBLE_HEIGHT)),
   );
   const visibleItems = filtered.slice(scrollTop, scrollTop + VISIBLE_HEIGHT);
   const hiddenAbove = scrollTop;
   const hiddenBelow = Math.max(0, filtered.length - scrollTop - visibleItems.length);
 
   return (
-    <Box
-      borderStyle="single"
-      borderColor="#AA00FF"
-      flexDirection="column"
-      paddingX={1}
-      paddingY={1}
-      marginY={1}
-    >
+    <Box borderStyle="single" borderColor="#AA00FF" flexDirection="column" paddingX={1} paddingY={1} marginY={1}>
       {/* Title */}
       <Box position="absolute" marginTop={-1} marginLeft={2} backgroundColor="black" paddingX={1}>
         <Text color="#AA00FF" bold>

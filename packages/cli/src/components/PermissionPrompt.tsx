@@ -39,9 +39,7 @@ export function PermissionPrompt({ permission, onExplain }: Props) {
         </Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#8C959F">
-          {permission.args ? JSON.stringify(permission.args, null, 2) : 'No arguments'}
-        </Text>
+        <Text color="#8C959F">{permission.args ? JSON.stringify(permission.args, null, 2) : 'No arguments'}</Text>
       </Box>
       <Box justifyContent="space-between">
         <Box>
