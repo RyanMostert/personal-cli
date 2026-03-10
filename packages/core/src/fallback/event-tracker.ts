@@ -185,13 +185,9 @@ export class AgentEventTracker {
   }
 
   getToolSuccessRate(): { total: number; success: number; rate: number } {
-<<<<<<< HEAD
-    const toolCalls = this.events.filter((e) => e.type === 'tool_call_success' || e.type === 'tool_call_failure');
-=======
     const toolCalls = this.events.filter(
       (e) => e.type === 'tool_call_success' || e.type === 'tool_call_failure',
     );
->>>>>>> tools_improvement
 
     const success = toolCalls.filter((e) => e.success).length;
     const total = toolCalls.length;

@@ -32,13 +32,9 @@ export function PatchView({ path, oldText, newText, isExpanded: initialExpanded 
           {' '}
           📂 PATCH: {path}{' '}
         </Text>
-<<<<<<< HEAD
-        {hasMore && <Text color="#00E5FF"> {isExpanded ? '[Enter: collapse]' : '[Enter: expand]'} </Text>}
-=======
         {hasMore && (
           <Text color="#00E5FF"> {isExpanded ? '[Enter: collapse]' : '[Enter: expand]'} </Text>
         )}
->>>>>>> tools_improvement
       </Box>
 
       <Box flexDirection="column">

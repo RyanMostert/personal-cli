@@ -246,17 +246,11 @@ const PROVIDER_REGISTRY: ProviderDef[] = [
       // @ts-ignore - optional peer dep
       const { GoogleAuth } = await import('google-auth-library');
 
-<<<<<<< HEAD
-      const project = process.env.GOOGLE_CLOUD_PROJECT ?? process.env.GCP_PROJECT ?? process.env.GCLOUD_PROJECT;
-
-      const location = process.env.GOOGLE_CLOUD_LOCATION ?? process.env.VERTEX_LOCATION ?? 'us-central1';
-=======
       const project =
         process.env.GOOGLE_CLOUD_PROJECT ?? process.env.GCP_PROJECT ?? process.env.GCLOUD_PROJECT;
 
       const location =
         process.env.GOOGLE_CLOUD_LOCATION ?? process.env.VERTEX_LOCATION ?? 'us-central1';
->>>>>>> tools_improvement
 
       const auth = new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
 

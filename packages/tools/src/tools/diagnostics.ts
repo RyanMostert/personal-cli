@@ -11,13 +11,9 @@ export const diagnostics = tool({
   inputSchema: z.object({
     paths: z
       .array(z.string())
-<<<<<<< HEAD
-      .describe('List of exact file paths to get diagnostics for (e.g., ["packages/cli/src/app.tsx"])'),
-=======
       .describe(
         'List of exact file paths to get diagnostics for (e.g., ["packages/cli/src/app.tsx"])',
       ),
->>>>>>> tools_improvement
   }),
   execute: async ({ paths }) => {
     try {

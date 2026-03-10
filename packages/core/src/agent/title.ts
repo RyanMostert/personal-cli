@@ -17,14 +17,10 @@ export async function generateTitle(
       model,
       system: TITLE_PROMPT,
       messages: [
-<<<<<<< HEAD
-        { role: 'user', content: `User: ${userMessage.slice(0, 200)}\nAssistant: ${assistantResponse.slice(0, 500)}` },
-=======
         {
           role: 'user',
           content: `User: ${userMessage.slice(0, 200)}\nAssistant: ${assistantResponse.slice(0, 500)}`,
         },
->>>>>>> tools_improvement
       ],
       maxOutputTokens: 20,
       temperature: 0.3,

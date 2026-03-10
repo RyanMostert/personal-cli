@@ -72,11 +72,7 @@ function searchDir(
             if (results.length >= 200) return;
           }
         }
-<<<<<<< HEAD
-      } catch (err) {
-=======
       } catch {
->>>>>>> tools_improvement
         // Ignore unreadable files (e.g. binary or permissions)
       }
     }

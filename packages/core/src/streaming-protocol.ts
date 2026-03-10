@@ -42,9 +42,6 @@ export interface ErrorEvent {
   error: Error | string;
 }
 
-<<<<<<< HEAD
-export type StreamEvent = TextDelta | ThoughtDelta | ToolCallStart | ToolCallResult | SystemEvent | FinishEvent | ErrorEvent;
-=======
 export type StreamEvent =
   | TextDelta
   | ThoughtDelta
@@ -53,4 +50,3 @@ export type StreamEvent =
   | SystemEvent
   | FinishEvent
   | ErrorEvent;
->>>>>>> tools_improvement

@@ -3,12 +3,6 @@
 if (!process.env.__PCLI_HEAPED__) {
   const { spawnSync } = await import('child_process');
   process.env.__PCLI_HEAPED__ = '1';
-<<<<<<< HEAD
-  const result = spawnSync(process.execPath, ['--max-old-space-size=8192', ...process.argv.slice(1)], {
-    stdio: 'inherit',
-    env: process.env,
-  });
-=======
   const result = spawnSync(
     process.execPath,
     ['--max-old-space-size=8192', ...process.argv.slice(1)],
@@ -17,7 +11,6 @@ if (!process.env.__PCLI_HEAPED__) {
       env: process.env,
     },
   );
->>>>>>> tools_improvement
   process.exit(result.status ?? 0);
 }
 

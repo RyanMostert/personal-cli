@@ -3,18 +3,12 @@
 This package is a skeleton for a terminal-native UI for personal-cli. The goal is to provide an interactive TUI as an alternative to the existing React-based CLI UI.
 
 Recommended stack
-<<<<<<< HEAD
-=======
 
->>>>>>> tools_improvement
 - Ink (React-based terminal UI) — recommended for fast development and reuse of React components.
 - Alternative: Blessed / Blessed-Contrib / terminal-kit if Ink is not desired.
 
 What to implement (Gemini):
-<<<<<<< HEAD
-=======
 
->>>>>>> tools_improvement
 1. App shell: main renderer, status bar, message list, input box.
 2. Streaming support: consume `parseStream()` from `@personal-cli/core` and render incremental `text-delta` events as they arrive.
 3. Provider onboarding: wire `ProviderWizard` flows and `testProviderConnection()` from core.
@@ -23,31 +17,17 @@ What to implement (Gemini):
 6. Tests: add vitest tests and a small smoke test for starting and stopping the TUI.
 
 Dev & build
-<<<<<<< HEAD
-=======
 
->>>>>>> tools_improvement
 - Build: pnpm -w -F @personal-cli/tui run build
 - Start (after implementation): pnpm -w -F @personal-cli/tui run start
 
 Integration points
-<<<<<<< HEAD
-=======
 
->>>>>>> tools_improvement
 - Use exports from `@personal-cli/core`: `Agent`, `ProviderManager`, `ConfigStore`, `parseStream`, and model refresh helpers.
 - Keep feature flags in `ConfigStore` for gating experimental behaviors.
 
 Acceptance criteria
-<<<<<<< HEAD
-- TUI can start, send messages to `Agent`, and render streaming responses incrementally.
-- Provider onboarding and model switching are available in the TUI.
-- Tests exist and CI passes.
-
-
-=======
 
 - TUI can start, send messages to `Agent`, and render streaming responses incrementally.
 - Provider onboarding and model switching are available in the TUI.
 - Tests exist and CI passes.
->>>>>>> tools_improvement

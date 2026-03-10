@@ -4,11 +4,8 @@ import { getAllToolSchemas, getPluginDir, listMacros, getMacroDir } from '@perso
 import { generalCommands } from './general.js';
 import { toolsCommands } from './tools.js';
 import { mcpCommands } from './mcp.js';
-<<<<<<< HEAD
-=======
 import { EXAMPLE_TASKS, FALLBACK_EXAMPLES } from './examples.js';
 export { tryMatchIntent } from './intent-matcher.js';
->>>>>>> tools_improvement
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import os from 'os';
@@ -16,23 +13,6 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 
-<<<<<<< HEAD
-const EXAMPLE_TASKS = [
-  { task: 'Explain a concept', example: 'Explain how async/await works in JavaScript' },
-  { task: 'Search code', example: 'Find all uses of the useEffect hook' },
-  { task: 'Refactor', example: 'Refactor this function to use TypeScript' },
-  { task: 'Debug', example: "Why am I getting 'undefined is not a function'?" },
-  { task: 'Documentation', example: 'Generate JSDoc for this file' },
-];
-
-const FALLBACK_EXAMPLES = [
-  "If search fails, I'll check MDN for web docs",
-  "If file not found, I'll search similar filenames",
-  "If tool unavailable, I'll explain using my training",
-];
-
-=======
->>>>>>> tools_improvement
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -148,13 +128,9 @@ const commands: Command[] = [
         return;
       }
       const ok = ctx.renameConversation(args);
-<<<<<<< HEAD
-      ctx.addSystemMessage(ok ? `Renamed to: ${args}` : 'Nothing to rename yet — send a message first.');
-=======
       ctx.addSystemMessage(
         ok ? `Renamed to: ${args}` : 'Nothing to rename yet — send a message first.',
       );
->>>>>>> tools_improvement
     },
   },
   {
@@ -426,59 +402,8 @@ export async function dispatch(input: string, ctx: CommandContext): Promise<bool
   return false;
 }
 
-<<<<<<< HEAD
-/**
- * Simple Levenshtein distance algorithm
- */
-function levenshtein(a: string, b: string): number {
-  const matrix = Array.from({ length: a.length + 1 }, (_, i) => [i]);
-  for (let j = 1; j <= b.length; j++) matrix[0][j] = j;
-
-  for (let i = 1; i <= a.length; i++) {
-    for (let j = 1; j <= b.length; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      matrix[i][j] = Math.min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + cost);
-    }
-  }
-  return matrix[a.length][b.length];
-}
-=======
 import { levenshtein } from '../utils/levenshtein.js';
->>>>>>> tools_improvement
 
 export function getCommands(): Command[] {
   return commands;
 }
-<<<<<<< HEAD
-
-/**
- * Lightweight Intent Mapping
- * Matches natural language patterns to CLI commands.
- */
-const INTENT_MAP: Array<{ pattern: RegExp; cmd: string; getArgs?: (match: RegExpMatchArray) => string }> = [
-  { pattern: /^(attach|add)\s+file\s+(.+)$/i, cmd: '/add', getArgs: (m) => m[2] },
-  { pattern: /^(show|open)\s+(.+)$/i, cmd: '/open', getArgs: (m) => m[2] },
-  { pattern: /^(undo|revert)(\s+that)?$/i, cmd: '/undo' },
-  { pattern: /^(redo|repeat)(\s+that)?$/i, cmd: '/redo' },
-  { pattern: /^(clear|reset)\s+chat$/i, cmd: '/clear' },
-  { pattern: /^(exit|quit|stop)$/i, cmd: '/exit' },
-  { pattern: /^(cancel|halt|stop)\s+(it|operation|ai)$/i, cmd: '/cancel' },
-  { pattern: /^(switch|change)\s+(to\s+)?mode\s+(.+)$/i, cmd: '/mode', getArgs: (m) => m[3] },
-  { pattern: /^(switch|change)\s+(to\s+)?model\s+(.+)$/i, cmd: '/model', getArgs: (m) => m[3] },
-];
-
-export function tryMatchIntent(input: string): { cmd: string; args: string } | null {
-  const trimmed = input.trim();
-  for (const intent of INTENT_MAP) {
-    const match = trimmed.match(intent.pattern);
-    if (match) {
-      return {
-        cmd: intent.cmd,
-        args: intent.getArgs ? intent.getArgs(match) : '',
-      };
-    }
-  }
-  return null;
-}
-=======
->>>>>>> tools_improvement

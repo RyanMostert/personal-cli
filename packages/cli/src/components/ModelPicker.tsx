@@ -19,8 +19,6 @@ import {
   getProviderEntries,
   type CacheStats,
 } from '@personal-cli/core';
-<<<<<<< HEAD
-=======
 import { TAG_COLORS, VISIBLE_HEIGHT } from '../constants/model-picker-constants.js';
 import {
   getStaticModels,
@@ -29,7 +27,6 @@ import {
   getAvgCost,
   parseModelFilter,
 } from '../utils/model-picker-helpers.js';
->>>>>>> tools_improvement
 
 interface Props {
   onSelect: (provider: ProviderName, modelId: string) => void;
@@ -37,46 +34,6 @@ interface Props {
   tick?: number;
 }
 
-<<<<<<< HEAD
-const TAG_COLORS: Record<ModelTag, string> = {
-  reasoning: '#BD93F9',
-  coding: '#00E5FF',
-  vision: '#FFB86C',
-  fast: '#50FA7B',
-  large: '#FF00AA',
-};
-
-const VISIBLE_HEIGHT = 14;
-// Providers with more models than this auto-collapse on open
-const COLLAPSE_THRESHOLD = 5;
-
-type RowHeader = { kind: 'header'; provider: string; label: string; collapsed: boolean; modelCount: number };
-type RowModel = { kind: 'model'; model: ModelEntry };
-type Row = RowHeader | RowModel;
-
-function getStaticModels(): ModelEntry[] {
-  return [
-    ...MODEL_REGISTRY.filter((model) => model.provider !== 'github-copilot'),
-    ...getCopilotModelList().map((model) => ({
-      provider: 'github-copilot' as ProviderName,
-      id: model.id,
-      label: model.label,
-      contextWindow: model.contextWindow,
-      inputCostPer1M: null,
-      outputCostPer1M: null,
-      free: true,
-      tags: model.tags,
-    })),
-  ];
-}
-
-function defaultCollapsedSet(models: ModelEntry[]): Set<string> {
-  const counts = new Map<string, number>();
-  for (const m of models) counts.set(m.provider, (counts.get(m.provider) ?? 0) + 1);
-  return new Set([...counts.entries()].filter(([, c]) => c > COLLAPSE_THRESHOLD).map(([p]) => p));
-}
-
-=======
 type RowHeader = {
   kind: 'header';
   provider: string;
@@ -87,18 +44,13 @@ type RowHeader = {
 type RowModel = { kind: 'model'; model: ModelEntry };
 type Row = RowHeader | RowModel;
 
->>>>>>> tools_improvement
 export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
   const staticModels = useMemo(() => getStaticModels(), []);
   const [filter, setFilter] = useState('');
   const [rowFocus, setRowFocus] = useState(0);
-<<<<<<< HEAD
-  const [collapsedProviders, setCollapsedProviders] = useState<Set<string>>(() => defaultCollapsedSet(staticModels));
-=======
   const [collapsedProviders, setCollapsedProviders] = useState<Set<string>>(() =>
     defaultCollapsedSet(staticModels),
   );
->>>>>>> tools_improvement
   const [costSavingMode, setCostSavingMode] = useState(false);
   const [cachedModels, setCachedModels] = useState<ModelEntry[]>([]);
   const [cacheStats, setCacheStats] = useState<CacheStats[]>([]);
@@ -118,28 +70,13 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
     }
   }, []);
 
-<<<<<<< HEAD
-  // Small heuristic for recommending models in the UI
-  const isRecommended = (m: ModelEntry): boolean => {
-    if (m.free) return true;
-    if (m.tags?.includes('coding')) return true;
-    if (m.inputCostPer1M != null && m.inputCostPer1M < 1) return true;
-    return false;
-  };
-
-=======
->>>>>>> tools_improvement
   // Load cached models on mount
   useEffect(() => {
     const loadCached = async () => {
       // Dynamically derive providers from ProviderFactory; exclude github-copilot to avoid stale cache wins
-<<<<<<< HEAD
-      const providers = getProviderEntries().map((p) => p.id).filter((id) => id !== 'github-copilot') as ProviderName[];
-=======
       const providers = getProviderEntries()
         .map((p) => p.id)
         .filter((id) => id !== 'github-copilot') as ProviderName[];
->>>>>>> tools_improvement
       const allCached: ModelEntry[] = [];
 
       for (const provider of providers) {
@@ -207,12 +144,8 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
   // Filter models
   const filtered = useMemo(() => {
     let models = allModels;
-<<<<<<< HEAD
-    if (tags.size > 0) models = models.filter((m) => Array.from(tags).some((tag) => m.tags?.includes(tag)));
-=======
     if (tags.size > 0)
       models = models.filter((m) => Array.from(tags).some((tag) => m.tags?.includes(tag)));
->>>>>>> tools_improvement
     if (freeOnly) models = models.filter((m) => m.free);
     // Cost-saving mode: filter to cheaper models (avg cost <$2/1M tokens)
     if (costSavingMode && !freeOnly) {
@@ -449,9 +382,6 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
                 {!isRecent && (
                   <Text color={focused ? '#8C959F' : '#484F58'}>
                     {' ─── '}
-<<<<<<< HEAD
-                    {row.collapsed ? `${row.modelCount} models  [Enter/Space to expand]` : `[Enter/Space to collapse]`}
-=======
                     {row.collapsed
                       ? `${row.modelCount} models  [Enter/Space to expand]`
                       : `[Enter/Space to collapse]`}
@@ -461,7 +391,6 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
                   <Text color={isStale ? '#FFB86C' : '#50FA7B'}>
                     {' '}
                     {isStale ? '⚠ cached' : '🔄 cached'}
->>>>>>> tools_improvement
                   </Text>
                 )}
                 {hasCache && <Text color={isStale ? '#FFB86C' : '#50FA7B'}> {isStale ? '⚠ cached' : '🔄 cached'}</Text>}
@@ -530,14 +459,10 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
       </Box>
 
       <Box marginTop={1} justifyContent="space-between" paddingX={1}>
-<<<<<<< HEAD
-        <Text color="#484F58"> ESC abort · type to filter · #free #fast · $ cheap mode · Ctrl+R refresh </Text>
-=======
         <Text color="#484F58">
           {' '}
           ESC abort · type to filter · #free #fast · $ cheap mode · Ctrl+R refresh{' '}
         </Text>
->>>>>>> tools_improvement
         <Text color="#00E5FF" bold>
           {' '}
           Enter select/toggle{' '}

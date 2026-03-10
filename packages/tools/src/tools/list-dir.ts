@@ -29,11 +29,7 @@ function listRecursive(dir: string, root: string, depth: number, maxDepth: numbe
         entries.push(`${prefix}${item.name}`);
       }
     }
-<<<<<<< HEAD
-  } catch (err) {
-=======
   } catch {
->>>>>>> tools_improvement
     // Ignore directories that cannot be read (e.g., due to permissions)
   }
   return entries;

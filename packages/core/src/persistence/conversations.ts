@@ -8,9 +8,6 @@ export function saveConversation(
   title?: string,
   existingId?: string,
 ): string {
-<<<<<<< HEAD
-  return getPersistenceStore().saveConversation(messages, model, firstUserMessage, title, existingId);
-=======
   return getPersistenceStore().saveConversation(
     messages,
     model,
@@ -18,7 +15,6 @@ export function saveConversation(
     title,
     existingId,
   );
->>>>>>> tools_improvement
 }
 
 export function loadConversation(id: string) {
@@ -45,9 +41,6 @@ export function loadWorkspace(path: string) {
   return getPersistenceStore().loadWorkspace(path);
 }
 
-<<<<<<< HEAD
-export function exportConversation(messages: any[], model: any, tokensUsed: number, cost: number, path?: string): string {
-=======
 export function exportConversation(
   messages: any[],
   model: any,
@@ -55,6 +48,5 @@ export function exportConversation(
   cost: number,
   path?: string,
 ): string {
->>>>>>> tools_improvement
   return getPersistenceStore().exportConversation(messages, model, tokensUsed, cost, path);
 }

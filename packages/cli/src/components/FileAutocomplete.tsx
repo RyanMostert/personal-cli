@@ -83,11 +83,7 @@ export function FileAutocomplete({ query, visible, selectedIndex, onFilesChange 
       cancelled = true;
       clearTimeout(t);
     };
-<<<<<<< HEAD
-  }, [cleanQuery, visible]); // eslint-disable-line react-hooks/exhaustive-deps
-=======
   }, [cleanQuery, visible]);
->>>>>>> tools_improvement
 
   if (!visible) return null;
 
@@ -99,14 +95,10 @@ export function FileAutocomplete({ query, visible, selectedIndex, onFilesChange 
         {isLoading ? (
           <Text color="#8C959F"> Searching for {label}…</Text>
         ) : files.length === 0 ? (
-<<<<<<< HEAD
-          <Text color="#8C959F"> {cleanQuery === '' ? 'No recent files' : `No files match ${label}`}</Text>
-=======
           <Text color="#8C959F">
             {' '}
             {cleanQuery === '' ? 'No recent files' : `No files match ${label}`}
           </Text>
->>>>>>> tools_improvement
         ) : (
           files.map((file, index) => (
             <Box key={file}>

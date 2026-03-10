@@ -90,13 +90,9 @@ export function createWebFetch(permissionFn?: PermissionCallback) {
         const html = await res.text();
         const cleaned = cleanHtml(html);
         const finalOutput =
-<<<<<<< HEAD
-          cleaned.length > FALLBACK_LIMIT ? cleaned.slice(0, FALLBACK_LIMIT) + '\n\n[CONTENT_TRUNCATED]' : cleaned;
-=======
           cleaned.length > FALLBACK_LIMIT
             ? cleaned.slice(0, FALLBACK_LIMIT) + '\n\n[CONTENT_TRUNCATED]'
             : cleaned;
->>>>>>> tools_improvement
 
         return {
           output: finalOutput,

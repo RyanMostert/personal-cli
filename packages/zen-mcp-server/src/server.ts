@@ -36,11 +36,7 @@ export class ZenMCPServer {
           tools: {},
           resources: {},
         },
-<<<<<<< HEAD
-      }
-=======
       },
->>>>>>> tools_improvement
     );
 
     this.setupHandlers();
@@ -229,13 +225,9 @@ export class ZenMCPServer {
 
         throw new Error(`Unknown resource: ${uri}`);
       } catch (error) {
-<<<<<<< HEAD
-        throw new Error(`Failed to read resource: ${error instanceof Error ? error.message : 'Unknown error'}`);
-=======
         throw new Error(
           `Failed to read resource: ${error instanceof Error ? error.message : 'Unknown error'}`,
         );
->>>>>>> tools_improvement
       }
     });
   }

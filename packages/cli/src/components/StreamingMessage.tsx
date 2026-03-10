@@ -47,9 +47,6 @@ export function StreamingMessage({ text, thought, tokenCount }: Props) {
             </Box>
           </Box>
         ) : !thought ? (
-<<<<<<< HEAD
-          <Text color={theme.dim}>▋ <Text italic>receiving…</Text></Text>
-=======
           <Box flexDirection="row" alignItems="center">
             <BlinkCursor />
             <Text color={theme.dim} italic>
@@ -57,7 +54,6 @@ export function StreamingMessage({ text, thought, tokenCount }: Props) {
               receiving…
             </Text>
           </Box>
->>>>>>> tools_improvement
         ) : null}
       </Box>
     </Box>

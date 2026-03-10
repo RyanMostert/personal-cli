@@ -149,13 +149,9 @@ export function ProviderWizard({ providerName, onSave, onClose }: Props) {
         paddingY={1}
         backgroundColor="#161b22"
         borderStyle="double"
-<<<<<<< HEAD
-        borderColor={info.noKeyNeeded || info.oauthFlow ? '#3FB950' : key.length > 0 ? info.color : '#484F58'}
-=======
         borderColor={
           info.noKeyNeeded || info.oauthFlow ? '#3FB950' : key.length > 0 ? info.color : '#484F58'
         }
->>>>>>> tools_improvement
       >
         {info.oauthFlow ? (
           // OAuth Flow UI

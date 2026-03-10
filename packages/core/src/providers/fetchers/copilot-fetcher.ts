@@ -14,30 +14,6 @@ interface CopilotModel {
 }
 
 const COPILOT_MODELS: CopilotModel[] = [
-<<<<<<< HEAD
-  { id: 'claude-haiku-4.5', label: 'Claude Haiku 4.5 (Copilot)', contextWindow: 160_000, tags: ['reasoning', 'fast'] },
-  { id: 'claude-opus-4.5', label: 'Claude Opus 4.5 (Copilot)', contextWindow: 160_000, tags: ['reasoning', 'large'] },
-  { id: 'claude-opus-4.6', label: 'Claude Opus 4.6 (Copilot)', contextWindow: 192_000, tags: ['reasoning', 'large'] },
-  { id: 'claude-sonnet-4.4', label: 'Claude Sonnet 4.4 (Copilot)', contextWindow: 144_000, tags: ['reasoning', 'coding'] },
-  { id: 'claude-sonnet-4.5', label: 'Claude Sonnet 4.5 (Copilot)', contextWindow: 160_000, tags: ['reasoning', 'coding'] },
-  { id: 'claude-sonnet-4.6', label: 'Claude Sonnet 4.6 (Copilot)', contextWindow: 160_000, tags: ['reasoning', 'coding'] },
-  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Copilot)', contextWindow: 173_000, tags: ['reasoning', 'large'] },
-  { id: 'gemini-3-flash', label: 'Gemini 3 Flash (Copilot)', contextWindow: 173_000, tags: ['fast'] },
-  { id: 'gemini-3-pro', label: 'Gemini 3 Pro (Copilot)', contextWindow: 173_000, tags: ['reasoning', 'large'] },
-  { id: 'gemini-3.1-pro', label: 'Gemini 3.1 Pro (Copilot)', contextWindow: 173_000, tags: ['reasoning', 'large'] },
-  { id: 'gpt-4.1', label: 'GPT-4.1 (Copilot)', contextWindow: 128_000, tags: ['coding', 'large'] },
-  { id: 'gpt-4o', label: 'GPT-4o (Copilot)', contextWindow: 68_000, tags: ['coding', 'fast'] },
-  { id: 'gpt-5-mini', label: 'GPT-5 mini (Copilot)', contextWindow: 192_000, tags: ['coding', 'fast'] },
-  { id: 'gpt-5.1', label: 'GPT-5.1 (Copilot)', contextWindow: 192_000, tags: ['coding', 'large'] },
-  { id: 'gpt-5.1-codex', label: 'GPT-5.1-Codex (Copilot)', contextWindow: 256_000, tags: ['coding', 'large'] },
-  { id: 'gpt-5.1-codex-max', label: 'GPT-5.1-Codex-Max (Copilot)', contextWindow: 256_000, tags: ['coding', 'large'] },
-  { id: 'gpt-5.1-codex-mini', label: 'GPT-5.1-Codex-Mini (Copilot)', contextWindow: 256_000, tags: ['coding', 'fast'] },
-  { id: 'gpt-5.2', label: 'GPT-5.2 (Copilot)', contextWindow: 192_000, tags: ['coding', 'large'] },
-  { id: 'gpt-5.2-codex', label: 'GPT-5.2-Codex (Copilot)', contextWindow: 400_000, tags: ['coding', 'large'] },
-  { id: 'gpt-5.3-codex', label: 'GPT-5.3-Codex (Copilot)', contextWindow: 400_000, tags: ['coding', 'large'] },
-  { id: 'gpt-5.4', label: 'GPT-5.4 (Copilot)', contextWindow: 400_000, tags: ['reasoning', 'large'] },
-  { id: 'grok-code-fast-1', label: 'Grok Code Fast 1 (Copilot)', contextWindow: 173_000, tags: ['fast'] },
-=======
   {
     id: 'claude-haiku-4.5',
     label: 'Claude Haiku 4.5 (Copilot)',
@@ -150,7 +126,6 @@ const COPILOT_MODELS: CopilotModel[] = [
     contextWindow: 173_000,
     tags: ['fast'],
   },
->>>>>>> tools_improvement
   { id: 'raptor-mini', label: 'Raptor mini (Copilot)', contextWindow: 264_000, tags: ['fast'] },
 ];
 

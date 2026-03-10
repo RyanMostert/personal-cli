@@ -187,13 +187,9 @@ export function CommandAutocomplete({
                 <Text color={index === selectedIndex ? '#C9D1D9' : '#8C959F'} bold={index === selectedIndex}>
                   {cmd.cmd.padEnd(12)}
                 </Text>
-<<<<<<< HEAD
-                <Text color={index === selectedIndex ? '#C9D1D9' : '#484F58'}>{cmd.description.slice(0, 30)}...</Text>
-=======
                 <Text color={index === selectedIndex ? '#C9D1D9' : '#484F58'}>
                   {cmd.description.slice(0, 30)}...
                 </Text>
->>>>>>> tools_improvement
               </Box>
             ))}
           </Box>
@@ -209,9 +205,6 @@ export function CommandAutocomplete({
             marginLeft={1}
             flexGrow={1}
           >
-<<<<<<< HEAD
-            <Box position="absolute" marginTop={-1} marginLeft={1} backgroundColor="black" paddingX={1}>
-=======
             <Box
               position="absolute"
               marginTop={-1}
@@ -219,7 +212,6 @@ export function CommandAutocomplete({
               backgroundColor="black"
               paddingX={1}
             >
->>>>>>> tools_improvement
               <Text color="#D29922" bold>
                 {' '}
                 💡 INTELLIGENCE:HINT{' '}

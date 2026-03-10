@@ -66,7 +66,3 @@ describe('ZenModelSchema', () => {
     expect(result.success).toBe(true);
   });
 });
-<<<<<<< HEAD
-
-=======
->>>>>>> tools_improvement

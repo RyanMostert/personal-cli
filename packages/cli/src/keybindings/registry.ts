@@ -23,9 +23,6 @@ export const DEFAULT_KEYBINDINGS: Keybinding[] = [
     description: 'Exit application',
     category: 'global',
   },
-<<<<<<< HEAD
-  { id: 'exit_eof', combo: { ctrl: true, input: 'd' }, action: 'exit', description: 'Exit (EOF)', category: 'global' },
-=======
   {
     id: 'exit_eof',
     combo: { ctrl: true, input: 'd' },
@@ -33,7 +30,6 @@ export const DEFAULT_KEYBINDINGS: Keybinding[] = [
     description: 'Exit (EOF)',
     category: 'global',
   },
->>>>>>> tools_improvement
   {
     id: 'model_picker',
     combo: { ctrl: true, input: 'm' },

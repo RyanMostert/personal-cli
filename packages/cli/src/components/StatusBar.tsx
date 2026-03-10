@@ -40,11 +40,8 @@ export function StatusBar({
   mcpServerCount = 0,
   activeToolCount = 0,
   leaderKeyActive = false,
-<<<<<<< HEAD
-=======
   activeToolName,
   notification,
->>>>>>> tools_improvement
 }: Props) {
   const [hintIndex, setHintIndex] = useState(0);
   const [flashVisible, setFlashVisible] = useState(false);
@@ -99,17 +96,6 @@ export function StatusBar({
 
   return (
     <Box flexDirection="column" marginTop={1}>
-<<<<<<< HEAD
-      {/* Activity / Hint Line */}
-      <Box paddingX={1} marginBottom={0}>
-        {(isStreaming || activeToolCount > 0 || leaderKeyActive) ? (
-          <Box>
-            <Text color="#00E5FF">{spinner} </Text>
-            {isStreaming && <Text color="#6E7681">receiving</Text>}
-            {activeToolCount > 0 && <Text color="#D29922"> · {activeToolCount} tool{activeToolCount > 1 ? 's' : ''} active</Text>}
-            {leaderKeyActive && <Text color="#FF00AA"> · leader — waiting…</Text>}
-          </Box>
-=======
       {/* Activity / Hint / Notification Line */}
       <Box paddingX={1} marginBottom={0}>
         {flashVisible && notification ? (
@@ -158,7 +144,6 @@ export function StatusBar({
             )}
             {leaderKeyActive && <Text color="#FF00AA"> · leader — waiting…</Text>}
           </Box>
->>>>>>> tools_improvement
         ) : (
           <Text color="#484F58">{activeHint}</Text>
         )}
@@ -173,22 +158,12 @@ export function StatusBar({
           <Text color="#6E7681">{provider}</Text>
           <Text color="#30363D"> / </Text>
           <Text color="white">{modelId}</Text>
-<<<<<<< HEAD
-          <Text color="#484F58">  </Text>
-          <Text color={modeColor[mode] ?? '#6E7681'} bold>{modeLabel[mode] ?? `[${mode.toUpperCase()}]`}</Text>
-          {attachedFiles.length > 0 && (
-            <Text color="#484F58">  {attachedFiles.length} attached</Text>
-          )}
-          {mcpServerCount > 0 && (
-            <Text color="#484F58">  {mcpServerCount} mcp</Text>
-=======
           <Text color="#484F58"> </Text>
           <Text color={modeColor[mode] ?? '#6E7681'} bold>
             {modeLabel[mode] ?? `[${mode.toUpperCase()}]`}
           </Text>
           {attachedFiles.length > 0 && (
             <Text color="#484F58"> {attachedFiles.length} attached</Text>
->>>>>>> tools_improvement
           )}
           {mcpServerCount > 0 && <Text color="#484F58"> {mcpServerCount} mcp</Text>}
         </Box>
@@ -197,11 +172,7 @@ export function StatusBar({
           <Text color="#484F58">CTX </Text>
           <Text color={tokenColor}>{barStr}</Text>
           <Text color="#484F58"> {Math.round(progress * 100)}%</Text>
-<<<<<<< HEAD
-          <Text color="#30363D">  </Text>
-=======
           <Text color="#30363D"> </Text>
->>>>>>> tools_improvement
           <Text color={cost > 0 ? '#D29922' : '#484F58'}>{costStr}</Text>
         </Box>
       </Box>

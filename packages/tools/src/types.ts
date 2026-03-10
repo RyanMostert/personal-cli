@@ -24,10 +24,6 @@ export const MODE_RULES: Record<string, PermissionRule[]> = {
     { tool: 'writeFile', action: 'ask' },
     { tool: 'editFile', action: 'ask' },
     { tool: 'patch', action: 'ask' },
-<<<<<<< HEAD
-    { tool: 'runCommand', action: 'ask' },
-    { tool: 'gitCommit', action: 'ask' },
-=======
     { tool: 'batchEdit', action: 'ask' },
     { tool: 'runCommand', action: 'ask' },
     { tool: 'runTests', action: 'ask' },
@@ -35,7 +31,6 @@ export const MODE_RULES: Record<string, PermissionRule[]> = {
     { tool: 'moveFile', action: 'ask' },
     { tool: 'copyFile', action: 'ask' },
     { tool: 'deleteFile', action: 'ask' },
->>>>>>> tools_improvement
   ],
   plan: [
     // Ask before every write/execute — user approves each step

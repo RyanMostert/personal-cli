@@ -2,14 +2,9 @@
   "semi": true,
   "trailingComma": "all",
   "singleQuote": true,
-<<<<<<< HEAD
-  "printWidth": 120,
-  "tabWidth": 2
-=======
   "printWidth": 100,
   "tabWidth": 2,
   "bracketSpacing": true,
   "arrowParens": "always",
   "endOfLine": "lf"
->>>>>>> tools_improvement
 }

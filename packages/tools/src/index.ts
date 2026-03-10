@@ -44,10 +44,7 @@ export interface CreateToolsOptions {
   questionFn?: QuestionCallback;
   plugins?: LoadedPlugin[];
   onTodoUpdate?: TodoUpdateCallback;
-<<<<<<< HEAD
-=======
   onNotify?: NotifyCallback;
->>>>>>> tools_improvement
 }
 
 export function createTools(
@@ -64,11 +61,7 @@ export function createTools(
   // Hook resolvedPermission into readFile synchronously
   setReadFilePermission(resolvedPermission);
 
-<<<<<<< HEAD
-  const { onWrite, questionFn, plugins, onTodoUpdate } = options ?? {};
-=======
   const { onWrite, questionFn, plugins, onTodoUpdate, onNotify } = options ?? {};
->>>>>>> tools_improvement
   const { todoWrite, todoRead } = createTodoTools(onTodoUpdate);
 
   const baseTools: Record<string, any> = {

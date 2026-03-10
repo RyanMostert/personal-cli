@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-import type { StreamEvent, TextDelta, ThoughtDelta, ToolCallStart, ToolCallResult, SystemEvent, FinishEvent, ErrorEvent } from './streaming-protocol';
-=======
 import type {
   StreamEvent,
   TextDelta,
@@ -11,19 +8,14 @@ import type {
   FinishEvent,
   ErrorEvent,
 } from './streaming-protocol';
->>>>>>> tools_improvement
 
 // Lightweight parser that maps provider stream "parts" to StreamEvent values.
 // This is intentionally conservative for a first pass: it forwards structured
 // stream parts when they already provide intent, and normalizes common shapes.
 
-<<<<<<< HEAD
-export async function* parseStream<T = any>(asyncIterable: AsyncIterable<T>): AsyncGenerator<StreamEvent> {
-=======
 export async function* parseStream<T = any>(
   asyncIterable: AsyncIterable<T>,
 ): AsyncGenerator<StreamEvent> {
->>>>>>> tools_improvement
   // Accumulate streamed tool-input-delta chunks per tool call (AI SDK v6+)
   const toolInputBuffers = new Map<string, { toolName: string; argsJson: string }>();
   // Track IDs already emitted via tool-input-end to skip the legacy tool-call duplicate
@@ -47,12 +39,8 @@ export async function* parseStream<T = any>(
         }
         case 'reasoning-delta':
         case 'thought-delta': {
-<<<<<<< HEAD
-          const delta = (part.reasoning as string) ?? (part.text as string) ?? (part.delta as string) ?? '';
-=======
           const delta =
             (part.reasoning as string) ?? (part.text as string) ?? (part.delta as string) ?? '';
->>>>>>> tools_improvement
           yield { type: 'thought-delta', delta } as ThoughtDelta;
           break;
         }
@@ -100,15 +88,11 @@ export async function* parseStream<T = any>(
             const buf = toolInputBuffers.get(id)!;
             toolInputBuffers.delete(id);
             let args: Record<string, unknown> | undefined;
-<<<<<<< HEAD
-            try { args = JSON.parse(buf.argsJson); } catch { /* leave undefined */ }
-=======
             try {
               args = JSON.parse(buf.argsJson);
             } catch {
               /* leave undefined */
             }
->>>>>>> tools_improvement
             emittedToolCallIds.add(id);
             yield {
               type: 'tool-call-start',

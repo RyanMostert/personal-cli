@@ -68,13 +68,9 @@ async function extractOutline(filePath: string, content: string): Promise<string
     return `<file name="${filePath}">\nNo distinct semantic structures found.\n</file>`;
   }
 
-<<<<<<< HEAD
-  const formattedItems = items.map((i) => `${i.line.toString().padStart(4, ' ')}: ${i.signature}`).join('\n');
-=======
   const formattedItems = items
     .map((i) => `${i.line.toString().padStart(4, ' ')}: ${i.signature}`)
     .join('\n');
->>>>>>> tools_improvement
   return `<file name="${filePath}">\n${formattedItems}\n</file>`;
 }
 

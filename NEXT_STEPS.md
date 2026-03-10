@@ -130,52 +130,6 @@ End of summary.
 
 ---
 
-<<<<<<< HEAD
-## Missing Tool Features (priority order)
-
-Current tool inventory: readFile, writeFile, editFile, listDir, searchFiles, globFiles,
-semanticSearch, diagnostics, runCommand, webFetch, webSearch, gitStatus, gitDiff, gitLog,
-gitCommit, todoWrite, todoRead, patch, question.
-
-### HIGH PRIORITY
-
-**1. notifyUser — desktop / in-TUI notification when long tasks complete**
-- Show a terminal bell + status-bar flash when an async operation finishes while the user is idle
-- Optional OS-level notification (node-notifier or `notify-send` on Linux / `osascript` on macOS)
-- Lets the model signal "done" without the user polling
-- Implementation: `packages/tools/src/tools/notify.ts`, emit a `system` StreamEvent that the
-  StatusBar intercepts to flash briefly; OS notify behind a settings flag
-
-**2. moveFile / copyFile / deleteFile — basic FS operations currently missing**
-- Model can read + write but has no way to rename, copy, or delete files
-- Each needs permission gating (same pattern as writeFile)
-- Implementation: `packages/tools/src/tools/fs-ops.ts`
-- deleteFile should push to UndoStack (soft-delete to a temp dir) so `/undo` can recover it
-
-**3. batchEdit — multi-file search-and-replace in one tool call**
-- Current editFile requires one call per file; renaming a symbol across 20 files is very slow
-- Input: `{ pattern: string, replacement: string, glob: string, isRegex?: boolean }`
-- Returns a diff summary and a list of files changed
-- Respects the same permission resolver as editFile
-- Implementation: `packages/tools/src/tools/batch-edit.ts`
-
-**4. runTests — run the project's test suite and stream results**
-- Detects test runner (vitest, jest, mocha) from package.json scripts
-- Streams stdout/stderr incrementally via the existing runCommand infra
-- Returns structured `{ passed, failed, skipped, output }` so the model can reason about failures
-- Implementation: thin wrapper over `createRunCommand` with auto-detection logic
-
-**5. sessionMemory — persistent key-value notes scoped to the workspace**
-- Unlike todoWrite (task tracking), this stores facts the model wants to remember long-term:
-  project conventions, user preferences, recurring context
-- Stored at `.pcli-memory.json` in the project root (git-ignorable)
-- Tools: `memoryWrite(key, value)`, `memoryRead(key?)`, `memoryDelete(key)`
-- Model should consult this at the start of each session (inject top entries into system prompt)
-- Implementation: `packages/tools/src/tools/session-memory.ts`
-
----
-
-=======
 ## Tool & UI Improvements (2026-03-07)
 
 ### Implemented (HIGH PRIORITY — all done)
@@ -238,7 +192,6 @@ semanticSearch, diagnostics, runCommand, **runTests** ✅, webFetch, webSearch, 
 gitLog, gitCommit, todoWrite, todoRead, patch, question, **moveFile** ✅, **copyFile** ✅,
 **deleteFile** ✅, **batchEdit** ✅, **memoryWrite/Read/Delete** ✅, **notifyUser** ✅.
 
->>>>>>> tools_improvement
 ### MEDIUM PRIORITY
 
 **6. screenshot — capture terminal / clipboard image**

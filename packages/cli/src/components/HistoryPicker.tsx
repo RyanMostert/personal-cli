@@ -38,14 +38,10 @@ export function HistoryPicker({ onSelect, onClose }: Props) {
   // Windowing
   const scrollTop = Math.max(
     0,
-<<<<<<< HEAD
-    Math.min(focusIndex - Math.floor(VISIBLE_HEIGHT / 2), Math.max(0, items.length - VISIBLE_HEIGHT)),
-=======
     Math.min(
       focusIndex - Math.floor(VISIBLE_HEIGHT / 2),
       Math.max(0, items.length - VISIBLE_HEIGHT),
     ),
->>>>>>> tools_improvement
   );
   const visible = items.slice(scrollTop, scrollTop + VISIBLE_HEIGHT);
   const hiddenAbove = scrollTop;

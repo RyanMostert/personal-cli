@@ -35,13 +35,9 @@ export function createRunCommand(permissionFn?: PermissionCallback) {
         // Truncate if output is massive to avoid token budget issues
         const limit = 20000;
         const finalOutput =
-<<<<<<< HEAD
-          output.length > limit ? output.slice(0, limit) + '\n\n[OUTPUT_TRUNCATED_DUE_TO_SIZE]' : output;
-=======
           output.length > limit
             ? output.slice(0, limit) + '\n\n[OUTPUT_TRUNCATED_DUE_TO_SIZE]'
             : output;
->>>>>>> tools_improvement
 
         return {
           output: finalOutput || '(Command completed with no output)',

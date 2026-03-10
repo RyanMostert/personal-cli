@@ -55,12 +55,6 @@ async function searchGoogle(query: string, maxResults: number, apiKey: string, c
     const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(query)}&num=${maxResults}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Google HTTP ${res.status}`);
-<<<<<<< HEAD
-    const data = (await res.json()) as any;
-
-    const results = (data.items ?? []).map((r: any) => `### ${r.title}\n${r.link}\n${r.snippet}`);
-    return { output: results.length > 0 ? results.join('\n\n') : `No results found for "${query}" on Google.` };
-=======
     interface GoogleSearchItem {
       title: string;
       link: string;
@@ -76,7 +70,6 @@ async function searchGoogle(query: string, maxResults: number, apiKey: string, c
       output:
         results.length > 0 ? results.join('\n\n') : `No results found for "${query}" on Google.`,
     };
->>>>>>> tools_improvement
   } catch (err) {
     return { error: `Google search failed: ${err}` };
   }

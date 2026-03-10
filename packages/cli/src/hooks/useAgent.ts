@@ -1,8 +1,4 @@
 import { useState, useCallback, useRef } from 'react';
-<<<<<<< HEAD
-import { Agent, ProviderManager, loadConfig, getDefaultModel, loadSettings } from '@personal-cli/core';
-import type { Message, StreamEvent, ToolCallInfo, AgentMode, ProviderName, Attachment, TodoItem } from '@personal-cli/shared';
-=======
 import {
   Agent,
   ProviderManager,
@@ -21,7 +17,6 @@ import type {
   Attachment,
   TodoItem,
 } from '@personal-cli/shared';
->>>>>>> tools_improvement
 import { DEFAULT_TOKEN_BUDGET, loadAttachment } from '@personal-cli/shared';
 import type { PendingPermission } from '../components/PermissionPrompt.js';
 import type { PendingQuestion } from '../components/QuestionPrompt.js';
@@ -41,11 +36,8 @@ interface AgentState {
   attachedFiles: Attachment[];
   mode: AgentMode;
   todos: TodoItem[];
-<<<<<<< HEAD
-=======
   // Currently active model/provider
   activeModel: { provider: ProviderName; modelId: string };
->>>>>>> tools_improvement
 }
 
 export function useAgent() {
@@ -71,13 +63,10 @@ export function useAgent() {
     attachedFiles: [],
     mode: loadSettings().defaultMode ?? 'ask',
     todos: [],
-<<<<<<< HEAD
-=======
     activeModel: {
       provider: initialModel.provider as ProviderName,
       modelId: initialModel.modelId,
     },
->>>>>>> tools_improvement
   });
 
   const permissionCallback = useCallback((toolName: string, args?: Record<string, unknown>) => {
@@ -230,13 +219,9 @@ export function useAgent() {
               setState((prev) => ({
                 ...prev,
                 toolCalls: prev.toolCalls.map((tc) =>
-<<<<<<< HEAD
-                  tc.toolCallId === event.toolCall!.toolCallId ? { ...tc, result: event.toolCall!.result } : tc,
-=======
                   tc.toolCallId === event.toolCall!.toolCallId
                     ? { ...tc, result: event.toolCall!.result }
                     : tc,
->>>>>>> tools_improvement
                 ),
               }));
               break;
@@ -327,9 +312,6 @@ export function useAgent() {
       (provider: ProviderName, modelId: string) => {
         const agent = getAgent();
         agent.switchModel(provider, modelId);
-<<<<<<< HEAD
-        setState((prev) => ({ ...prev }));
-=======
         // Record as recent and persist last-used provider so next startup selects the same provider
         try {
           addRecentModel(provider, modelId);
@@ -357,7 +339,6 @@ export function useAgent() {
         }
         // Update activeModel in state so consumers react to the change
         setState((prev) => ({ ...prev, activeModel: agent.getActiveModel() }));
->>>>>>> tools_improvement
       },
       [getAgent],
     ),

@@ -43,9 +43,6 @@ export class ErrorBoundary extends Component<Props, State> {
             </Text>
           </Box>
 
-<<<<<<< HEAD
-          <Box flexDirection="column" borderStyle="single" borderColor="#484F58" paddingX={2} paddingY={1}>
-=======
           <Box
             flexDirection="column"
             borderStyle="single"
@@ -53,7 +50,6 @@ export class ErrorBoundary extends Component<Props, State> {
             paddingX={2}
             paddingY={1}
           >
->>>>>>> tools_improvement
             <Text color="#FF5555" bold>
               ERROR_TYPE:{' '}
             </Text>
@@ -69,12 +65,9 @@ export class ErrorBoundary extends Component<Props, State> {
             <Box marginTop={1} flexDirection="column">
               <Text color="#484F58" bold>
                 STACK_TRACE_SUMMARY:
-<<<<<<< HEAD
-=======
               </Text>
               <Text color="#484F58">
                 {this.state.error?.stack?.split('\n').slice(0, 5).join('\n')}
->>>>>>> tools_improvement
               </Text>
               <Text color="#484F58">{this.state.error?.stack?.split('\n').slice(0, 5).join('\n')}</Text>
             </Box>

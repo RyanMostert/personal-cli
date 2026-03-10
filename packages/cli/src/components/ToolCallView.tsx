@@ -197,33 +197,6 @@ function summarizeResult(result: unknown): {
   return {
     text: firstLine.slice(0, 100) + (firstLine.length > 100 ? '…' : ''),
     isError: false,
-<<<<<<< HEAD
-    lineCount: s.split('\n').filter((line) => line.trim().length > 0).length > 1 ? s.split('\n').length : undefined,
-  };
-}
-
-// Get file info for display
-function getFileInfo(tool: ToolCallInfo): { path?: string; lineCount?: number } | null {
-  const args = tool.args as Record<string, unknown> | undefined;
-  if (!args) return null;
-
-  if (tool.toolName === 'readFile' && typeof args.path === 'string') {
-    const result = tool.result;
-    if (typeof result === 'string') {
-      return { path: args.path, lineCount: result.split('\n').length };
-    }
-    return { path: args.path };
-  }
-
-  if (tool.toolName === 'writeFile' && typeof args.path === 'string') {
-    const content = args.content as string | undefined;
-    return { path: args.path, lineCount: content?.split('\n').length };
-  }
-
-  return null;
-}
-
-=======
     lineCount:
       s.split('\n').filter((line) => line.trim().length > 0).length > 1
         ? s.split('\n').length
@@ -231,7 +204,6 @@ function getFileInfo(tool: ToolCallInfo): { path?: string; lineCount?: number } 
   };
 }
 
->>>>>>> tools_improvement
 export function ToolCallView({
   tool,
   startTime = Date.now(),
@@ -275,22 +247,11 @@ export function ToolCallView({
 
   return (
     <Box marginY={0} paddingLeft={1} flexDirection="column">
-<<<<<<< HEAD
-      {/* Header Row */}
-=======
       {/* Header Row: [icon] STATUS TOOLNAME <primary-arg> <duration> */}
->>>>>>> tools_improvement
       <Box flexDirection="row" alignItems="center">
         <Text color={statusColor} bold>
           {isRunFinished ? (isError ? '✖' : '✔') : '⠶'}{' '}
         </Text>
-<<<<<<< HEAD
-        <Text color={theme.toolName} bold>
-          {tool.toolName.toUpperCase()}
-        </Text>
-        <Text color={theme.dim}> {formatDuration(duration)}</Text>
-
-=======
         <Text color={theme.dim}>[</Text>
         <Text color={theme.toolName}>{icon}</Text>
         <Text color={theme.dim}>] </Text>
@@ -307,21 +268,11 @@ export function ToolCallView({
           </Text>
         )}
         <Text color={theme.dim}> {formatDuration(duration)}</Text>
->>>>>>> tools_improvement
         {focused && (
           <Text color="#FF00AA" bold>
             {' '}
             ◀
           </Text>
-<<<<<<< HEAD
-        )}
-
-        {!isRunFinished && tool.args && (
-          <Box paddingLeft={1}>
-            <Text color={theme.muted}>{JSON.stringify(tool.args).substring(0, 40)}...</Text>
-          </Box>
-=======
->>>>>>> tools_improvement
         )}
       </Box>
 
@@ -353,11 +304,6 @@ export function ToolCallView({
                   : JSON.stringify(tool.result, null, 2)
                 : resultSummary.text}
             </Text>
-<<<<<<< HEAD
-            {isRunFinished && !expanded && (
-              <Text color={theme.primary} bold>
-                {focused ? ' (ENTER to expand)' : ''}
-=======
             {!expanded && resultSummary.lineCount && resultSummary.lineCount > 1 && (
               <Text color={theme.dim}> [{resultSummary.lineCount}L]</Text>
             )}
@@ -365,7 +311,6 @@ export function ToolCallView({
               <Text color={theme.primary} bold>
                 {' '}
                 (ENTER)
->>>>>>> tools_improvement
               </Text>
             )}
           </Box>

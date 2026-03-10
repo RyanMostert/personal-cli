@@ -67,14 +67,10 @@ export async function saveModelCache(cache: ModelCache): Promise<void> {
   }
 }
 
-<<<<<<< HEAD
-export async function cacheModels(provider: ProviderName, models: FetchedModelEntry[]): Promise<void> {
-=======
 export async function cacheModels(
   provider: ProviderName,
   models: FetchedModelEntry[],
 ): Promise<void> {
->>>>>>> tools_improvement
   const cache = await loadModelCache();
   cache[provider] = {
     models,

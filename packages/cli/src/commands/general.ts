@@ -41,9 +41,6 @@ export const generalCommands: Command[] = [
         if (ok) ctx.addSystemMessage('Clipboard image attached!');
         else ctx.addSystemMessage('Failed to attach clipboard image.');
       } catch (err) {
-<<<<<<< HEAD
-        ctx.addSystemMessage(typeof err === 'string' ? err : err instanceof Error ? err.message : 'Clipboard image not found.');
-=======
         ctx.addSystemMessage(
           typeof err === 'string'
             ? err
@@ -51,7 +48,6 @@ export const generalCommands: Command[] = [
               ? err.message
               : 'Clipboard image not found.',
         );
->>>>>>> tools_improvement
       }
     },
   },
@@ -101,11 +97,7 @@ export const generalCommands: Command[] = [
           ctx.addSystemMessage('Usage: /settings set-flag <FLAG_NAME> <on|off>');
           return;
         }
-<<<<<<< HEAD
-        const bool = ['1','true','on','enabled'].includes(val.toLowerCase());
-=======
         const bool = ['1', 'true', 'on', 'enabled'].includes(val.toLowerCase());
->>>>>>> tools_improvement
         const s = store.loadSettings();
         const ff = s.featureFlags ?? {};
         ff[key] = bool;

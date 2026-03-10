@@ -180,15 +180,11 @@ export function ProviderManager({
                   <Text color={focused ? 'white' : '#8C959F'} bold={focused}>
                     {p.label.toUpperCase()}
                   </Text>
-<<<<<<< HEAD
-                  {isConfigured ? <Text color="#3FB950"> [CONNECTED] </Text> : <Text color="#484F58"> [{p.id}] </Text>}
-=======
                   {isConfigured ? (
                     <Text color="#3FB950"> [CONNECTED] </Text>
                   ) : (
                     <Text color="#484F58"> [{p.id}] </Text>
                   )}
->>>>>>> tools_improvement
                 </Box>
 
                 <Box>
