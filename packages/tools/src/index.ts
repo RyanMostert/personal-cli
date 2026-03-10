@@ -152,10 +152,7 @@ function convertArgsToZod(args?: Record<string, ToolArgSchema>) {
   return z.object(shape);
 }
 
-function makePermissionResolver(
-  rules: PermissionRule[],
-  userCallback?: PermissionCallback,
-): PermissionCallback {
+function makePermissionResolver(rules: PermissionRule[], userCallback?: PermissionCallback): PermissionCallback {
   return async (toolName, args) => {
     const pathArg = (args.path ?? args.command ?? args.filePath ?? '') as string;
 

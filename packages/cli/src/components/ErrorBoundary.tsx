@@ -69,6 +69,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <Text color="#484F58">
                 {this.state.error?.stack?.split('\n').slice(0, 5).join('\n')}
               </Text>
+              <Text color="#484F58">{this.state.error?.stack?.split('\n').slice(0, 5).join('\n')}</Text>
             </Box>
           </Box>
 

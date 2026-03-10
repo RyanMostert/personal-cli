@@ -68,10 +68,7 @@ function readYamlFile<T>(filePath: string, schema: { parse: (v: unknown) => T })
 export function loadConfig(): AppConfig {
   const globalConfigDir = join(homedir(), CONFIG_DIR);
 
-  const providers = readYamlFile(
-    join(globalConfigDir, CONFIG_PROVIDERS_FILE),
-    ProvidersConfigSchema,
-  );
+  const providers = readYamlFile(join(globalConfigDir, CONFIG_PROVIDERS_FILE), ProvidersConfigSchema);
 
   const agent = AgentConfigSchema.parse({});
 

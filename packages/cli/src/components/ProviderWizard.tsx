@@ -86,14 +86,7 @@ export function ProviderWizard({ providerName, onSave, onClose }: Props) {
   const scanLine = '░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░';
 
   return (
-    <Box
-      flexDirection="column"
-      paddingX={2}
-      paddingY={1}
-      marginY={1}
-      borderStyle="single"
-      borderColor={info.color}
-    >
+    <Box flexDirection="column" paddingX={2} paddingY={1} marginY={1} borderStyle="single" borderColor={info.color}>
       {/* Header Overlay */}
       <Box position="absolute" marginTop={-1} marginLeft={2} backgroundColor="black" paddingX={1}>
         <Text color={info.color} bold>

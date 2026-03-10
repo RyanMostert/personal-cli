@@ -98,9 +98,7 @@ export const searchFiles = tool({
       regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
     }
 
-    const fileRegex = filePattern
-      ? new RegExp(filePattern.replace(/\*/g, '.*').replace(/\?/g, '.'))
-      : undefined;
+    const fileRegex = filePattern ? new RegExp(filePattern.replace(/\*/g, '.*').replace(/\?/g, '.')) : undefined;
 
     const results: Match[] = [];
     searchDir(root, root, regex, results, fileRegex);
