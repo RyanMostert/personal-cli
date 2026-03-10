@@ -63,9 +63,7 @@ export function FileAutocomplete({ query, visible, selectedIndex, onFilesChange 
         // Cap at 50 before sorting so getBatchFrecency stays fast
         const capped = matches.slice(0, 50);
         const scores = getBatchFrecency(capped);
-        const sorted = capped
-          .sort((a, b) => (scores.get(b) ?? 0) - (scores.get(a) ?? 0))
-          .slice(0, 8);
+        const sorted = capped.sort((a, b) => (scores.get(b) ?? 0) - (scores.get(a) ?? 0)).slice(0, 8);
 
         setFiles(sorted);
         onFilesChange(sorted);
@@ -107,10 +105,7 @@ export function FileAutocomplete({ query, visible, selectedIndex, onFilesChange 
               <Text color={index === selectedIndex ? '#58A6FF' : '#8C959F'}>
                 {index === selectedIndex ? '▶ ' : '  '}
               </Text>
-              <Text
-                color={index === selectedIndex ? '#C9D1D9' : '#8C959F'}
-                bold={index === selectedIndex}
-              >
+              <Text color={index === selectedIndex ? '#C9D1D9' : '#8C959F'} bold={index === selectedIndex}>
                 {file}
               </Text>
             </Box>

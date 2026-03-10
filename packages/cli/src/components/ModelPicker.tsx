@@ -105,8 +105,7 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
       if (part.startsWith('#')) {
         const tag = part.slice(1);
         if (tag === 'free') isFreeOnly = true;
-        else if (['reasoning', 'coding', 'vision', 'fast', 'large'].includes(tag))
-          tagSet.add(tag as ModelTag);
+        else if (['reasoning', 'coding', 'vision', 'fast', 'large'].includes(tag)) tagSet.add(tag as ModelTag);
       } else {
         queryParts.push(part);
       }
@@ -268,10 +267,7 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
   // Windowing centred on the focused row
   const scrollTop = Math.max(
     0,
-    Math.min(
-      rowFocus - Math.floor(VISIBLE_HEIGHT / 2),
-      Math.max(0, allRows.length - VISIBLE_HEIGHT),
-    ),
+    Math.min(rowFocus - Math.floor(VISIBLE_HEIGHT / 2), Math.max(0, allRows.length - VISIBLE_HEIGHT)),
   );
   const visibleRows = allRows.slice(scrollTop, scrollTop + VISIBLE_HEIGHT);
   const hiddenAbove = scrollTop;
@@ -298,14 +294,7 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
   const formatCtx = (n: number) => (n >= 1_000_000 ? `${n / 1_000_000}M` : `${n / 1_000}k`);
 
   return (
-    <Box
-      borderStyle="single"
-      borderColor="#00E5FF"
-      flexDirection="column"
-      paddingX={1}
-      paddingY={1}
-      marginY={1}
-    >
+    <Box borderStyle="single" borderColor="#00E5FF" flexDirection="column" paddingX={1} paddingY={1} marginY={1}>
       {/* Title */}
       <Box position="absolute" marginTop={-1} marginLeft={2} backgroundColor="black" paddingX={1}>
         <Text color="#00E5FF" bold>
@@ -404,6 +393,7 @@ export function ModelPicker({ onSelect, onClose, tick = 0 }: Props) {
                     {isStale ? '⚠ cached' : '🔄 cached'}
                   </Text>
                 )}
+                {hasCache && <Text color={isStale ? '#FFB86C' : '#50FA7B'}> {isStale ? '⚠ cached' : '🔄 cached'}</Text>}
               </Box>
             );
           }

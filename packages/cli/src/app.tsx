@@ -83,6 +83,47 @@ interface AppProps {
   initialAttachments?: Array<{ path: string; type: 'file' | 'image' }>;
 }
 
+const DEFAULT_ZEN_ENDPOINT = 'https://opencode.ai/zen/v1';
+
+function parseZenGatewayConfig(config?: MCPServerConfig): ZenGatewayConfig | null {
+  const apiKey = config?.env?.OPENCODE_API_KEY || config?.env?.ZEN_API_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  const result = ZenGatewayConfigSchema.safeParse({
+    endpoint: config.env?.ZEN_ENDPOINT || DEFAULT_ZEN_ENDPOINT,
+    apiKey,
+    enabled: true,
+  });
+
+  return result.success ? result.data : null;
+}
+
+function parseZenGatewayConfigFromEnv(): ZenGatewayConfig | null {
+  const apiKey = process.env.OPENCODE_API_KEY || process.env.ZEN_API_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  const result = ZenGatewayConfigSchema.safeParse({
+    endpoint: process.env.ZEN_ENDPOINT || DEFAULT_ZEN_ENDPOINT,
+    apiKey,
+    enabled: true,
+  });
+
+  return result.success ? result.data : null;
+}
+
+function getTextResult(result: ToolResult): string {
+  const text = result.content.find((item) => item.type === 'text' && typeof item.text === 'string')?.text;
+  if (!text) {
+    throw new Error('Zen Gateway returned an empty response.');
+  }
+
+  return text;
+}
+
 export function App({ initialAttachments = [] }: AppProps) {
   const [focusedToolCallId, setFocusedToolCallId] = useState<string | null>(null);
   const [expandedToolCalls, setExpandedToolCalls] = useState<Set<string>>(new Set());
@@ -1493,3 +1534,4 @@ export const helloWorld = async ({ name = 'World' }) => {
     </>
   );
 }
+

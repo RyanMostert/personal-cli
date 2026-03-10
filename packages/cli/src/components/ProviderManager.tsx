@@ -116,24 +116,14 @@ export function ProviderManager({
   // Windowing
   const scrollTop = Math.max(
     0,
-    Math.min(
-      focusIndex - Math.floor(VISIBLE_HEIGHT / 2),
-      Math.max(0, allList.length - VISIBLE_HEIGHT),
-    ),
+    Math.min(focusIndex - Math.floor(VISIBLE_HEIGHT / 2), Math.max(0, allList.length - VISIBLE_HEIGHT)),
   );
   const visibleItems = allList.slice(scrollTop, scrollTop + VISIBLE_HEIGHT);
   const hiddenAbove = scrollTop;
   const hiddenBelow = Math.max(0, allList.length - scrollTop - visibleItems.length);
 
   return (
-    <Box
-      borderStyle="single"
-      borderColor="#00E5FF"
-      flexDirection="column"
-      paddingX={1}
-      paddingY={1}
-      marginY={1}
-    >
+    <Box borderStyle="single" borderColor="#00E5FF" flexDirection="column" paddingX={1} paddingY={1} marginY={1}>
       {/* Title */}
       <Box position="absolute" marginTop={-1} marginLeft={2} backgroundColor="black" paddingX={1}>
         <Text color="#00E5FF" bold>

@@ -368,14 +368,7 @@ export function MCPWizard({
   };
 
   return (
-    <Box
-      flexDirection="column"
-      paddingX={2}
-      paddingY={1}
-      marginY={1}
-      borderStyle="single"
-      borderColor="#00E5FF"
-    >
+    <Box flexDirection="column" paddingX={2} paddingY={1} marginY={1} borderStyle="single" borderColor="#00E5FF">
       {/* Header */}
       <Box position="absolute" marginTop={-1} marginLeft={2} backgroundColor="black" paddingX={1}>
         <Text color="#00E5FF" bold>
@@ -497,3 +490,4 @@ export function MCPWizard({
     </Box>
   );
 }
+

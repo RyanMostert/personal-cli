@@ -184,10 +184,7 @@ export function CommandAutocomplete({
                 <Text color={index === selectedIndex ? '#58A6FF' : '#8C959F'}>
                   {index === selectedIndex ? '▶ ' : '  '}
                 </Text>
-                <Text
-                  color={index === selectedIndex ? '#C9D1D9' : '#8C959F'}
-                  bold={index === selectedIndex}
-                >
+                <Text color={index === selectedIndex ? '#C9D1D9' : '#8C959F'} bold={index === selectedIndex}>
                   {cmd.cmd.padEnd(12)}
                 </Text>
                 <Text color={index === selectedIndex ? '#C9D1D9' : '#484F58'}>
