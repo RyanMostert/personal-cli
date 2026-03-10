@@ -47,16 +47,29 @@ describe('prefs', () => {
       expect(fs.writeFileSync).toHaveBeenCalledWith(
         expect.stringContaining('prefs.json'),
         expect.stringContaining('"theme": "light"'),
+<<<<<<< HEAD
         expect.objectContaining({ mode: 0o600 })
+=======
+        expect.objectContaining({ mode: 0o600 }),
+>>>>>>> tools_improvement
       );
     });
 
     it('should preserve other prefs when setting theme', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
+<<<<<<< HEAD
       vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ recentModels: [{ provider: 'p', modelId: 'm' }] }));
       
       setTheme('ocean');
       
+=======
+      vi.mocked(fs.readFileSync).mockReturnValue(
+        JSON.stringify({ recentModels: [{ provider: 'p', modelId: 'm' }] }),
+      );
+
+      setTheme('ocean');
+
+>>>>>>> tools_improvement
       const lastCall = vi.mocked(fs.writeFileSync).mock.calls[0];
       const writtenContent = JSON.parse(lastCall[1] as string);
       expect(writtenContent.theme).toBe('ocean');
@@ -82,15 +95,25 @@ describe('prefs', () => {
     it('should add a model to an empty list', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       addRecentModel('google', 'gemini-1.5-pro');
+<<<<<<< HEAD
       
       const lastCall = vi.mocked(fs.writeFileSync).mock.calls[0];
       const writtenContent = JSON.parse(lastCall[1] as string);
       expect(writtenContent.recentModels).toEqual([{ provider: 'google', modelId: 'gemini-1.5-pro' }]);
+=======
+
+      const lastCall = vi.mocked(fs.writeFileSync).mock.calls[0];
+      const writtenContent = JSON.parse(lastCall[1] as string);
+      expect(writtenContent.recentModels).toEqual([
+        { provider: 'google', modelId: 'gemini-1.5-pro' },
+      ]);
+>>>>>>> tools_improvement
     });
 
     it('should move existing model to front and avoid duplicates', () => {
       const initial = [
         { provider: 'p1', modelId: 'm1' },
+<<<<<<< HEAD
         { provider: 'p2', modelId: 'm2' }
       ];
       vi.mocked(fs.existsSync).mockReturnValue(true);
@@ -98,6 +121,15 @@ describe('prefs', () => {
       
       addRecentModel('p2', 'm2');
       
+=======
+        { provider: 'p2', modelId: 'm2' },
+      ];
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ recentModels: initial }));
+
+      addRecentModel('p2', 'm2');
+
+>>>>>>> tools_improvement
       const lastCall = vi.mocked(fs.writeFileSync).mock.calls[0];
       const writtenContent = JSON.parse(lastCall[1] as string);
       expect(writtenContent.recentModels[0]).toEqual({ provider: 'p2', modelId: 'm2' });
@@ -110,6 +142,7 @@ describe('prefs', () => {
         { provider: 'p2', modelId: 'm2' },
         { provider: 'p3', modelId: 'm3' },
         { provider: 'p4', modelId: 'm4' },
+<<<<<<< HEAD
         { provider: 'p5', modelId: 'm5' }
       ];
       vi.mocked(fs.existsSync).mockReturnValue(true);
@@ -117,6 +150,15 @@ describe('prefs', () => {
       
       addRecentModel('p6', 'm6');
       
+=======
+        { provider: 'p5', modelId: 'm5' },
+      ];
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ recentModels: initial }));
+
+      addRecentModel('p6', 'm6');
+
+>>>>>>> tools_improvement
       const lastCall = vi.mocked(fs.writeFileSync).mock.calls[0];
       const writtenContent = JSON.parse(lastCall[1] as string);
       expect(writtenContent.recentModels).toHaveLength(5);

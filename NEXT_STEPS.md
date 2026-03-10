@@ -130,6 +130,7 @@ End of summary.
 
 ---
 
+<<<<<<< HEAD
 ## Missing Tool Features (priority order)
 
 Current tool inventory: readFile, writeFile, editFile, listDir, searchFiles, globFiles,
@@ -174,6 +175,70 @@ gitCommit, todoWrite, todoRead, patch, question.
 
 ---
 
+=======
+## Tool & UI Improvements (2026-03-07)
+
+### Implemented (HIGH PRIORITY — all done)
+
+**1. notifyUser** (`packages/tools/src/tools/notify.ts`) ✅
+- Terminal bell on every notification; optional OS-level desktop popup (osascript / notify-send / PowerShell)
+- `NotifyCallback` wired into `createTools()` via `options.onNotify`; StatusBar intercepts it to flash for 4s
+- StatusBar now shows the active tool name inline when a tool is running (e.g. "running batchEdit")
+
+**2. moveFile / copyFile / deleteFile** (`packages/tools/src/tools/fs-ops.ts`) ✅
+- All three gated by `PermissionCallback` (same pattern as writeFile/editFile)
+- `deleteFile` performs a soft-delete to `~/.personal-cli/.trash/` with a timestamp prefix so `/undo` can recover
+- `copyFile` supports recursive directory copy
+- Permission rules added to MODE_RULES for ask/plan/build modes
+
+**3. batchEdit** (`packages/tools/src/tools/batch-edit.ts`) ✅
+- Multi-file search-and-replace via `glob` pattern matching (uses `glob` npm package)
+- Supports literal string or JavaScript regex with flags
+- `dryRun: true` option previews without writing
+- Returns `{ filesChanged, occurrencesReplaced }` for structured agent reasoning
+- Ignores node_modules/dist/.git automatically
+
+**4. runTests** (`packages/tools/src/tools/run-tests.ts`) ✅
+- Auto-detects vitest / jest / mocha from package.json scripts and devDependencies
+- Optional `filter` param to run a specific file or pattern
+- Returns structured `{ passed, failed, skipped, total, success, runner }` so the model can branch on failures
+- Sets `CI=1, FORCE_COLOR=0` in the subprocess env for clean output
+
+**5. sessionMemory** (`packages/tools/src/tools/session-memory.ts`) ✅
+- Stored at `.pcli-memory.json` in the project root (add to .gitignore if private)
+- Tools: `memoryWrite(key, value)`, `memoryRead(key?)`, `memoryDelete(key)`
+- `loadMemoryForPrompt()` helper exported from `@personal-cli/tools` for system prompt injection
+- Model should call `memoryRead` at the start of each session to recall project conventions
+
+### UI Improvements (2026-03-07) ✅
+
+**ToolCallView** (`packages/cli/src/components/ToolCallView.tsx`)
+- Replaced generic args blob (`JSON.stringify(args).substring(0,40)`) with `getPrimaryArg()` dispatcher — shows the most useful arg inline per tool type (path, command, query, pattern, etc.)
+- Added `TOOL_ICONS` map (ASCII single-char per category) in the header bracket `[E] editFile`
+- `runTests` results show a dedicated pass/fail/skip row instead of raw text
+- `editFile` tool name check now covers both `editFile` and legacy `edit_file` names
+- Line count badge shown on multi-line results
+
+**StreamingMessage** (`packages/cli/src/components/StreamingMessage.tsx`)
+- `BlinkCursor` component (500ms toggle) replaces the static `▋` character
+- Shows approximate token count while streaming (`~N tokens`)
+- Works for both text-only and thought+text streaming
+
+**StatusBar** (`packages/cli/src/components/StatusBar.tsx`)
+- New `activeToolName` prop — shows "running batchEdit" instead of just "receiving"
+- New `notification` prop — flashes `notifyUser` results for 4 seconds with level-colored text
+- Flash auto-clears after 4s using `useEffect` + `setTimeout`
+
+---
+
+## Missing Tool Features (remaining)
+
+Current tool inventory: readFile, writeFile, editFile, listDir, searchFiles, globFiles,
+semanticSearch, diagnostics, runCommand, **runTests** ✅, webFetch, webSearch, gitStatus, gitDiff,
+gitLog, gitCommit, todoWrite, todoRead, patch, question, **moveFile** ✅, **copyFile** ✅,
+**deleteFile** ✅, **batchEdit** ✅, **memoryWrite/Read/Delete** ✅, **notifyUser** ✅.
+
+>>>>>>> tools_improvement
 ### MEDIUM PRIORITY
 
 **6. screenshot — capture terminal / clipboard image**

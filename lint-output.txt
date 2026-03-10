@@ -1,0 +1,462 @@
+
+> personal-cli@0.1.0 lint C:\Workspace\Private\personal-cli
+> eslint "packages/**/*.{ts,tsx}"
+
+
+C:\Workspace\Private\personal-cli\packages\cli\src\app.tsx
+   34:20  error    'getCommands' is defined but never used                                         @typescript-eslint/no-unused-vars
+   57:3   error    'getAllCacheStats' is defined but never used                                    @typescript-eslint/no-unused-vars
+   65:55  error    'ToolResult' is defined but never used                                          @typescript-eslint/no-unused-vars
+   67:3   error    'ZenGatewayConfigSchema' is defined but never used                              @typescript-eslint/no-unused-vars
+   84:8   warning  Function 'App' has a complexity of 88. Maximum allowed is 15                    complexity
+  351:25  warning  Unexpected any. Specify a different type                                        @typescript-eslint/no-explicit-any
+  375:18  warning  Unexpected any. Specify a different type                                        @typescript-eslint/no-explicit-any
+  457:14  error    'err' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  490:37  warning  Unexpected any. Specify a different type                                        @typescript-eslint/no-explicit-any
+  495:59  warning  Unexpected any. Specify a different type                                        @typescript-eslint/no-explicit-any
+  526:25  warning  Arrow function has a complexity of 112. Maximum allowed is 15                   complexity
+  783:27  warning  Async arrow function has a complexity of 81. Maximum allowed is 15              complexity
+
+C:\Workspace\Private\personal-cli\packages\cli\src\bin.ts
+  14:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\cli\src\commands\general.ts
+    3:10  error    'getAllToolSchemas' is defined but never used                         @typescript-eslint/no-unused-vars
+    3:29  error    'loadPlugins' is defined but never used                               @typescript-eslint/no-unused-vars
+    3:42  error    'getPluginDir' is defined but never used                              @typescript-eslint/no-unused-vars
+  108:5   warning  Async method 'handler' has a complexity of 18. Maximum allowed is 15  complexity
+  119:66  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\cli\src\commands\mcp.ts
+  21:5  warning  Async method 'handler' has a complexity of 23. Maximum allowed is 15  complexity
+
+C:\Workspace\Private\personal-cli\packages\cli\src\commands\registry.ts
+   11:8   error    'os' is defined but never used                                  @typescript-eslint/no-unused-vars
+   17:7   error    '__dirname' is assigned a value but never used                  @typescript-eslint/no-unused-vars
+   34:37  warning  Unexpected any. Specify a different type                        @typescript-eslint/no-explicit-any
+   44:30  warning  Unexpected any. Specify a different type                        @typescript-eslint/no-explicit-any
+  197:5   warning  Method 'handler' has a complexity of 16. Maximum allowed is 15  complexity
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\AttachmentPreview.tsx
+  28:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\AttachmentPreview.tsx:28:7
+  26 |   useEffect(() => {
+  27 |     if (!fs.existsSync(path)) {
+> 28 |       setPreview('[File not found]');
+     |       ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  29 |       return;
+  30 |     }
+  31 |     try {  react-hooks/set-state-in-effect
+  34:14  error  'err' is defined but never used. Allowed unused caught errors must match /^_/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\CommandAutocomplete.tsx
+  5:10  error  'getAllToolSchemas' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\CostRecommendation.tsx
+  39:71  error  'currentCost' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\FileAutocomplete.tsx
+  78:30  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\FileExplorer.tsx
+  21:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\FileExplorer.tsx:21:5
+  19 |
+  20 |   useEffect(() => {
+> 21 |     setIsLoading(true);
+     |     ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  22 |     // Use the standard 'glob' package which has better ESM support
+  23 |     glob('**/*', {
+  24 |       ignore: ['**/node_modules/**', '**/dist/**', '**/.git/**', '**/build/**', '**/.turbo/**', '**/node_modules'],  react-hooks/set-state-in-effect
+  46:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\FileExplorer.tsx:46:5
+  44 |
+  45 |   useEffect(() => {
+> 46 |     setSelectedIndex(0);
+     |     ^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  47 |   }, [filter]);
+  48 |
+  49 |   useInput((input, key) => {                                                                                                                                                           react-hooks/set-state-in-effect
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\HistoryPicker.tsx
+  31:18  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\HistoryPicker.tsx:31:18
+  29 |
+  30 |   const relativeDate = (ts: number) => {
+> 31 |     const diff = Date.now() - ts;
+     |                  ^^^^^^^^^^ Cannot call impure function
+  32 |     if (diff < 60_000) return 'just now';
+  33 |     if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+  34 |     if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;  react-hooks/purity
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\InputBox.tsx
+  16:8  warning  Function 'InputBox' has a complexity of 16. Maximum allowed is 15  complexity
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\KeybindingManager.tsx
+   3:69  error  'KeyCombo' is defined but never used              @typescript-eslint/no-unused-vars
+  12:20  error  'setBindings' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\MCPManager.tsx
+  59:45  error    'config' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  79:25  warning  Arrow function has a complexity of 29. Maximum allowed is 15              complexity
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\MCPWizard.tsx
+   18:8    warning  Function 'MCPWizard' has a complexity of 50. Maximum allowed is 15  complexity
+  126:25   warning  Arrow function has a complexity of 70. Maximum allowed is 15        complexity
+  276:111  warning  Arrow function has a complexity of 26. Maximum allowed is 15        complexity
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\MarkdownRenderer.tsx
+   26:12  error    'err' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+   36:1   warning  Function 'TokenView' has a complexity of 20. Maximum allowed is 15              complexity
+   76:45  warning  Unexpected any. Specify a different type                                        @typescript-eslint/no-explicit-any
+  116:12  error    'err' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  121:1   warning  Function 'renderInline' has a complexity of 16. Maximum allowed is 15           complexity
+  172:12  error    'err' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\ModelPicker.tsx
+    4:3   error    'MODEL_REGISTRY' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   11:3   error    'getCopilotModelList' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+   17:3   error    'isCopilotAuthenticated' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   28:3   error    'parseModelFilter' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+  214:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\ModelPicker.tsx:214:5
+  212 |
+  213 |   useEffect(() => {
+> 214 |     setRowFocus(0);
+      |     ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  215 |   }, [filter]);
+  216 |
+  217 |   const toggleCollapse = (provider: string) => {  react-hooks/set-state-in-effect
+  372:35  warning  Arrow function has a complexity of 27. Maximum allowed is 15                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                complexity
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\OnboardingWizard.tsx
+  20:25  warning  Arrow function has a complexity of 20. Maximum allowed is 15  complexity
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\PasteHandler.tsx
+   1:10  error  'Box' is defined but never used                                                 @typescript-eslint/no-unused-vars
+   1:15  error  'Text' is defined but never used                                                @typescript-eslint/no-unused-vars
+  44:16  error  'err' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\PermissionPrompt.tsx
+  16:20  error  'key' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\PluginManager.tsx
+  32:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\PluginManager.tsx:32:5
+  30 |
+  31 |   useEffect(() => {
+> 32 |     setFocusIndex(0);
+     |     ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  33 |   }, [filter]);
+  34 |
+  35 |   useInput((input, key) => {  react-hooks/set-state-in-effect
+  35:25  warning  Arrow function has a complexity of 22. Maximum allowed is 15                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          complexity
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\PluginWizard.tsx
+  24:25  warning  Arrow function has a complexity of 33. Maximum allowed is 15  complexity
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\ProviderManager.tsx
+   3:34  error    'ProviderEntry' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+  38:21  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/no-explicit-any
+  53:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\ProviderManager.tsx:53:5
+  51 |
+  52 |   useEffect(() => {
+> 53 |     setFocusIndex(0);
+     |     ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  54 |   }, [filter]);
+  55 |
+  56 |   const allList = [...filtered.configured, ...filtered.available];  react-hooks/set-state-in-effect
+  58:25  warning  Arrow function has a complexity of 19. Maximum allowed is 15                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  complexity
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\ProviderWizard.tsx
+   6:19  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+  20:8   warning  Function 'ProviderWizard' has a complexity of 16. Maximum allowed is 15  complexity
+  53:23  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\SidePanel.tsx
+   1:47  error    'useRef' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+  20:8   warning  Function 'SidePanel' has a complexity of 24. Maximum allowed is 15                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                complexity
+  55:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\SidePanel.tsx:55:5
+  53 |
+  54 |     const l = raw.split('\n');
+> 55 |     setLines(l);
+     |     ^^^^^^^^ Avoid calling setState() directly within an effect
+  56 |     setCursor({ line: 0, char: 0 });
+  57 |     setScrollOffset(0);
+  58 |   }, [initialContent, thought, path, type, oldText, newText]);  react-hooks/set-state-in-effect
+  98:25  warning  Arrow function has a complexity of 51. Maximum allowed is 15                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      complexity
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\StatusBar.tsx
+  30:8  warning  Function 'StatusBar' has a complexity of 36. Maximum allowed is 15                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               complexity
+  59:5  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\StatusBar.tsx:59:5
+  57 |   useEffect(() => {
+  58 |     if (!notification) return;
+> 59 |     setFlashVisible(true);
+     |     ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  60 |     const t = setTimeout(() => setFlashVisible(false), 4000);
+  61 |     return () => clearTimeout(t);
+  62 |   }, [notification]);  react-hooks/set-state-in-effect
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\ToolCallView.tsx
+   16:7   error    'RESULT_PREVIEW_CHARS' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+   61:1   warning  Function 'getPrimaryArg' has a complexity of 34. Maximum allowed is 15                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    complexity
+  114:1   warning  Function 'summarizeResult' has a complexity of 20. Maximum allowed is 15                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  complexity
+  196:8   warning  Function 'ToolCallView' has a complexity of 50. Maximum allowed is 15                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     complexity
+  198:15  error    Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\ToolCallView.tsx:198:15
+  196 | export function ToolCallView({
+  197 |   tool,
+> 198 |   startTime = Date.now(),
+      |               ^^^^^^^^^^ Cannot call impure function
+  199 |   focused = false,
+  200 |   expanded = false,
+  201 |   onToggleExpand,                                                                                                                                                                                                                               react-hooks/purity
+  201:3   error    'onToggleExpand' is defined but never used. Allowed unused args must match /^_/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+  202:3   error    'onFocus' is defined but never used. Allowed unused args must match /^_/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+  211:47  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  227:48  error    Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\ToolCallView.tsx:227:48
+  225 |   }, [isRunFinished, startTime]);
+  226 |
+> 227 |   const duration = isRunFinished ? elapsed || (Date.now() - startTime) : Date.now() - startTime;
+      |                                                ^^^^^^^^^^ Cannot call impure function
+  228 |   const statusColor = isError ? theme.error : isRunFinished ? theme.success : theme.warning;
+  229 |
+  230 |   // For runTests, show pass/fail counts in the result line                            react-hooks/purity
+  227:74  error    Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Workspace\Private\personal-cli\packages\cli\src\components\ToolCallView.tsx:227:74
+  225 |   }, [isRunFinished, startTime]);
+  226 |
+> 227 |   const duration = isRunFinished ? elapsed || (Date.now() - startTime) : Date.now() - startTime;
+      |                                                                          ^^^^^^^^^^ Cannot call impure function
+  228 |   const statusColor = isError ? theme.error : isRunFinished ? theme.success : theme.warning;
+  229 |
+  230 |   // For runTests, show pass/fail counts in the result line  react-hooks/purity
+
+C:\Workspace\Private\personal-cli\packages\cli\src\hooks\useAgent.ts
+    3:24  error    'StreamEvent' is defined but never used                             @typescript-eslint/no-unused-vars
+    7:22  error    'fs' is defined but never used                                      @typescript-eslint/no-unused-vars
+  109:29  warning  Async arrow function has a complexity of 22. Maximum allowed is 15  complexity
+
+C:\Workspace\Private\personal-cli\packages\cli\src\hooks\useClipboardImage.ts
+  20:8   warning  Async function 'extractClipboardImage' has a complexity of 20. Maximum allowed is 15  complexity
+  77:27  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  92:14  error    'pyErr' is defined but never used. Allowed unused caught errors must match /^_/u      @typescript-eslint/no-unused-vars
+  96:17  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\core\src\agent-streaming-poc.test.ts
+   8:18  error    'opts' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+   8:24  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  30:51  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  33:51  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  41:88  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  43:19  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\core\src\agent.ts
+   21:8   error    'SavedWorkspace' is defined but never used                                          @typescript-eslint/no-unused-vars
+   24:3   error    'createTools' is defined but never used                                             @typescript-eslint/no-unused-vars
+   25:8   error    'CreateToolsOptions' is defined but never used                                      @typescript-eslint/no-unused-vars
+   67:33  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  193:29  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  230:12  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  240:14  error    'err' is defined but never used. Allowed unused caught errors must match /^_/u      @typescript-eslint/no-unused-vars
+  273:14  error    'err' is defined but never used. Allowed unused caught errors must match /^_/u      @typescript-eslint/no-unused-vars
+  281:14  error    'err' is defined but never used. Allowed unused caught errors must match /^_/u      @typescript-eslint/no-unused-vars
+  292:10  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  323:3   warning  Async generator method 'sendMessage' has a complexity of 86. Maximum allowed is 15  complexity
+  367:10  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  372:42  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  392:38  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  484:39  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  491:42  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  510:42  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  643:30  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  648:31  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  651:39  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  662:85  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  693:16  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  697:52  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  776:18  error    'e' is defined but never used. Allowed unused caught errors must match /^_/u        @typescript-eslint/no-unused-vars
+  879:10  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\core\src\config\prefs.ts
+  18:12  error  'err' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  27:12  error  'err' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Workspace\Private\personal-cli\packages\core\src\fallback\tool-fallback.ts
+   50:39  error    'originalResult' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+   74:39  error    'originalResult' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  117:39  error    'originalResult' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  192:3   warning  Method 'shouldAttemptFallback' has a complexity of 21. Maximum allowed is 15      complexity
+  255:3   warning  Async method 'attemptFallback' has a complexity of 17. Maximum allowed is 15      complexity
+
+C:\Workspace\Private\personal-cli\packages\core\src\persistence\conversations.ts
+  30:51  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  38:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  38:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\core\src\persistence\undo-stack.ts
+  26:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\core\src\providers\copilot-auth.ts
+  85:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\core\src\providers\manager.ts
+  240:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  242:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  281:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  283:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  297:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+C:\Workspace\Private\personal-cli\packages\core\src\providers\provider-factory.ts
+  24:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  24:96  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\core\src\streaming-parser.test.ts
+  42:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  86:74  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  91:98  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  96:98  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  98:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\core\src\streaming-parser.ts
+   7:8   warning  Async generator function 'parseStream' has a complexity of 60. Maximum allowed is 15  complexity
+   7:40  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  13:59  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  97:34  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  97:57  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\core\src\telemetry.ts
+  30:12  error  'err' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Workspace\Private\personal-cli\packages\core\src\utils\thought-transform.ts
+  13:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  18:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\mcp-client\src\client.ts
+  6:3  error  'ToolCall' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Workspace\Private\personal-cli\packages\mcp-client\src\transports\sse.ts
+  25:81  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  37:22  error    'error' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Workspace\Private\personal-cli\packages\mcp-client\src\transports\stdio.ts
+  114:18  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Workspace\Private\personal-cli\packages\shared\src\models\anthropic.ts
+  2:27  error  'ModelTag' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Workspace\Private\personal-cli\packages\shared\src\models\openai.ts
+  5:7  error  'coding' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Workspace\Private\personal-cli\packages\shared\src\models\opencode-zen.ts
+  4:7  error  'tag' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Workspace\Private\personal-cli\packages\shared\src\providers\registry.ts
+  198:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\tools\src\index.ts
+   67:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  102:49  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  122:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  124:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\tools\src\mcp-tools.ts
+  1:15  error  'MCPClientManager' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Workspace\Private\personal-cli\packages\tools\src\tools\batch-edit.ts
+  43:5  warning  Async method 'execute' has a complexity of 26. Maximum allowed is 15  complexity
+
+C:\Workspace\Private\personal-cli\packages\tools\src\tools\diagnostics.ts
+  26:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  63:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\tools\src\tools\run-command.ts
+  43:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\tools\src\tools\run-tests.ts
+  141:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\tools\src\tools\semantic-search.ts
+   27:31  warning  Arrow function has a complexity of 22. Maximum allowed is 15  complexity
+   95:23  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  101:19  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+
+C:\Workspace\Private\personal-cli\packages\tools\src\tools\web-search.ts
+  98:1  warning  Async function 'searchDuckDuckGo' has a complexity of 18. Maximum allowed is 15  complexity
+
+✖ 175 problems (73 errors, 102 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+
+ ELIFECYCLE  Command failed with exit code 1.

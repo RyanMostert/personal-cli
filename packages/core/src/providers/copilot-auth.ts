@@ -64,7 +64,15 @@ export async function startDeviceFlow(): Promise<{
  * Step 2: Poll until the user authorizes. Returns the GitHub OAuth token.
  * Caller should call this after displaying the user_code and verification_uri.
  */
+<<<<<<< HEAD
 export async function pollForGitHubToken(deviceCode: string, interval: number, onTick?: () => void): Promise<string> {
+=======
+export async function pollForGitHubToken(
+  deviceCode: string,
+  interval: number,
+  onTick?: () => void,
+): Promise<string> {
+>>>>>>> tools_improvement
   const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
   const pollInterval = Math.max(interval, 5) * 1000; // at least 5s
 

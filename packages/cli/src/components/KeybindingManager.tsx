@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
-import { DEFAULT_KEYBINDINGS, formatKeyCombo, type Keybinding, type KeyCombo } from '../keybindings/registry.js';
+import {
+  DEFAULT_KEYBINDINGS,
+  formatKeyCombo,
+  type Keybinding,
+  type KeyCombo,
+} from '../keybindings/registry.js';
 
 interface Props {
   onClose: () => void;

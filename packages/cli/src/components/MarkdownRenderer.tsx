@@ -75,7 +75,9 @@ function TokenView({ token, dimmed }: TokenViewProps) {
           <Box flexDirection="column" marginBottom={1} width="100%">
             {(token.items || []).map((item: any, i: number) => (
               <Box key={i} width="100%">
-                <Text color={dimmed ? muted : '#58A6FF'}>{token.ordered ? `${i + 1}. ` : '• '}</Text>
+                <Text color={dimmed ? muted : '#58A6FF'}>
+                  {token.ordered ? `${i + 1}. ` : '• '}
+                </Text>
                 <Text color={muted} wrap="wrap">
                   {stripInlineMarkdown(item.text || '')}
                 </Text>

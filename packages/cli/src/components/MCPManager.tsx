@@ -1,6 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
-import { MCPClientStatus, type MCPServerInfo, type MCPServerConfig } from '@personal-cli/mcp-client';
+import {
+  MCPClientStatus,
+  type MCPServerInfo,
+  type MCPServerConfig,
+} from '@personal-cli/mcp-client';
 
 interface Props {
   servers: MCPServerInfo[];
@@ -30,7 +34,21 @@ const STATUS_COLORS = {
   error: '#FF5555',
 };
 
+<<<<<<< HEAD
 export function MCPManager({ servers, onAdd, onAddZenGateway, onEdit, onRemove, onConnect, onDisconnect, onClose, tick = 0 }: Props) {
+=======
+export function MCPManager({
+  servers,
+  onAdd,
+  onAddZenGateway,
+  onEdit,
+  onRemove,
+  onConnect,
+  onDisconnect,
+  onClose,
+  tick = 0,
+}: Props) {
+>>>>>>> tools_improvement
   const [filter, setFilter] = useState('');
   const [focusIndex, setFocusIndex] = useState(0);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -49,10 +67,20 @@ export function MCPManager({ servers, onAdd, onAddZenGateway, onEdit, onRemove, 
     const connected = servers.filter(
       (s) =>
         s.status === 'connected' &&
+<<<<<<< HEAD
         (s.name.toLowerCase().includes(query) || s.tools.some((t) => t.name.toLowerCase().includes(query))),
     );
 
     const disconnected = servers.filter((s) => s.status !== 'connected' && s.name.toLowerCase().includes(query));
+=======
+        (s.name.toLowerCase().includes(query) ||
+          s.tools.some((t) => t.name.toLowerCase().includes(query))),
+    );
+
+    const disconnected = servers.filter(
+      (s) => s.status !== 'connected' && s.name.toLowerCase().includes(query),
+    );
+>>>>>>> tools_improvement
 
     // Add configured but not loaded servers
     const configuredNames = new Set(servers.map((s) => s.name));

@@ -12,7 +12,8 @@ export const webSearch = tool({
     maxResults: z.number().optional().default(5).describe('Max results to return'),
   }),
   execute: async ({ query, maxResults }) => {
-    const userAgent = 'Mozilla/5.0 (compatible; PersonalCLI/1.0; +https://github.com/ramos/personal-cli)';
+    const userAgent =
+      'Mozilla/5.0 (compatible; PersonalCLI/1.0; +https://github.com/ramos/personal-cli)';
 
     // 1. Try Google Search if configured
     const googleKey = process.env.GOOGLE_SEARCH_API_KEY;
@@ -40,7 +41,7 @@ export const webSearch = tool({
           metadata: { source: 'jina-search', query },
         };
       }
-    } catch (e) {
+    } catch {
       // Fallback to DDG
     }
 
@@ -54,10 +55,28 @@ async function searchGoogle(query: string, maxResults: number, apiKey: string, c
     const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(query)}&num=${maxResults}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Google HTTP ${res.status}`);
+<<<<<<< HEAD
     const data = (await res.json()) as any;
 
     const results = (data.items ?? []).map((r: any) => `### ${r.title}\n${r.link}\n${r.snippet}`);
     return { output: results.length > 0 ? results.join('\n\n') : `No results found for "${query}" on Google.` };
+=======
+    interface GoogleSearchItem {
+      title: string;
+      link: string;
+      snippet: string;
+    }
+    interface GoogleSearchResponse {
+      items?: GoogleSearchItem[];
+    }
+    const data = (await res.json()) as GoogleSearchResponse;
+
+    const results = (data.items ?? []).map((r) => `### ${r.title}\n${r.link}\n${r.snippet}`);
+    return {
+      output:
+        results.length > 0 ? results.join('\n\n') : `No results found for "${query}" on Google.`,
+    };
+>>>>>>> tools_improvement
   } catch (err) {
     return { error: `Google search failed: ${err}` };
   }

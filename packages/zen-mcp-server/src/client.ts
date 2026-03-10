@@ -29,7 +29,11 @@ export class ZenGatewayClient {
       }
 
       const models = await this.listModels();
+<<<<<<< HEAD
       
+=======
+
+>>>>>>> tools_improvement
       return {
         connected: true,
         endpoint: this.config.endpoint,
@@ -99,9 +103,13 @@ export class ZenGatewayClient {
         throw new Error('Rate limit exceeded. Please try again later.');
       }
       const errorData = await response.json().catch(() => ({}));
+<<<<<<< HEAD
       throw new Error(
         errorData.error?.message || `Request failed: HTTP ${response.status}`
       );
+=======
+      throw new Error(errorData.error?.message || `Request failed: HTTP ${response.status}`);
+>>>>>>> tools_improvement
     }
 
     return response;
@@ -141,7 +149,11 @@ export class ZenGatewayClient {
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
             if (data === '[DONE]') return;
+<<<<<<< HEAD
             
+=======
+
+>>>>>>> tools_improvement
             try {
               const parsed = JSON.parse(data);
               const content = parsed.choices?.[0]?.delta?.content;
@@ -161,7 +173,11 @@ export class ZenGatewayClient {
 
   private getHeaders(): Record<string, string> {
     return {
+<<<<<<< HEAD
       'Authorization': `Bearer ${this.config.apiKey}`,
+=======
+      Authorization: `Bearer ${this.config.apiKey}`,
+>>>>>>> tools_improvement
       'User-Agent': 'personal-cli/zen-gateway',
     };
   }

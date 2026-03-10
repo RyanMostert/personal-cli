@@ -1,7 +1,11 @@
 export interface FallbackStrategy {
   name: string;
   description: string;
-  attempt: (toolName: string, args: Record<string, unknown>, originalResult: unknown) => Promise<FallbackResult | null>;
+  attempt: (
+    toolName: string,
+    args: Record<string, unknown>,
+    originalResult: unknown,
+  ) => Promise<FallbackResult | null>;
 }
 
 export interface FallbackResult {
@@ -79,8 +83,16 @@ export class ToolFallbackManager {
 
         // Create helpful documentation links based on query
         const isProgramming =
+<<<<<<< HEAD
           /\b(javascript|js|python|java|cpp|c\+\+|typescript|ts|react|node|html|css|sql|go|ruby|rust)\b/i.test(query);
         const isWebDev = /\b(html|css|javascript|dom|api|fetch|async|await|react|vue|angular)\b/i.test(query);
+=======
+          /\b(javascript|js|python|java|cpp|c\+\+|typescript|ts|react|node|html|css|sql|go|ruby|rust)\b/i.test(
+            query,
+          );
+        const isWebDev =
+          /\b(html|css|javascript|dom|api|fetch|async|await|react|vue|angular)\b/i.test(query);
+>>>>>>> tools_improvement
 
         let suggestions: string[] = [];
 

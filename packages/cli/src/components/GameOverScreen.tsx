@@ -40,7 +40,14 @@ export function GameOverScreen({ tokensUsed, cost, messageCount, onComplete }: P
   }, [onComplete]);
 
   return (
-    <Box flexDirection="column" alignItems="center" paddingY={2} width="100%" height="100%" justifyContent="center">
+    <Box
+      flexDirection="column"
+      alignItems="center"
+      paddingY={2}
+      width="100%"
+      height="100%"
+      justifyContent="center"
+    >
       {GAME_OVER_ASCII.map((line, i) => (
         <Text key={i} bold color="#FF5555">
           {line}

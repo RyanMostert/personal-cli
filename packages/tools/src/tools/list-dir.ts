@@ -1,10 +1,18 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { readdirSync, statSync, existsSync } from 'fs';
-import { resolve, join, relative } from 'path';
+import { readdirSync, existsSync } from 'fs';
+import { resolve, join } from 'path';
 import { TOOL_OUTPUT_MAX_CHARS } from '@personal-cli/shared';
 
-const IGNORE = new Set(['.git', 'node_modules', 'dist', '.turbo', '.next', '__pycache__', '.cache']);
+const IGNORE = new Set([
+  '.git',
+  'node_modules',
+  'dist',
+  '.turbo',
+  '.next',
+  '__pycache__',
+  '.cache',
+]);
 
 function listRecursive(dir: string, root: string, depth: number, maxDepth: number): string[] {
   if (depth > maxDepth) return [];
@@ -13,7 +21,6 @@ function listRecursive(dir: string, root: string, depth: number, maxDepth: numbe
     const items = readdirSync(dir, { withFileTypes: true });
     for (const item of items) {
       if (IGNORE.has(item.name)) continue;
-      const rel = relative(root, join(dir, item.name));
       const prefix = '  '.repeat(depth);
       if (item.isDirectory()) {
         entries.push(`${prefix}${item.name}/`);
@@ -22,7 +29,11 @@ function listRecursive(dir: string, root: string, depth: number, maxDepth: numbe
         entries.push(`${prefix}${item.name}`);
       }
     }
+<<<<<<< HEAD
   } catch (err) {
+=======
+  } catch {
+>>>>>>> tools_improvement
     // Ignore directories that cannot be read (e.g., due to permissions)
   }
   return entries;

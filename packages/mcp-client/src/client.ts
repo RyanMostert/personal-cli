@@ -32,7 +32,10 @@ export class MCPClient {
   private status: MCPClientStatus = MCPClientStatus.DISCONNECTED;
   private tools: ToolSchema[] = [];
   private requestId = 0;
-  private pendingRequests = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
+  private pendingRequests = new Map<
+    number,
+    { resolve: (value: unknown) => void; reject: (error: Error) => void }
+  >();
   private serverInfo?: { name: string; version: string };
   private connectedAt?: Date;
 
@@ -89,7 +92,9 @@ export class MCPClient {
         },
       });
 
-      this.serverInfo = (initResult as { serverInfo: { name: string; version: string } }).serverInfo;
+      this.serverInfo = (
+        initResult as { serverInfo: { name: string; version: string } }
+      ).serverInfo;
 
       // List available tools
       const toolsResult = await this.sendRequest('tools/list', {});

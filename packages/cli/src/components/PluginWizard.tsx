@@ -4,7 +4,12 @@ import { Box, Text, useInput } from 'ink';
 interface Props {
   mode: 'add' | 'edit';
   pluginName?: string;
-  onSave: (data: { name: string; version: string; description: string; createTemplate: boolean }) => void;
+  onSave: (data: {
+    name: string;
+    version: string;
+    description: string;
+    createTemplate: boolean;
+  }) => void;
   onClose: () => void;
 }
 
@@ -114,7 +119,12 @@ export function PluginWizard({ mode, pluginName: initialName, onSave, onClose }:
       <Box flexDirection="column">
         {renderField('name', 'MODULE_IDENTIFIER', name, focusField === 'name')}
         {renderField('version', 'VERSION_TAG', version, focusField === 'version')}
-        {renderField('description', 'FUNCTIONAL_PURPOSE', description, focusField === 'description')}
+        {renderField(
+          'description',
+          'FUNCTIONAL_PURPOSE',
+          description,
+          focusField === 'description',
+        )}
 
         <Box
           flexDirection="column"

@@ -34,6 +34,8 @@ import {
 import { dispatch, getCommands, tryMatchIntent } from './commands/registry.js';
 import type { CommandContext } from './types/commands.js';
 import { useAgent } from './hooks/useAgent.js';
+import { useZenGateway } from './hooks/useZenGateway.js';
+import { useSidePanel } from './hooks/useSidePanel.js';
 import { useOverlay } from './context/OverlayContext.js';
 import { useSetTheme } from './context/ThemeContext.js';
 import {
@@ -74,6 +76,11 @@ import {
 import { promises as fs, existsSync } from 'fs';
 import { join } from 'path';
 import clipboardy from 'clipboardy';
+<<<<<<< HEAD
+=======
+import { parseZenGatewayConfig, parseZenGatewayConfigFromEnv } from './utils/zen-config.js';
+import { getToolTextResult } from './utils/tool-result.js';
+>>>>>>> tools_improvement
 
 interface AppProps {
   initialAttachments?: Array<{ path: string; type: 'file' | 'image' }>;
@@ -190,9 +197,12 @@ export function App({ initialAttachments = [] }: AppProps) {
 
   // MCP State
   const [mcpManager] = useState(() => new MCPClientManager());
-  const [mcpServers, setMcpServers] = useState<import('@personal-cli/mcp-client').MCPServerInfo[]>([]);
+  const [mcpServers, setMcpServers] = useState<import('@personal-cli/mcp-client').MCPServerInfo[]>(
+    [],
+  );
   const [mcpServerCount, setMcpServerCount] = useState(0);
 
+<<<<<<< HEAD
   // Zen Gateway State
   const [zenConfig, setZenConfig] = useState<ZenGatewayConfig | null>(() => {
     const mcpConfigs = loadMCPConfig();
@@ -275,12 +285,33 @@ export function App({ initialAttachments = [] }: AppProps) {
 
     setZenConfig(null);
   }, []);
+=======
+  // Zen Gateway
+  const {
+    zenConfig,
+    setZenConfig,
+    resolveZenGatewayConfig,
+    callZenGatewayTool,
+    parseZenGatewayStatusResult,
+    parseZenGatewayModelsResult,
+    syncZenConfigFromMcp,
+    saveZenConfigFromMcp,
+  } = useZenGateway(mcpManager);
+>>>>>>> tools_improvement
 
   const [cmdSelectedIdx, setCmdSelectedIdx] = useState(0);
   const [fileAutoFiles, setFileAutoFiles] = useState<string[]>([]);
   const [fileAutoSelectedIdx, setFileAutoSelectedIdx] = useState(0);
 
   const { exit } = useApp();
+
+  // Side Panel
+  const { openFileInPanel, handleSaveFile, handleExplainChange } = useSidePanel(
+    setSidePanel,
+    addSystemMessage,
+    synthesizeAnswer,
+    pendingPermission,
+  );
 
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -292,12 +323,14 @@ export function App({ initialAttachments = [] }: AppProps) {
   }, [isGameOver]);
 
   const isPickingProvider = overlay.type === 'provider-manager';
-  const pendingProviderAdd = overlay.type === 'provider-wizard' ? (overlay.props?.providerId as string) : null;
+  const pendingProviderAdd =
+    overlay.type === 'provider-wizard' ? (overlay.props?.providerId as string) : null;
   const showHistory = overlay.type === 'history';
   const showFileExplorer = overlay.type === 'file-explorer';
   const showKeyHelp = overlay.type === 'key-help';
   const showKeybindManager = overlay.type === 'keybind-manager';
   const isManagingMCP = overlay.type === 'mcp-manager';
+<<<<<<< HEAD
   const mcpWizardMode = overlay.type === 'mcp-wizard' ? (overlay.props?.mode as 'add' | 'edit') : null;
   const mcpWizardServer = overlay.type === 'mcp-wizard' ? (overlay.props?.serverName as string) : null;
   const mcpWizardServerType = overlay.type === 'mcp-wizard' ? (overlay.props?.serverType as 'zen-gateway' | 'custom') : null;
@@ -311,6 +344,28 @@ export function App({ initialAttachments = [] }: AppProps) {
   useEffect(() => {
     setInputHistory(loadPromptHistory());
     
+=======
+  const mcpWizardMode =
+    overlay.type === 'mcp-wizard' ? (overlay.props?.mode as 'add' | 'edit') : null;
+  const mcpWizardServer =
+    overlay.type === 'mcp-wizard' ? (overlay.props?.serverName as string) : null;
+  const mcpWizardServerType =
+    overlay.type === 'mcp-wizard' ? (overlay.props?.serverType as 'zen-gateway' | 'custom') : null;
+
+  const isManagingPlugins = overlay.type === 'plugin-manager';
+  const pluginWizardMode =
+    overlay.type === 'plugin-wizard' ? (overlay.props?.mode as 'add' | 'edit') : null;
+  const pluginWizardName =
+    overlay.type === 'plugin-wizard' ? (overlay.props?.pluginName as string) : null;
+  const isOnboarding = overlay.type === 'onboarding';
+  const [activePlugins, setActivePlugins] = useState<import('@personal-cli/tools').LoadedPlugin[]>(
+    [],
+  );
+
+  useEffect(() => {
+    setInputHistory(loadPromptHistory());
+
+>>>>>>> tools_improvement
     // Trigger onboarding if no providers are configured
     const auth = readAuth();
     if (Object.keys(auth).length === 0 && messages.length === 0) {
@@ -360,7 +415,16 @@ export function App({ initialAttachments = [] }: AppProps) {
   }, [streamingThought, isStreaming, sidePanel?.type]);
 
   const handleCreatePlugin = useCallback(
+<<<<<<< HEAD
     async (data: { name: string; version: string; description: string; createTemplate: boolean }) => {
+=======
+    async (data: {
+      name: string;
+      version: string;
+      description: string;
+      createTemplate: boolean;
+    }) => {
+>>>>>>> tools_improvement
       try {
         const { getPluginDir } = await import('@personal-cli/tools');
         const pluginDir = getPluginDir();
@@ -401,7 +465,13 @@ export const helloWorld = async ({ name = 'World' }) => {
         setActivePlugins(plugins);
         close();
       } catch (err) {
+<<<<<<< HEAD
         addSystemMessage(`✗ Failed to create plugin: ${err instanceof Error ? err.message : String(err)}`);
+=======
+        addSystemMessage(
+          `✗ Failed to create plugin: ${err instanceof Error ? err.message : String(err)}`,
+        );
+>>>>>>> tools_improvement
       }
     },
     [addSystemMessage, close, loadPlugins],
@@ -420,11 +490,18 @@ export const helloWorld = async ({ name = 'World' }) => {
           setActivePlugins(plugins);
         }
       } catch (err) {
+<<<<<<< HEAD
         addSystemMessage(`✗ Failed to delete plugin: ${err instanceof Error ? err.message : String(err)}`);
+=======
+        addSystemMessage(
+          `✗ Failed to delete plugin: ${err instanceof Error ? err.message : String(err)}`,
+        );
+>>>>>>> tools_improvement
       }
     },
     [addSystemMessage, loadPlugins],
   );
+<<<<<<< HEAD
 
   const openFileInPanel = useCallback(
     async (fp: string) => {
@@ -472,6 +549,8 @@ export const helloWorld = async ({ name = 'World' }) => {
       setSidePanel({ type: 'thoughts', thought: 'Error generating explanation.' });
     }
   }, [pendingPermission, synthesizeAnswer]);
+=======
+>>>>>>> tools_improvement
 
   const showCommandAutocomplete =
     inputValue.startsWith('/') &&
@@ -484,7 +563,16 @@ export const helloWorld = async ({ name = 'World' }) => {
 
   const fileMatch = inputValue.match(/(@|\/add\s|\/open\s)([^\s]*)$/);
   const showFileAutocomplete =
+<<<<<<< HEAD
     !!fileMatch && !isPickingModel && !isPickingProvider && !showHistory && !pendingProviderAdd && !isStreaming;
+=======
+    !!fileMatch &&
+    !isPickingModel &&
+    !isPickingProvider &&
+    !showHistory &&
+    !pendingProviderAdd &&
+    !isStreaming;
+>>>>>>> tools_improvement
   const fileTrigger = fileMatch?.[1] ?? '';
   const fileQuery = fileMatch?.[2] ?? '';
 
@@ -675,13 +763,25 @@ export const helloWorld = async ({ name = 'World' }) => {
           recordAccess(sel);
           if (fileTrigger === '@') {
             setInputValue((v) => v.replace(/@[^\s]*$/, ''));
+<<<<<<< HEAD
             attachFile(sel).then((ok) => addSystemMessage(ok ? `Attached: ${sel}` : `Error: could not read ${sel}`));
+=======
+            attachFile(sel).then((ok) =>
+              addSystemMessage(ok ? `Attached: ${sel}` : `Error: could not read ${sel}`),
+            );
+>>>>>>> tools_improvement
           } else if (fileTrigger.trimEnd() === '/open') {
             setInputValue('');
             openFileInPanel(sel);
           } else if (fileTrigger.trimEnd() === '/add') {
             setInputValue('');
+<<<<<<< HEAD
             attachFile(sel).then((ok) => addSystemMessage(ok ? `Attached: ${sel}` : `Error: could not read ${sel}`));
+=======
+            attachFile(sel).then((ok) =>
+              addSystemMessage(ok ? `Attached: ${sel}` : `Error: could not read ${sel}`),
+            );
+>>>>>>> tools_improvement
           } else {
             setInputValue((v) => v.replace(/([^\s]*)$/, sel));
           }
@@ -878,7 +978,13 @@ export const helloWorld = async ({ name = 'World' }) => {
       }
       if (trimmed === '/telemetry') {
         const isEnabled = getTelemetryEnabled();
+<<<<<<< HEAD
         addSystemMessage(`Telemetry is currently ${isEnabled ? 'ON' : 'OFF'}. Use /telemetry [on|off] to change.`);
+=======
+        addSystemMessage(
+          `Telemetry is currently ${isEnabled ? 'ON' : 'OFF'}. Use /telemetry [on|off] to change.`,
+        );
+>>>>>>> tools_improvement
         setInputValue('');
         return;
       }
@@ -901,7 +1007,14 @@ export const helloWorld = async ({ name = 'World' }) => {
       if (trimmed === '/tools') {
         const tools = getTools();
         const toolList = tools
+<<<<<<< HEAD
           .map((t) => `  ⚡ [${t.name.toUpperCase()}] — ${t.description || 'No description available'}`)
+=======
+          .map(
+            (t) =>
+              `  ⚡ [${t.name.toUpperCase()}] — ${t.description || 'No description available'}`,
+          )
+>>>>>>> tools_improvement
           .join('\n');
         addSystemMessage(`Active Neuro-Tools:\n${toolList}`);
         setInputValue('');
@@ -927,8 +1040,17 @@ export const helloWorld = async ({ name = 'World' }) => {
           setInputValue('');
           refreshAllProviders().then((results) => {
             const successCount = results.filter((r) => r.success).length;
+<<<<<<< HEAD
             const totalModels = results.filter((r) => r.success).reduce((sum, r) => sum + r.modelCount, 0);
             addSystemMessage(`✓ Refreshed ${successCount}/${results.length} providers (${totalModels} models)`);
+=======
+            const totalModels = results
+              .filter((r) => r.success)
+              .reduce((sum, r) => sum + r.modelCount, 0);
+            addSystemMessage(
+              `✓ Refreshed ${successCount}/${results.length} providers (${totalModels} models)`,
+            );
+>>>>>>> tools_improvement
             results
               .filter((r) => !r.success)
               .forEach((r) => {
@@ -958,7 +1080,13 @@ export const helloWorld = async ({ name = 'World' }) => {
           switchModel(parts[0] as ProviderName, parts.slice(1).join('/'));
           addSystemMessage(`Switched to ${parts[0]}/${parts.slice(1).join('/')}`);
         } else {
+<<<<<<< HEAD
           addSystemMessage('Usage: /model <provider/modelId>  or  /model to browse  or  /model refresh [provider]');
+=======
+          addSystemMessage(
+            'Usage: /model <provider/modelId>  or  /model to browse  or  /model refresh [provider]',
+          );
+>>>>>>> tools_improvement
         }
         setInputValue('');
         return;
@@ -1035,7 +1163,13 @@ export const helloWorld = async ({ name = 'World' }) => {
                   setMcpServers(mcpManager.getAllServerInfo());
                   setMcpServerCount(mcpManager.getConnectedServers().length);
                 } catch (error) {
+<<<<<<< HEAD
                   addSystemMessage(`Failed to connect: ${error instanceof Error ? error.message : String(error)}`);
+=======
+                  addSystemMessage(
+                    `Failed to connect: ${error instanceof Error ? error.message : String(error)}`,
+                  );
+>>>>>>> tools_improvement
                 }
               } else {
                 addSystemMessage(`No configuration found for: ${serverName}`);
@@ -1159,7 +1293,13 @@ export const helloWorld = async ({ name = 'World' }) => {
       }
       if (trimmed.startsWith('/export')) {
         const p = trimmed.slice(7).trim() || undefined;
+<<<<<<< HEAD
         addSystemMessage(`Exported to: ${exportConversation(messages, activeModel, tokensUsed, cost, p)}`);
+=======
+        addSystemMessage(
+          `Exported to: ${exportConversation(messages, activeModel, tokensUsed, cost, p)}`,
+        );
+>>>>>>> tools_improvement
         setInputValue('');
         return;
       }
@@ -1176,7 +1316,13 @@ export const helloWorld = async ({ name = 'World' }) => {
         return;
       }
       if (trimmed === '/theme') {
+<<<<<<< HEAD
         addSystemMessage('Themes: default  dracula  tokyo-night  nord  gruvbox\nUsage: /theme <name>');
+=======
+        addSystemMessage(
+          'Themes: default  dracula  tokyo-night  nord  gruvbox\nUsage: /theme <name>',
+        );
+>>>>>>> tools_improvement
         setInputValue('');
         return;
       }
@@ -1248,7 +1394,12 @@ export const helloWorld = async ({ name = 'World' }) => {
 
   if (isGameOver) {
     return (
-      <GameOverScreen tokensUsed={tokensUsed} cost={cost} messageCount={messages.length} onComplete={() => exit()} />
+      <GameOverScreen
+        tokensUsed={tokensUsed}
+        cost={cost}
+        messageCount={messages.length}
+        onComplete={() => exit()}
+      />
     );
   }
 
@@ -1275,12 +1426,24 @@ export const helloWorld = async ({ name = 'World' }) => {
           } else if (attachment.type === 'path') {
             const ok = await attachFile(attachment.path);
             addSystemMessage(
+<<<<<<< HEAD
               ok ? `Attached (Paste/Drop): ${attachment.path}` : `Error: could not attach ${attachment.path}`,
+=======
+              ok
+                ? `Attached (Paste/Drop): ${attachment.path}`
+                : `Error: could not attach ${attachment.path}`,
+>>>>>>> tools_improvement
             );
           } else {
             const ok = await attachFile(attachment.path);
             addSystemMessage(
+<<<<<<< HEAD
               ok ? `Attached Image (Clipboard): ${attachment.name}` : `Error: could not attach clipboard image`,
+=======
+              ok
+                ? `Attached Image (Clipboard): ${attachment.name}`
+                : `Error: could not attach clipboard image`,
+>>>>>>> tools_improvement
             );
           }
         }}
@@ -1368,7 +1531,13 @@ export const helloWorld = async ({ name = 'World' }) => {
               <MCPManager
                 servers={mcpServers}
                 onAdd={() => open('mcp-wizard', { mode: 'add' })}
+<<<<<<< HEAD
                 onAddZenGateway={() => open('mcp-wizard', { mode: 'add', serverType: 'zen-gateway' })}
+=======
+                onAddZenGateway={() =>
+                  open('mcp-wizard', { mode: 'add', serverType: 'zen-gateway' })
+                }
+>>>>>>> tools_improvement
                 onEdit={(name) => open('mcp-wizard', { mode: 'edit', serverName: name })}
                 onRemove={async (name) => {
                   await mcpManager.disconnectServer(name);
@@ -1387,7 +1556,9 @@ export const helloWorld = async ({ name = 'World' }) => {
                     setMcpServers(mcpManager.getAllServerInfo());
                     setMcpServerCount(mcpManager.getConnectedServers().length);
                   } catch (error) {
-                    addSystemMessage(`Failed to connect: ${error instanceof Error ? error.message : String(error)}`);
+                    addSystemMessage(
+                      `Failed to connect: ${error instanceof Error ? error.message : String(error)}`,
+                    );
                   }
                 }}
                 onDisconnect={async (name) => {
@@ -1428,12 +1599,20 @@ export const helloWorld = async ({ name = 'World' }) => {
                 serverType={mcpWizardServerType || 'custom'}
                 onSave={async (name, config) => {
                   saveMCPConfig(name, config);
+<<<<<<< HEAD
                   
+=======
+
+>>>>>>> tools_improvement
                   // If this is the Zen Gateway, sync CLI state from the saved MCP config
                   if (name === 'zen-gateway') {
                     saveZenConfigFromMcp(config);
                   }
+<<<<<<< HEAD
                   
+=======
+
+>>>>>>> tools_improvement
                   if (config.enabled !== false) {
                     try {
                       await mcpManager.connectServer(name, config);
@@ -1446,7 +1625,9 @@ export const helloWorld = async ({ name = 'World' }) => {
                       );
                     }
                   } else {
-                    addSystemMessage(`MCP server ${mcpWizardMode === 'add' ? 'added' : 'updated'}: ${name}`);
+                    addSystemMessage(
+                      `MCP server ${mcpWizardMode === 'add' ? 'added' : 'updated'}: ${name}`,
+                    );
                   }
                   setMcpServers(mcpManager.getAllServerInfo());
                   setMcpServerCount(mcpManager.getConnectedServers().length);
@@ -1486,12 +1667,19 @@ export const helloWorld = async ({ name = 'World' }) => {
                     onFocus={() => setFocusedToolCallId(tc.toolCallId)}
                   />
                 ))}
-                {isStreaming && <StreamingMessage text={streamingText} thought={streamingThought} />}
+                {isStreaming && (
+                  <StreamingMessage text={streamingText} thought={streamingThought} />
+                )}
                 {pendingPermission && (
                   <PermissionPrompt
                     permission={pendingPermission}
                     onExplain={
+<<<<<<< HEAD
                       pendingPermission.toolName === 'edit_file' || pendingPermission.toolName === 'patch'
+=======
+                      pendingPermission.toolName === 'edit_file' ||
+                      pendingPermission.toolName === 'patch'
+>>>>>>> tools_improvement
                         ? handleExplainChange
                         : undefined
                     }
@@ -1550,7 +1738,11 @@ export const helloWorld = async ({ name = 'World' }) => {
           leaderKeyActive={leaderKeyActive}
         />
 
-        <CommandAutocomplete filtered={cmdFiltered} selectedIndex={cmdSelectedIdx} visible={showCommandAutocomplete} />
+        <CommandAutocomplete
+          filtered={cmdFiltered}
+          selectedIndex={cmdSelectedIdx}
+          visible={showCommandAutocomplete}
+        />
         <FileAutocomplete
           query={fileQuery}
           visible={showFileAutocomplete}

@@ -15,6 +15,11 @@ import { createTodoTools, type TodoUpdateCallback } from './tools/todo.js';
 import { webSearch } from './tools/web-search.js';
 import { createPatch } from './tools/patch.js';
 import { createQuestionTool } from './tools/question.js';
+import { createMoveFile, createCopyFile, createDeleteFile } from './tools/fs-ops.js';
+import { createBatchEdit } from './tools/batch-edit.js';
+import { memoryWrite, memoryRead, memoryDelete } from './tools/session-memory.js';
+import { createRunTests } from './tools/run-tests.js';
+import { createNotifyUser, type NotifyCallback } from './tools/notify.js';
 import { minimatch } from 'minimatch';
 import {
   type PermissionCallback,
@@ -27,6 +32,9 @@ import {
   MODE_RULES,
 } from './types.js';
 
+export { loadMemoryForPrompt } from './tools/session-memory.js';
+export type { NotifyCallback };
+
 export * from './types.js';
 export * from './plugin-loader.js';
 export { MCPToolWrapper, wrapMCPTools, convertMCPToolsToRegistryFormat } from './mcp-tools.js';
@@ -36,6 +44,10 @@ export interface CreateToolsOptions {
   questionFn?: QuestionCallback;
   plugins?: LoadedPlugin[];
   onTodoUpdate?: TodoUpdateCallback;
+<<<<<<< HEAD
+=======
+  onNotify?: NotifyCallback;
+>>>>>>> tools_improvement
 }
 
 export function createTools(
@@ -52,7 +64,11 @@ export function createTools(
   // Hook resolvedPermission into readFile synchronously
   setReadFilePermission(resolvedPermission);
 
+<<<<<<< HEAD
   const { onWrite, questionFn, plugins, onTodoUpdate } = options ?? {};
+=======
+  const { onWrite, questionFn, plugins, onTodoUpdate, onNotify } = options ?? {};
+>>>>>>> tools_improvement
   const { todoWrite, todoRead } = createTodoTools(onTodoUpdate);
 
   const baseTools: Record<string, any> = {
@@ -65,6 +81,7 @@ export function createTools(
     semanticSearch,
     diagnostics,
     runCommand: createRunCommand(resolvedPermission),
+    runTests: createRunTests(resolvedPermission),
     webFetch: createWebFetch(resolvedPermission),
     webSearch,
     gitStatus,
@@ -75,6 +92,14 @@ export function createTools(
     todoRead,
     patch: createPatch(resolvedPermission, onWrite),
     question: createQuestionTool(questionFn),
+    moveFile: createMoveFile(resolvedPermission, onWrite),
+    copyFile: createCopyFile(resolvedPermission, onWrite),
+    deleteFile: createDeleteFile(resolvedPermission, onWrite),
+    batchEdit: createBatchEdit(resolvedPermission, onWrite),
+    memoryWrite,
+    memoryRead,
+    memoryDelete,
+    notifyUser: createNotifyUser(onNotify),
   };
 
   // Merge plugin tools
@@ -141,7 +166,8 @@ function makePermissionResolver(rules: PermissionRule[], userCallback?: Permissi
     // Check rules in reverse order (last match wins, like CSS)
     for (const rule of [...rules].reverse()) {
       const toolMatch = rule.tool === '*' || rule.tool === toolName;
-      const patternMatch = !rule.pattern || minimatch(pathArg, rule.pattern, { dot: true, matchBase: true });
+      const patternMatch =
+        !rule.pattern || minimatch(pathArg, rule.pattern, { dot: true, matchBase: true });
       if (!toolMatch || !patternMatch) continue;
 
       if (rule.action === 'allow') return true;

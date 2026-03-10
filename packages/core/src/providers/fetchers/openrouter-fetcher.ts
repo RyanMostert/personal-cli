@@ -66,7 +66,9 @@ export async function fetchOpenRouterModels(apiKey?: string): Promise<FetchedMod
     contextWindow: model.context_length || 4096,
     inputCostPer1M: model.pricing?.prompt ? model.pricing.prompt * 1000000 : null,
     outputCostPer1M: model.pricing?.completion ? model.pricing.completion * 1000000 : null,
-    free: model.id.includes(':free') || (model.pricing?.prompt === 0 && model.pricing?.completion === 0),
+    free:
+      model.id.includes(':free') ||
+      (model.pricing?.prompt === 0 && model.pricing?.completion === 0),
     tags: extractTags(model),
   }));
 }

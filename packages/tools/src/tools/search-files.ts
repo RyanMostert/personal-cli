@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { readdirSync, readFileSync, statSync } from 'fs';
+import { readdirSync, readFileSync } from 'fs';
 import { resolve, join, relative, extname } from 'path';
 import { TOOL_OUTPUT_MAX_CHARS } from '@personal-cli/shared';
 
@@ -38,7 +38,13 @@ interface Match {
   text: string;
 }
 
-function searchDir(dir: string, root: string, query: RegExp, results: Match[], filePattern?: RegExp) {
+function searchDir(
+  dir: string,
+  root: string,
+  query: RegExp,
+  results: Match[],
+  filePattern?: RegExp,
+) {
   if (results.length > 200) return;
   let entries;
   try {
@@ -66,7 +72,11 @@ function searchDir(dir: string, root: string, query: RegExp, results: Match[], f
             if (results.length >= 200) return;
           }
         }
+<<<<<<< HEAD
       } catch (err) {
+=======
+      } catch {
+>>>>>>> tools_improvement
         // Ignore unreadable files (e.g. binary or permissions)
       }
     }

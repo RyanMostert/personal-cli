@@ -37,6 +37,7 @@ describe('history', () => {
     it('should append new entry to file', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.readFileSync).mockReturnValue('');
+<<<<<<< HEAD
       
       appendHistory('hello world');
       
@@ -44,6 +45,15 @@ describe('history', () => {
         expect.stringContaining('prompt-history.jsonl'),
         expect.stringContaining('"text":"hello world"'),
         expect.objectContaining({ mode: 0o600 })
+=======
+
+      appendHistory('hello world');
+
+      expect(fs.appendFileSync).toHaveBeenCalledWith(
+        expect.stringContaining('prompt-history.jsonl'),
+        expect.stringContaining('"text":"hello world"'),
+        expect.objectContaining({ mode: 0o600 }),
+>>>>>>> tools_improvement
       );
     });
 
@@ -51,27 +61,49 @@ describe('history', () => {
       const lastEntry = { text: 'last one', timestamp: Date.now() - 1000 };
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(lastEntry) + '\n');
+<<<<<<< HEAD
       
       appendHistory('last one');
       
+=======
+
+      appendHistory('last one');
+
+>>>>>>> tools_improvement
       expect(fs.appendFileSync).not.toHaveBeenCalled();
     });
 
     it('should trim history if it exceeds MAX_ENTRIES', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
+<<<<<<< HEAD
       
       // Create 100 entries already in file
       let fileContent = Array.from({ length: 100 }, (_, i) => 
         JSON.stringify({ text: `entry ${i}`, timestamp: Date.now() + i })
       ).join('\n') + '\n';
       
+=======
+
+      // Create 100 entries already in file
+      let fileContent =
+        Array.from({ length: 100 }, (_, i) =>
+          JSON.stringify({ text: `entry ${i}`, timestamp: Date.now() + i }),
+        ).join('\n') + '\n';
+
+>>>>>>> tools_improvement
       vi.mocked(fs.readFileSync).mockImplementation(() => fileContent);
       vi.mocked(fs.appendFileSync).mockImplementation((path, data) => {
         fileContent += data;
       });
+<<<<<<< HEAD
       
       appendHistory('new entry');
       
+=======
+
+      appendHistory('new entry');
+
+>>>>>>> tools_improvement
       expect(fs.writeFileSync).toHaveBeenCalled();
       const writtenContent = vi.mocked(fs.writeFileSync).mock.calls[0][1] as string;
       const lines = writtenContent.trim().split('\n');
@@ -97,12 +129,21 @@ describe('history', () => {
       const e1 = { text: 'first', timestamp: 1000 };
       const e2 = { text: 'second', timestamp: 2000 };
       const e3 = { text: 'third', timestamp: 1500 };
+<<<<<<< HEAD
       
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue(
         [JSON.stringify(e1), JSON.stringify(e2), JSON.stringify(e3)].join('\n')
       );
       
+=======
+
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue(
+        [JSON.stringify(e1), JSON.stringify(e2), JSON.stringify(e3)].join('\n'),
+      );
+
+>>>>>>> tools_improvement
       const history = loadHistory();
       expect(history).toEqual(['second', 'third', 'first']);
     });
@@ -110,9 +151,15 @@ describe('history', () => {
     it('should skip malformed lines', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue(
+<<<<<<< HEAD
         JSON.stringify({ text: 'valid', timestamp: 1000 }) + '\ninvalid json\n'
       );
       
+=======
+        JSON.stringify({ text: 'valid', timestamp: 1000 }) + '\ninvalid json\n',
+      );
+
+>>>>>>> tools_improvement
       expect(loadHistory()).toEqual(['valid']);
     });
   });

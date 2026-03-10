@@ -4,7 +4,11 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('ai', async (importOriginal) => {
   const actual = await importOriginal();
   return {
+<<<<<<< HEAD
     ...actual,
+=======
+    ...(actual as any),
+>>>>>>> tools_improvement
     streamText: (opts: any) => {
       const fullStream = (async function* () {
         yield { type: 'text-delta', text: 'Hello' };
@@ -54,6 +58,12 @@ describe('Agent streaming POC integration', () => {
     expect(finishEvents.length).toBeGreaterThanOrEqual(1);
 
     const msgs = agent.getMessages();
+<<<<<<< HEAD
     expect(msgs.some((m) => m.role === 'assistant' && m.content.includes('Hello world'))).toBeTruthy();
+=======
+    expect(
+      msgs.some((m) => m.role === 'assistant' && m.content.includes('Hello world')),
+    ).toBeTruthy();
+>>>>>>> tools_improvement
   });
 });

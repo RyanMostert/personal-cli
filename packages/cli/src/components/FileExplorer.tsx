@@ -21,7 +21,14 @@ export function FileExplorer({ onSelect, onClose, tick }: Props) {
     setIsLoading(true);
     // Use the standard 'glob' package which has better ESM support
     glob('**/*', {
-      ignore: ['**/node_modules/**', '**/dist/**', '**/.git/**', '**/build/**', '**/.turbo/**', '**/node_modules'],
+      ignore: [
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/.git/**',
+        '**/build/**',
+        '**/.turbo/**',
+        '**/node_modules',
+      ],
       nodir: true,
       dot: false,
     })
@@ -79,7 +86,14 @@ export function FileExplorer({ onSelect, onClose, tick }: Props) {
 
   const scrollOffset = Math.max(
     0,
+<<<<<<< HEAD
     Math.min(selectedIndex - Math.floor(VISIBLE_COUNT / 2), Math.max(0, filtered.length - VISIBLE_COUNT)),
+=======
+    Math.min(
+      selectedIndex - Math.floor(VISIBLE_COUNT / 2),
+      Math.max(0, filtered.length - VISIBLE_COUNT),
+    ),
+>>>>>>> tools_improvement
   );
 
   const visibleItems = filtered.slice(scrollOffset, scrollOffset + VISIBLE_COUNT);

@@ -12,7 +12,13 @@ interface Props {
 
 const VISIBLE_HEIGHT = 14;
 
-export function ProviderManager({ configuredProviders, onAdd, onRemove, onClose, tick = 0 }: Props) {
+export function ProviderManager({
+  configuredProviders,
+  onAdd,
+  onRemove,
+  onClose,
+  tick = 0,
+}: Props) {
   const [filter, setFilter] = useState('');
   const [focusIndex, setFocusIndex] = useState(0);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -174,7 +180,15 @@ export function ProviderManager({ configuredProviders, onAdd, onRemove, onClose,
                   <Text color={focused ? 'white' : '#8C959F'} bold={focused}>
                     {p.label.toUpperCase()}
                   </Text>
+<<<<<<< HEAD
                   {isConfigured ? <Text color="#3FB950"> [CONNECTED] </Text> : <Text color="#484F58"> [{p.id}] </Text>}
+=======
+                  {isConfigured ? (
+                    <Text color="#3FB950"> [CONNECTED] </Text>
+                  ) : (
+                    <Text color="#484F58"> [{p.id}] </Text>
+                  )}
+>>>>>>> tools_improvement
                 </Box>
 
                 <Box>

@@ -141,7 +141,11 @@ export function PluginManager({ plugins, onAdd, onEdit, onRemove, onClose, tick 
           const focused = realIdx === focusIndex;
 
           return (
-            <Box key={p.manifest.name} paddingLeft={2} backgroundColor={focused ? '#161b22' : undefined}>
+            <Box
+              key={p.manifest.name}
+              paddingLeft={2}
+              backgroundColor={focused ? '#161b22' : undefined}
+            >
               <Text color={focused ? '#FF00AA' : '#484F58'}>{focused ? '❯❯ ' : '   '}</Text>
 
               <Box flexDirection="row" justifyContent="space-between" flexGrow={1}>

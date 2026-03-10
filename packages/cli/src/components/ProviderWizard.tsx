@@ -20,7 +20,10 @@ interface Props {
 export function ProviderWizard({ providerName, onSave, onClose }: Props) {
   const [key, setKey] = useState('');
   const [oauthPhase, setOauthPhase] = useState<'init' | 'waiting' | 'done' | 'error'>('init');
-  const [deviceInfo, setDeviceInfo] = useState<{ userCode: string; verificationUri: string } | null>(null);
+  const [deviceInfo, setDeviceInfo] = useState<{
+    userCode: string;
+    verificationUri: string;
+  } | null>(null);
   const [oauthError, setOauthError] = useState<string | null>(null);
 
   const info = PROVIDER_REGISTRY.find((p) => p.id === providerName) ?? FALLBACK_INFO;
@@ -126,7 +129,13 @@ export function ProviderWizard({ providerName, onSave, onClose }: Props) {
         </Box>
 
         {/* Diagnostic Scan Panel */}
-        <Box flexDirection="column" marginLeft={4} width={15} borderStyle="single" borderColor="#484F58">
+        <Box
+          flexDirection="column"
+          marginLeft={4}
+          width={15}
+          borderStyle="single"
+          borderColor="#484F58"
+        >
           <Text color="#484F58"> SYS_SCAN </Text>
           <Text color={info.color}>{scanLine.slice(0, 10)}</Text>
           <Text color="#484F58"> [OK] 100% </Text>
@@ -140,7 +149,13 @@ export function ProviderWizard({ providerName, onSave, onClose }: Props) {
         paddingY={1}
         backgroundColor="#161b22"
         borderStyle="double"
+<<<<<<< HEAD
         borderColor={info.noKeyNeeded || info.oauthFlow ? '#3FB950' : key.length > 0 ? info.color : '#484F58'}
+=======
+        borderColor={
+          info.noKeyNeeded || info.oauthFlow ? '#3FB950' : key.length > 0 ? info.color : '#484F58'
+        }
+>>>>>>> tools_improvement
       >
         {info.oauthFlow ? (
           // OAuth Flow UI

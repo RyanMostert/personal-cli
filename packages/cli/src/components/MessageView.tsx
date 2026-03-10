@@ -41,12 +41,28 @@ export function MessageView({
     return (
       <Box flexDirection="column" marginBottom={1} paddingLeft={1}>
         <Box>
+<<<<<<< HEAD
           <Text color={theme.userLabel} bold>{'❯ '}</Text>
           {isLarge ? (
             <Box>
               <Text color={theme.dim} italic>{lines.length} lines</Text>
               {imageCount > 0 && (
                 <Text color={theme.dim} italic> · {imageCount} image{imageCount > 1 ? 's' : ''}</Text>
+=======
+          <Text color={theme.userLabel} bold>
+            {'❯ '}
+          </Text>
+          {isLarge ? (
+            <Box>
+              <Text color={theme.dim} italic>
+                {lines.length} lines
+              </Text>
+              {imageCount > 0 && (
+                <Text color={theme.dim} italic>
+                  {' '}
+                  · {imageCount} image{imageCount > 1 ? 's' : ''}
+                </Text>
+>>>>>>> tools_improvement
               )}
             </Box>
           ) : (
@@ -61,7 +77,13 @@ export function MessageView({
     return (
       <Box flexDirection="row" marginBottom={1} paddingLeft={1}>
         <Text color={theme.dim}>· </Text>
+<<<<<<< HEAD
         <Text color={theme.muted} italic>{message.content}</Text>
+=======
+        <Text color={theme.muted} italic>
+          {message.content}
+        </Text>
+>>>>>>> tools_improvement
       </Box>
     );
   }
@@ -85,7 +107,13 @@ export function MessageView({
         {message.content ? (
           <MarkdownRenderer text={message.content} />
         ) : !message.toolCalls?.length ? (
+<<<<<<< HEAD
           <Text color={theme.dim} italic>(empty response)</Text>
+=======
+          <Text color={theme.dim} italic>
+            (empty response)
+          </Text>
+>>>>>>> tools_improvement
         ) : null}
       </Box>
     </Box>

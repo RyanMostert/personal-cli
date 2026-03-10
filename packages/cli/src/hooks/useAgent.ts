@@ -1,10 +1,32 @@
 import { useState, useCallback, useRef } from 'react';
+<<<<<<< HEAD
 import { Agent, ProviderManager, loadConfig, getDefaultModel, loadSettings } from '@personal-cli/core';
 import type { Message, StreamEvent, ToolCallInfo, AgentMode, ProviderName, Attachment, TodoItem } from '@personal-cli/shared';
+=======
+import {
+  Agent,
+  ProviderManager,
+  loadConfig,
+  getDefaultModel,
+  loadSettings,
+  addRecentModel,
+  saveSettings,
+} from '@personal-cli/core';
+import type {
+  Message,
+  StreamEvent,
+  ToolCallInfo,
+  AgentMode,
+  ProviderName,
+  Attachment,
+  TodoItem,
+} from '@personal-cli/shared';
+>>>>>>> tools_improvement
 import { DEFAULT_TOKEN_BUDGET, loadAttachment } from '@personal-cli/shared';
 import type { PendingPermission } from '../components/PermissionPrompt.js';
 import type { PendingQuestion } from '../components/QuestionPrompt.js';
 import { promises as fs } from 'fs';
+import { error } from 'console';
 
 interface AgentState {
   messages: Message[];
@@ -19,6 +41,11 @@ interface AgentState {
   attachedFiles: Attachment[];
   mode: AgentMode;
   todos: TodoItem[];
+<<<<<<< HEAD
+=======
+  // Currently active model/provider
+  activeModel: { provider: ProviderName; modelId: string };
+>>>>>>> tools_improvement
 }
 
 export function useAgent() {
@@ -28,6 +55,8 @@ export function useAgent() {
   // Split streamingText and streamingThought into isolated state to prevent re-renders of the main state tree
   const [streamingText, setStreamingText] = useState('');
   const [streamingThought, setStreamingThought] = useState('');
+
+  const initialModel = getDefaultModel(loadConfig(), loadSettings());
 
   const [state, setState] = useState<AgentState>({
     messages: [],
@@ -42,6 +71,13 @@ export function useAgent() {
     attachedFiles: [],
     mode: loadSettings().defaultMode ?? 'ask',
     todos: [],
+<<<<<<< HEAD
+=======
+    activeModel: {
+      provider: initialModel.provider as ProviderName,
+      modelId: initialModel.modelId,
+    },
+>>>>>>> tools_improvement
   });
 
   const permissionCallback = useCallback((toolName: string, args?: Record<string, unknown>) => {
@@ -79,14 +115,13 @@ export function useAgent() {
   const getAgent = useCallback((): Agent => {
     if (!agentRef.current) {
       const config = loadConfig();
-      const { provider, modelId } = getDefaultModel(config);
+      const settings = loadSettings();
+      const { provider, modelId } = getDefaultModel(config, settings);
 
       const manager = new ProviderManager({
         provider: provider as ConstructorParameters<typeof ProviderManager>[0]['provider'],
         modelId,
       });
-
-      const settings = loadSettings();
 
       agentRef.current = new Agent({
         providerManager: manager,
@@ -96,14 +131,17 @@ export function useAgent() {
         permissionFn: permissionCallback,
         questionFn: questionCallback,
       });
+
+      // Ensure UI reflects the agent's active model as soon as it's created
+      try {
+        setState((prev) => ({ ...prev, activeModel: agentRef.current!.getActiveModel() }));
+      } catch {
+        // ignore
+      }
     }
     return agentRef.current;
   }, [permissionCallback]);
 
-  const activeModel = agentRef.current?.getActiveModel() ?? {
-    provider: 'opencode-zen',
-    modelId: 'kimi-k2.5-free',
-  };
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -192,7 +230,13 @@ export function useAgent() {
               setState((prev) => ({
                 ...prev,
                 toolCalls: prev.toolCalls.map((tc) =>
+<<<<<<< HEAD
                   tc.toolCallId === event.toolCall!.toolCallId ? { ...tc, result: event.toolCall!.result } : tc,
+=======
+                  tc.toolCallId === event.toolCall!.toolCallId
+                    ? { ...tc, result: event.toolCall!.result }
+                    : tc,
+>>>>>>> tools_improvement
                 ),
               }));
               break;
@@ -262,7 +306,8 @@ export function useAgent() {
     ...state,
     streamingText,
     streamingThought,
-    activeModel,
+    // Expose reactive activeModel from state so UI updates correctly
+    activeModel: state.activeModel,
     sendMessage,
     abort,
     addSystemMessage: useCallback(
@@ -282,7 +327,37 @@ export function useAgent() {
       (provider: ProviderName, modelId: string) => {
         const agent = getAgent();
         agent.switchModel(provider, modelId);
+<<<<<<< HEAD
         setState((prev) => ({ ...prev }));
+=======
+        // Record as recent and persist last-used provider so next startup selects the same provider
+        try {
+          addRecentModel(provider, modelId);
+          // Persist provider, model, and update per-provider lastUsedModels map
+          try {
+            const current = loadSettings();
+            const lastUsedModels = { ...(current.lastUsedModels ?? {}), [provider]: modelId };
+            saveSettings({ defaultProvider: provider, lastUsedModels });
+          } catch (err) {
+            // Log errors so failures are visible in logs but don't disrupt the UI
+            try {
+              // eslint-disable-next-line no-console
+              console.error('Failed to persist model selection', err);
+            } catch {
+              error('Failed to persist model selection and log the error');
+            }
+          }
+        } catch (err) {
+          try {
+            // eslint-disable-next-line no-console
+            console.error('Failed to record recent model', err);
+          } catch {
+            error('Failed to record recent model and log the error');
+          }
+        }
+        // Update activeModel in state so consumers react to the change
+        setState((prev) => ({ ...prev, activeModel: agent.getActiveModel() }));
+>>>>>>> tools_improvement
       },
       [getAgent],
     ),

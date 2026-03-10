@@ -26,12 +26,26 @@ export function ThoughtView({ text, isStreaming }: Props) {
 
   return (
     <Box flexDirection="column" marginBottom={1} paddingLeft={1}>
+<<<<<<< HEAD
       <Text color={theme.dim}>◈ <Text italic color={theme.muted}>{isStreaming ? 'thinking…' : 'thought'}</Text></Text>
       <Box paddingLeft={2} flexDirection="column">
         <Text color={theme.muted} italic wrap="wrap">{displayedText}</Text>
         {isLong && !showFull && (
           <Text color={theme.dim}>⋯ {lines.length - 3} more lines</Text>
         )}
+=======
+      <Text color={theme.dim}>
+        ◈{' '}
+        <Text italic color={theme.muted}>
+          {isStreaming ? 'thinking…' : 'thought'}
+        </Text>
+      </Text>
+      <Box paddingLeft={2} flexDirection="column">
+        <Text color={theme.muted} italic wrap="wrap">
+          {displayedText}
+        </Text>
+        {isLong && !showFull && <Text color={theme.dim}>⋯ {lines.length - 3} more lines</Text>}
+>>>>>>> tools_improvement
       </Box>
     </Box>
   );

@@ -92,6 +92,7 @@ await server.start();
 ## Available MCP Tools
 
 ### zen_chat
+<<<<<<< HEAD
 Send a chat completion request to the Zen Gateway.
 
 **Input:**
@@ -101,14 +102,33 @@ Send a chat completion request to the Zen Gateway.
   "messages": [
     { "role": "user", "content": "Hello!" }
   ],
+=======
+
+Send a chat completion request to the Zen Gateway.
+
+**Input:**
+
+```json
+{
+  "model": "gpt-4",
+  "messages": [{ "role": "user", "content": "Hello!" }],
+>>>>>>> tools_improvement
   "maxTokens": 1000
 }
 ```
 
 ### zen_list_models
+<<<<<<< HEAD
 List all available models from Zen Gateway.
 
 ### zen_get_status
+=======
+
+List all available models from Zen Gateway.
+
+### zen_get_status
+
+>>>>>>> tools_improvement
 Check Zen Gateway connection status.
 
 ## Available MCP Resources
@@ -119,6 +139,10 @@ Check Zen Gateway connection status.
 ## Error Handling
 
 The server handles common error scenarios:
+<<<<<<< HEAD
+=======
+
+>>>>>>> tools_improvement
 - **401 Unauthorized**: Invalid API key
 - **429 Too Many Requests**: Rate limiting
 - **Network Errors**: Connection issues with the gateway
@@ -126,12 +150,24 @@ The server handles common error scenarios:
 ## Configuration
 
 When used with personal-cli, the configuration is stored in:
+<<<<<<< HEAD
 ```
 ~/.personal-cli/mcp.json
 ```
 (Windows: `%USERPROFILE%\.personal-cli\mcp.json`)
 
 Example configuration:
+=======
+
+```
+~/.personal-cli/mcp.json
+```
+
+(Windows: `%USERPROFILE%\.personal-cli\mcp.json`)
+
+Example configuration:
+
+>>>>>>> tools_improvement
 ```json
 {
   "zen-gateway": {
@@ -168,4 +204,7 @@ When integrated with personal-cli, you can use:
 ## License
 
 MIT
+<<<<<<< HEAD
 
+=======
+>>>>>>> tools_improvement

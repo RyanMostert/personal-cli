@@ -86,7 +86,13 @@ export function SidePanel({
     const match = textBefore.match(/\b([a-zA-Z_][a-zA-Z0-9_]*)$/);
     if (match) {
       const prefix = match[1].toLowerCase();
+<<<<<<< HEAD
       const filtered = wordIndex.filter((w) => w.toLowerCase().startsWith(prefix) && w.toLowerCase() !== prefix);
+=======
+      const filtered = wordIndex.filter(
+        (w) => w.toLowerCase().startsWith(prefix) && w.toLowerCase() !== prefix,
+      );
+>>>>>>> tools_improvement
       setSuggestions(filtered.slice(0, 5));
       setSuggestionIdx(0);
       setShowSuggestions(filtered.length > 0);
@@ -198,7 +204,8 @@ export function SidePanel({
         const currentLine = lines[cursor.line];
         if (cursor.char > 0) {
           const newLines = [...lines];
-          newLines[cursor.line] = currentLine.slice(0, cursor.char - 1) + currentLine.slice(cursor.char);
+          newLines[cursor.line] =
+            currentLine.slice(0, cursor.char - 1) + currentLine.slice(cursor.char);
           setLines(newLines);
           setCursor((c) => ({ ...c, char: c.char - 1 }));
           updateSuggestions(newLines[cursor.line], cursor.char - 1);
@@ -222,7 +229,8 @@ export function SidePanel({
         setLines(newLines);
         setCursor({ line: cursor.line + 1, char: 0 });
         setShowSuggestions(false);
-        if (cursor.line + 1 >= scrollOffset + VISIBLE_LINES) setScrollOffset(cursor.line + 1 - VISIBLE_LINES + 1);
+        if (cursor.line + 1 >= scrollOffset + VISIBLE_LINES)
+          setScrollOffset(cursor.line + 1 - VISIBLE_LINES + 1);
         return;
       }
 
@@ -230,7 +238,8 @@ export function SidePanel({
       if (input && !key.ctrl && !key.meta) {
         const currentLine = lines[cursor.line];
         const newLines = [...lines];
-        newLines[cursor.line] = currentLine.slice(0, cursor.char) + input + currentLine.slice(cursor.char);
+        newLines[cursor.line] =
+          currentLine.slice(0, cursor.char) + input + currentLine.slice(cursor.char);
         setLines(newLines);
         setCursor((c) => ({ ...c, char: c.char + input.length }));
         updateSuggestions(newLines[cursor.line], cursor.char + input.length);
@@ -294,7 +303,16 @@ export function SidePanel({
 
       {/* Search Bar */}
       {(isSearching || filter) && (
+<<<<<<< HEAD
         <Box paddingX={1} marginBottom={0} borderStyle="round" borderColor={isSearching ? '#FF00AA' : '#484F58'}>
+=======
+        <Box
+          paddingX={1}
+          marginBottom={0}
+          borderStyle="round"
+          borderColor={isSearching ? '#FF00AA' : '#484F58'}
+        >
+>>>>>>> tools_improvement
           <Text color="#FF00AA" bold>
             FIND:{' '}
           </Text>
@@ -354,7 +372,13 @@ export function SidePanel({
 
             return (
               <Box key={lineIdx} backgroundColor={isMatch ? '#302000' : undefined}>
+<<<<<<< HEAD
                 <Text color={isCursorLine ? '#FF00AA' : type === 'thoughts' ? '#8C959F' : '#484F58'}>
+=======
+                <Text
+                  color={isCursorLine ? '#FF00AA' : type === 'thoughts' ? '#8C959F' : '#484F58'}
+                >
+>>>>>>> tools_improvement
                   {String(lineIdx + 1).padStart(4)}{' '}
                 </Text>
                 {isCursorLine ? (

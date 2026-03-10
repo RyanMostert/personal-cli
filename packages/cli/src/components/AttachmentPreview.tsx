@@ -62,7 +62,8 @@ export function AttachmentPreview({ attachments, onRemove }: Props) {
           {/* Image stub/metadata */}
           {att.type === 'image' && (
             <Text dimColor>
-              Image (no dimensions/exif available) – type: {att.mimeType || 'unknown'}, size: {att.size || 'unknown'}
+              Image (no dimensions/exif available) – type: {att.mimeType || 'unknown'}, size:{' '}
+              {att.size || 'unknown'}
             </Text>
           )}
           {/* Error feedback for missing/unreadable files handled in TextFilePreview */}

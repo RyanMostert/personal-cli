@@ -1,5 +1,6 @@
 import { homedir } from 'os';
 import { join } from 'path';
+<<<<<<< HEAD
 import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, readdirSync, unlinkSync } from 'fs';
 import type { Message, ActiveModel } from '@personal-cli/shared';
 
@@ -35,6 +36,26 @@ interface FrecencyEntry {
   score: number;
   lastUsed: number;
 }
+=======
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  appendFileSync,
+  mkdirSync,
+  readdirSync,
+  unlinkSync,
+} from 'fs';
+import type { Message, ActiveModel } from '@personal-cli/shared';
+import type {
+  ConversationMeta,
+  SavedConversation,
+  SavedWorkspace,
+  HistoryEntry,
+  FrecencyEntry,
+} from './types.js';
+export type { ConversationMeta, SavedConversation, SavedWorkspace } from './types.js';
+>>>>>>> tools_improvement
 
 export interface PersistenceStore {
   appendHistory(text: string): void;
@@ -53,7 +74,17 @@ export interface PersistenceStore {
   renameConversation(id: string, title: string): boolean;
   saveWorkspace(path: string, data: SavedWorkspace): void;
   loadWorkspace(path: string): SavedWorkspace | null;
+<<<<<<< HEAD
   exportConversation(messages: Message[], model: ActiveModel, tokensUsed: number, cost: number, path?: string): string;
+=======
+  exportConversation(
+    messages: Message[],
+    model: ActiveModel,
+    tokensUsed: number,
+    cost: number,
+    path?: string,
+  ): string;
+>>>>>>> tools_improvement
 
   getFrecency(path: string): number;
   getBatchFrecency(paths: string[]): Map<string, number>;
@@ -156,7 +187,13 @@ class FileSystemPersistenceStore implements PersistenceStore {
       .filter((f) => f.endsWith('.json'))
       .map((f) => {
         try {
+<<<<<<< HEAD
           const d = JSON.parse(readFileSync(join(this.HISTORY_DIR(), f), 'utf-8')) as SavedConversation;
+=======
+          const d = JSON.parse(
+            readFileSync(join(this.HISTORY_DIR(), f), 'utf-8'),
+          ) as SavedConversation;
+>>>>>>> tools_improvement
           return {
             id: d.id,
             title: d.title,
@@ -204,7 +241,17 @@ class FileSystemPersistenceStore implements PersistenceStore {
     }
   }
 
+<<<<<<< HEAD
   exportConversation(messages: Message[], model: ActiveModel, tokensUsed: number, cost: number, path?: string): string {
+=======
+  exportConversation(
+    messages: Message[],
+    model: ActiveModel,
+    tokensUsed: number,
+    cost: number,
+    path?: string,
+  ): string {
+>>>>>>> tools_improvement
     const date = new Date().toISOString().split('T')[0];
     const filePath = path ?? join(homedir(), `conversation-${date}-${Date.now()}.md`);
     const content = [
@@ -306,7 +353,14 @@ class FileSystemPersistenceStore implements PersistenceStore {
     const store = this.readFrecencyStore();
     const now = Date.now();
     return Object.entries(store)
+<<<<<<< HEAD
       .map(([p, e]) => ({ path: p, score: e.score + Math.max(0, 10 - (now - e.lastUsed) / (1000 * 60 * 60 * 24)) }))
+=======
+      .map(([p, e]) => ({
+        path: p,
+        score: e.score + Math.max(0, 10 - (now - e.lastUsed) / (1000 * 60 * 60 * 24)),
+      }))
+>>>>>>> tools_improvement
       .sort((a, b) => b.score - a.score)
       .slice(0, n)
       .map((e) => e.path);
@@ -322,7 +376,14 @@ class FileSystemPersistenceStore implements PersistenceStore {
   }
 
   private slugify(text: string): string {
+<<<<<<< HEAD
     return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+=======
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)+/g, '');
+>>>>>>> tools_improvement
   }
 }
 
@@ -343,7 +404,17 @@ export class InMemoryPersistenceStore implements PersistenceStore {
     return this._history.map((e) => e.text);
   }
 
+<<<<<<< HEAD
   saveConversation(messages: Message[], model: ActiveModel, firstUserMessage: string, title?: string, existingId?: string): string {
+=======
+  saveConversation(
+    messages: Message[],
+    model: ActiveModel,
+    firstUserMessage: string,
+    title?: string,
+    existingId?: string,
+  ): string {
+>>>>>>> tools_improvement
     const timestamp = Date.now();
     const id = existingId ?? `${timestamp}-${Math.random().toString(36).slice(2, 8)}`;
     const title_ = (title ?? firstUserMessage ?? 'Untitled').slice(0, 60);
@@ -358,7 +429,17 @@ export class InMemoryPersistenceStore implements PersistenceStore {
 
   listConversations(): ConversationMeta[] {
     return Array.from(this._convos.values())
+<<<<<<< HEAD
       .map((d) => ({ id: d.id, title: d.title, date: d.date, model: `${d.model.provider}/${d.model.modelId}`, messageCount: d.messages.length }))
+=======
+      .map((d) => ({
+        id: d.id,
+        title: d.title,
+        date: d.date,
+        model: `${d.model.provider}/${d.model.modelId}`,
+        messageCount: d.messages.length,
+      }))
+>>>>>>> tools_improvement
       .sort((a, b) => b.date - a.date);
   }
 
@@ -382,7 +463,17 @@ export class InMemoryPersistenceStore implements PersistenceStore {
     return null;
   }
 
+<<<<<<< HEAD
   exportConversation(_messages: Message[], _model: ActiveModel, _tokensUsed: number, _cost: number, _path?: string): string {
+=======
+  exportConversation(
+    _messages: Message[],
+    _model: ActiveModel,
+    _tokensUsed: number,
+    _cost: number,
+    _path?: string,
+  ): string {
+>>>>>>> tools_improvement
     return 'in-memory-export';
   }
 
@@ -411,7 +502,14 @@ export class InMemoryPersistenceStore implements PersistenceStore {
     const now = Date.now();
     const prev = this._frecency[path];
     const days = prev ? (now - prev.lastUsed) / (1000 * 60 * 60 * 24) : Infinity;
+<<<<<<< HEAD
     this._frecency[path] = { score: (prev?.score ?? 0) + 1 + Math.max(0, 10 - days), lastUsed: now };
+=======
+    this._frecency[path] = {
+      score: (prev?.score ?? 0) + 1 + Math.max(0, 10 - days),
+      lastUsed: now,
+    };
+>>>>>>> tools_improvement
   }
 }
 
@@ -426,7 +524,15 @@ export function getPersistenceStore(): PersistenceStore {
   return _store;
 }
 
+<<<<<<< HEAD
 export function createInMemoryPersistenceStore(initial?: { history?: HistoryEntry[]; convos?: SavedConversation[]; frecency?: Record<string, FrecencyEntry> }) {
+=======
+export function createInMemoryPersistenceStore(initial?: {
+  history?: HistoryEntry[];
+  convos?: SavedConversation[];
+  frecency?: Record<string, FrecencyEntry>;
+}) {
+>>>>>>> tools_improvement
   const s = new InMemoryPersistenceStore();
   if (initial?.history) s['_history'] = initial.history.slice();
   if (initial?.convos) for (const c of initial.convos) s['_convos'].set(c.id, c);

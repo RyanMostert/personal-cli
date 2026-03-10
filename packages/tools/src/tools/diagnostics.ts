@@ -2,7 +2,6 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
-import path from 'node:path';
 
 const execAsync = promisify(exec);
 
@@ -12,7 +11,13 @@ export const diagnostics = tool({
   inputSchema: z.object({
     paths: z
       .array(z.string())
+<<<<<<< HEAD
       .describe('List of exact file paths to get diagnostics for (e.g., ["packages/cli/src/app.tsx"])'),
+=======
+      .describe(
+        'List of exact file paths to get diagnostics for (e.g., ["packages/cli/src/app.tsx"])',
+      ),
+>>>>>>> tools_improvement
   }),
   execute: async ({ paths }) => {
     try {
@@ -27,7 +32,9 @@ export const diagnostics = tool({
       }
 
       if (!stdout) {
-        return { output: 'No TypeScript errors found in the project. The build is perfectly clean!' };
+        return {
+          output: 'No TypeScript errors found in the project. The build is perfectly clean!',
+        };
       }
 
       const lines = stdout.split('\n');

@@ -1,4 +1,5 @@
 import type { ProviderName } from '../types/index.js';
+<<<<<<< HEAD
 
 export type ModelTag = 'reasoning' | 'coding' | 'vision' | 'fast' | 'large';
 
@@ -995,6 +996,26 @@ export const MODEL_REGISTRY: ModelEntry[] = [
     free: false,
     tags: ['fast'],
   },
+=======
+import type { ModelEntry, ModelTag } from './types.js';
+export type { ModelEntry, ModelTag } from './types.js';
+import { opencodeZenModels } from './opencode-zen.js';
+import { anthropicModels } from './anthropic.js';
+import { openaiModels } from './openai.js';
+import { googleModels } from './google.js';
+import { openrouterModels } from './openrouter.js';
+import { deepseekModels } from './deepseek.js';
+import { groqModels } from './groq.js';
+
+export const MODEL_REGISTRY: ModelEntry[] = [
+  ...opencodeZenModels,
+  ...anthropicModels,
+  ...openaiModels,
+  ...googleModels,
+  ...openrouterModels,
+  ...deepseekModels,
+  ...groqModels,
+>>>>>>> tools_improvement
 ];
 
 export function getModelEntry(provider: ProviderName, modelId: string): ModelEntry | undefined {
@@ -1003,9 +1024,10 @@ export function getModelEntry(provider: ProviderName, modelId: string): ModelEnt
 
 export function getModelsByProvider(): Map<ProviderName, ModelEntry[]> {
   const map = new Map<ProviderName, ModelEntry[]>();
-  for (const m of MODEL_REGISTRY) {
-    if (!map.has(m.provider)) map.set(m.provider, []);
-    map.get(m.provider)!.push(m);
+  for (const model of MODEL_REGISTRY) {
+    const existing = map.get(model.provider) || [];
+    existing.push(model);
+    map.set(model.provider, existing);
   }
   return map;
 }

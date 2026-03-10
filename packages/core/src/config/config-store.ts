@@ -1,6 +1,23 @@
 import type { AppConfig, UserSettings } from './loader.js';
+<<<<<<< HEAD
 import { loadSettings, saveSettings, loadConfig, getDefaultModel as coreGetDefaultModel } from './loader.js';
 import { readAuth, writeAuth, setProviderKey, getProviderKey, removeProviderKey, type AuthStore } from './auth.js';
+=======
+import {
+  loadSettings,
+  saveSettings,
+  loadConfig,
+  getDefaultModel as coreGetDefaultModel,
+} from './loader.js';
+import {
+  readAuth,
+  writeAuth,
+  setProviderKey,
+  getProviderKey,
+  removeProviderKey,
+  type AuthStore,
+} from './auth.js';
+>>>>>>> tools_improvement
 
 /**
  * Lightweight ConfigStore wrapper to centralize config access and provide an in-memory
@@ -20,7 +37,11 @@ export class ConfigStore {
   }
 
   getDefaultModel(cfg?: AppConfig) {
+<<<<<<< HEAD
     return coreGetDefaultModel(cfg ?? this.loadConfig());
+=======
+    return coreGetDefaultModel(cfg ?? this.loadConfig(), this.loadSettings());
+>>>>>>> tools_improvement
   }
 
   // Auth helpers
@@ -69,7 +90,11 @@ export class InMemoryConfigStore extends ConfigStore {
   }
 
   loadConfig() {
+<<<<<<< HEAD
     return (this._config ?? ({} as AppConfig));
+=======
+    return this._config ?? ({} as AppConfig);
+>>>>>>> tools_improvement
   }
 
   readAuth() {
@@ -93,6 +118,14 @@ export class InMemoryConfigStore extends ConfigStore {
   }
 }
 
+<<<<<<< HEAD
 export function createInMemoryConfigStore(initial?: { settings?: UserSettings; config?: AppConfig; auth?: AuthStore }) {
+=======
+export function createInMemoryConfigStore(initial?: {
+  settings?: UserSettings;
+  config?: AppConfig;
+  auth?: AuthStore;
+}) {
+>>>>>>> tools_improvement
   return new InMemoryConfigStore(initial);
 }

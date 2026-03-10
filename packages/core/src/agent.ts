@@ -22,6 +22,10 @@ import {
 } from './persistence/conversations.js';
 import {
   createTools,
+<<<<<<< HEAD
+=======
+  type CreateToolsOptions,
+>>>>>>> tools_improvement
   type PermissionCallback,
   type QuestionCallback,
   loadPlugins,
@@ -33,9 +37,25 @@ import { COMPACTION_PROMPT } from './prompts/compaction.js';
 import { UndoStack } from './persistence/undo-stack.js';
 import { existsSync, readFileSync, writeFileSync, readdirSync } from 'fs';
 import { join } from 'path';
+<<<<<<< HEAD
 import { ToolFallbackManager, createFallbackManager, type FallbackConfig } from './fallback/tool-fallback.js';
 import { AgentEventTracker, createEventTracker, type AgentEvent } from './fallback/event-tracker.js';
 import { parseStream } from './streaming-parser.js';
+=======
+import {
+  ToolFallbackManager,
+  createFallbackManager,
+  type FallbackConfig,
+} from './fallback/tool-fallback.js';
+import {
+  AgentEventTracker,
+  createEventTracker,
+  type AgentEvent,
+} from './fallback/event-tracker.js';
+import { parseStream } from './streaming-parser.js';
+import { loadProjectHints, formatProjectHints } from './utils/project-hints.js';
+import { buildTools as createToolsWithContext } from './utils/tools.js';
+>>>>>>> tools_improvement
 
 export interface AgentOptions {
   providerManager: ProviderManager;
@@ -80,6 +100,7 @@ export class Agent {
     this.eventTracker = createEventTracker();
 
     // Inject project context from various hint files if present
+<<<<<<< HEAD
     let base = options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
     const projectHints: string[] = [];
     const hintFiles = ['.pcli-hints', 'AGENTS.md', 'CONTEXT.md', 'INSTRUCTIONS.md', '.goosehints', '.cursorrules'];
@@ -95,14 +116,30 @@ export class Agent {
         }
       }
     }
+=======
+    const hints = loadProjectHints(process.cwd());
+    const hintsText = formatProjectHints(hints);
+>>>>>>> tools_improvement
 
-    if (projectHints.length > 0) {
-      base = `# Project Context & Guidelines\n\n${projectHints.join('\n\n')}\n\n---\n\n${base}`;
+    let base = options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
+    if (hintsText) {
+      base = `# Project Context & Guidelines\n\n${hintsText}\n\n---\n\n${base}`;
     }
     this.systemPrompt = base;
 
     // Initialize with empty plugins - will load async
-    this.tools = this.buildTools();
+    this.tools = createToolsWithContext({
+      mode: this.mode,
+      permissionFn: this.permissionFn,
+      onWrite: (path, before, after) => {
+        if (before !== null) this.undoStack.push({ path, before, after });
+      },
+      questionFn: this.questionFn,
+      plugins: this.loadedPlugins,
+      onTodoUpdate: (todos) => {
+        this.pendingTodoUpdates = todos;
+      },
+    });
 
     // Track conversation start
     this.eventTracker.trackConversationStart();
@@ -115,13 +152,25 @@ export class Agent {
     try {
       this.loadedPlugins = await loadPlugins();
       if (this.loadedPlugins.length > 0) {
-        this.tools = this.buildTools();
+        this.tools = createToolsWithContext({
+          mode: this.mode,
+          permissionFn: this.permissionFn,
+          onWrite: (path, before, after) => {
+            if (before !== null) this.undoStack.push({ path, before, after });
+          },
+          questionFn: this.questionFn,
+          plugins: this.loadedPlugins,
+          onTodoUpdate: (todos) => {
+            this.pendingTodoUpdates = todos;
+          },
+        });
       }
     } catch (err) {
       console.warn('Failed to load plugins:', err);
     }
   }
 
+<<<<<<< HEAD
   private buildTools() {
     return createTools(this.mode, this.permissionFn, {
       onWrite: (path, before, after) => {
@@ -133,6 +182,8 @@ export class Agent {
     });
   }
 
+=======
+>>>>>>> tools_improvement
   getMessages(): Message[] {
     return this.messages;
   }
@@ -155,7 +206,18 @@ export class Agent {
 
   switchMode(mode: AgentMode) {
     this.mode = mode;
-    this.tools = this.buildTools();
+    this.tools = createToolsWithContext({
+      mode: this.mode,
+      permissionFn: this.permissionFn,
+      onWrite: (path, before, after) => {
+        if (before !== null) this.undoStack.push({ path, before, after });
+      },
+      questionFn: this.questionFn,
+      plugins: this.loadedPlugins,
+      onTodoUpdate: (todos) => {
+        this.pendingTodoUpdates = todos;
+      },
+    });
   }
 
   abort(): void {
@@ -299,7 +361,14 @@ export class Agent {
     });
   }
 
+<<<<<<< HEAD
   async *sendMessage(userContent: string, attachedFiles?: Attachment[]): AsyncGenerator<StreamEvent> {
+=======
+  async *sendMessage(
+    userContent: string,
+    attachedFiles?: Attachment[],
+  ): AsyncGenerator<StreamEvent> {
+>>>>>>> tools_improvement
     // 1. Check for auto-compaction if over 85% budget
     if (this.totalTokensUsed > this.tokenBudget * 0.85) {
       yield {
@@ -401,7 +470,10 @@ export class Agent {
                   const multiToolOpenIdx = buffer.indexOf('<multi_tool_use.parallel>');
 
                   // Handle <thought>
-                  if (thoughtOpenIdx !== -1 && (multiToolOpenIdx === -1 || thoughtOpenIdx < multiToolOpenIdx)) {
+                  if (
+                    thoughtOpenIdx !== -1 &&
+                    (multiToolOpenIdx === -1 || thoughtOpenIdx < multiToolOpenIdx)
+                  ) {
                     const beforeText = buffer.slice(0, thoughtOpenIdx);
                     if (beforeText) {
                       rawText += beforeText;
@@ -508,7 +580,14 @@ export class Agent {
               this.eventTracker.trackToolSuccess(toolName, toolResult, 0);
 
               // Check if we need fallback - use the normalized result
+<<<<<<< HEAD
               const needsFallback = this.fallbackManager.shouldAttemptFallback(toolName, resultForCheck);
+=======
+              const needsFallback = this.fallbackManager.shouldAttemptFallback(
+                toolName,
+                resultForCheck,
+              );
+>>>>>>> tools_improvement
 
               if (needsFallback && allToolCalls[toolCall.toolCallId]) {
                 const args = allToolCalls[toolCall.toolCallId].args || {};
@@ -520,7 +599,15 @@ export class Agent {
                 };
 
                 // Try fallback asynchronously - use normalized result
+<<<<<<< HEAD
                 const fallbackResult = await this.fallbackManager.attemptFallback(toolName, args, resultForCheck);
+=======
+                const fallbackResult = await this.fallbackManager.attemptFallback(
+                  toolName,
+                  args,
+                  resultForCheck,
+                );
+>>>>>>> tools_improvement
 
                 if (fallbackResult) {
                   // Track fallback success
@@ -544,7 +631,9 @@ export class Agent {
 
                   // If it's LLM synthesis needed, generate answer immediately
                   if (fallbackResult.output.includes('[LLM_SYNTHESIS_NEEDED]')) {
-                    const query = fallbackResult.output.replace('[LLM_SYNTHESIS_NEEDED]', '').trim();
+                    const query = fallbackResult.output
+                      .replace('[LLM_SYNTHESIS_NEEDED]', '')
+                      .trim();
                     yield {
                       type: 'system',
                       message: `No instant results found. Generating explanation for: "${query}"...`,
@@ -648,7 +737,14 @@ export class Agent {
             system: this.systemPrompt,
             messages: [
               ...this.coreMessages,
+<<<<<<< HEAD
               { role: 'user' as const, content: 'Please summarize the above tool results concisely.' },
+=======
+              {
+                role: 'user' as const,
+                content: 'Please summarize the above tool results concisely.',
+              },
+>>>>>>> tools_improvement
             ],
             maxOutputTokens: 1024,
           } as any);

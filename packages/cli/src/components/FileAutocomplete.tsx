@@ -10,7 +10,15 @@ interface Props {
   onFilesChange: (files: string[]) => void;
 }
 
-const GLOB_IGNORE = ['node_modules/**', '.git/**', 'dist/**', 'build/**', '.turbo/**', '*.lock', 'pnpm-lock*'];
+const GLOB_IGNORE = [
+  'node_modules/**',
+  '.git/**',
+  'dist/**',
+  'build/**',
+  '.turbo/**',
+  '*.lock',
+  'pnpm-lock*',
+];
 
 export function FileAutocomplete({ query, visible, selectedIndex, onFilesChange }: Props) {
   const [files, setFiles] = useState<string[]>([]);
@@ -75,7 +83,11 @@ export function FileAutocomplete({ query, visible, selectedIndex, onFilesChange 
       cancelled = true;
       clearTimeout(t);
     };
+<<<<<<< HEAD
   }, [cleanQuery, visible]); // eslint-disable-line react-hooks/exhaustive-deps
+=======
+  }, [cleanQuery, visible]);
+>>>>>>> tools_improvement
 
   if (!visible) return null;
 
@@ -87,7 +99,14 @@ export function FileAutocomplete({ query, visible, selectedIndex, onFilesChange 
         {isLoading ? (
           <Text color="#8C959F"> Searching for {label}…</Text>
         ) : files.length === 0 ? (
+<<<<<<< HEAD
           <Text color="#8C959F"> {cleanQuery === '' ? 'No recent files' : `No files match ${label}`}</Text>
+=======
+          <Text color="#8C959F">
+            {' '}
+            {cleanQuery === '' ? 'No recent files' : `No files match ${label}`}
+          </Text>
+>>>>>>> tools_improvement
         ) : (
           files.map((file, index) => (
             <Box key={file}>
