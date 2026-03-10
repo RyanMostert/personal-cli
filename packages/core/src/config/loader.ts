@@ -94,7 +94,7 @@ export function loadConfig(): AppConfig {
   };
 }
 // Determine the model to use on startup.
-// Priority: user settings favorite -> recent (prefs) -> provider defaults -> global default
+// Priority: per-provider last-used (settings) -> recent prefs -> user favourite (settings) -> provider defaults -> global default
 export function getDefaultModel(
   config: AppConfig,
   userSettings?: UserSettings,
@@ -110,19 +110,17 @@ export function getDefaultModel(
   const favourite = settings.defaultModel ?? defaults?.model ?? '';
 
   // Last used model for this provider can be stored in settings (preferred),
-  // otherwise fall back to recent prefs, then provider defaults, then global default
+  // otherwise fall back to recent prefs
   const lastUsedFromSettings = settings.lastUsedModels?.[provider] ?? '';
   const recent = getRecentModels();
   const lastForProvider =
-    (lastUsedFromSettings || recent.find((r) => r.provider === provider)?.modelId) ??
-    recent[0]?.modelId ??
-    '';
+    lastUsedFromSettings || recent.find((r) => r.provider === provider)?.modelId || recent[0]?.modelId || '';
 
   const modelId =
-    favourite && favourite !== ''
-      ? favourite
-      : lastForProvider && lastForProvider !== ''
-        ? lastForProvider
+    lastForProvider && lastForProvider !== ''
+      ? lastForProvider
+      : favourite && favourite !== ''
+        ? favourite
         : (defaults?.model ?? DEFAULT_MODEL);
 
   return { provider, modelId };

@@ -307,7 +307,7 @@ export function useAgent() {
           try {
             const current = loadSettings();
             const lastUsedModels = { ...(current.lastUsedModels ?? {}), [provider]: modelId };
-            saveSettings({ defaultProvider: provider, defaultModel: modelId, lastUsedModels });
+            saveSettings({ defaultProvider: provider, lastUsedModels });
           } catch (err) {
             // Log errors so failures are visible in logs but don't disrupt the UI
             try {
