@@ -359,6 +359,89 @@ export class Agent {
       'notifyUser',
     ];
 
+    const toolSynonyms: Record<string, string[]> = {
+      readFile: ['read', 'open', 'view', 'show', 'display', 'fetch'],
+      writeFile: ['write', 'create', 'make', 'save'],
+      editFile: ['edit', 'modify', 'change', 'update', 'alter'],
+      listDir: ['list', 'ls', 'show', 'display', 'explore'],
+      searchFiles: ['search', 'find', 'grep', 'look'],
+      globFiles: ['glob', 'match', 'pattern'],
+      semanticSearch: ['semantic', 'ai search'],
+      diagnostics: ['diagnostic', 'check', 'analyze'],
+      runCommand: ['run', 'execute', 'cmd', 'command', 'shell'],
+      runTests: ['test', 'tests', 'testing', 'run tests'],
+      webFetch: ['fetch', 'scrape', 'crawl', 'get'],
+      webSearch: ['search', 'google', 'bing', 'web search'],
+      gitStatus: ['git status', 'status'],
+      gitDiff: ['diff', 'git diff'],
+      gitLog: ['log', 'git log', 'history'],
+      gitCommit: ['commit', 'git commit'],
+      todoWrite: ['todo', 'add todo', 'write todo'],
+      todoRead: ['read todo', 'list todo', 'show todo'],
+      patch: ['patch', 'apply'],
+      question: ['ask', 'question', 'query'],
+      moveFile: ['move', 'rename'],
+      copyFile: ['copy', 'duplicate'],
+      deleteFile: ['delete', 'remove', 'rm'],
+      batchEdit: ['batch', 'bulk edit'],
+      memoryWrite: ['memory write', 'save to memory'],
+      memoryRead: ['memory read', 'read from memory'],
+      memoryDelete: ['memory delete', 'clear memory'],
+      notifyUser: ['notify', 'alert', 'notify user'],
+    };
+
+    const numberedListPattern =
+      /(?:^|\n)\s*(\d+)[.)]\s*(?:I'll|I will|I'll|I will|then|next)\s+(?:run\s+)?(?:the\s+)?(?:(\w+)\s+)?(.+?)(?=\n\s*\d+[.)]|$)/gim;
+
+    let match;
+    while ((match = numberedListPattern.exec(text)) !== null) {
+      const action = match[3]?.toLowerCase().trim() || '';
+      const verb = match[2]?.toLowerCase().trim() || '';
+
+      if (action || verb) {
+        const combined = `${verb} ${action}`.trim().toLowerCase();
+
+        for (const [toolName, synonyms] of Object.entries(toolSynonyms)) {
+          for (const synonym of synonyms) {
+            if (combined.includes(synonym) || action.includes(synonym)) {
+              if (!promisedTools.includes(toolName)) {
+                promisedTools.push(toolName);
+              }
+              break;
+            }
+          }
+        }
+
+        if (!promisedActions.includes(combined) && combined.length > 2) {
+          promisedActions.push(combined);
+        }
+      }
+    }
+
+    for (const toolName of toolNames) {
+      const regex = new RegExp(`\\b${toolName}\\b`, 'gi');
+      if (regex.test(text)) {
+        if (!promisedTools.includes(toolName)) {
+          promisedTools.push(toolName);
+        }
+      }
+    }
+
+    for (const [toolName, synonyms] of Object.entries(toolSynonyms)) {
+      for (const synonym of synonyms) {
+        const regex = new RegExp(`\\b${synonym}\\b`, 'gi');
+        if (regex.test(text) && !promisedTools.includes(toolName)) {
+          const contextRegex = new RegExp(
+            `(?:I'll|I will|I will|then|next|first)\\s+.*?${synonym}`,
+            'gi',
+          );
+          if (contextRegex.test(text)) {
+            promisedTools.push(toolName);
+          }
+        }
+      }
+    }
+
     const actionPatterns = [
       /I'll\s+(?:run\s+)?(?:the\s+)?(\w+)/gi,
       /I(?:'ll|\s+will)\s+(?:run\s+)?(?:the\s+)?(\w+)/gi,
@@ -366,13 +449,6 @@ export class Agent {
       /(?:first|then|next)\s+I(?:'ll|\s+will)\s+(?:run\s+)?(?:the\s+)?(\w+)/gi,
       /(?:I\s+)?(?:need to|should|must|have to)\s+(\w+)/gi,
     ];
-
-    for (const toolName of toolNames) {
-      const regex = new RegExp(`\\b${toolName}\\b`, 'gi');
-      if (regex.test(text)) {
-        promisedTools.push(toolName);
-      }
-    }
 
     for (const pattern of actionPatterns) {
       let match;
