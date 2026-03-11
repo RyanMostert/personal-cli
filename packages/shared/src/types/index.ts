@@ -122,12 +122,25 @@ export type StreamEventType =
   | 'thought-delta'
   | 'tool-call-start'
   | 'tool-call-result'
+  | 'tool-queue-update'
+  | 'promise-warning'
   | 'step-start'
   | 'step-finish'
   | 'finish'
   | 'error'
   | 'system'
   | 'todo-update';
+
+export interface QueuedTool {
+  id: string;
+  toolCallId: string;
+  toolName: string;
+  args: Record<string, unknown>;
+  status: 'pending' | 'executing' | 'completed' | 'failed';
+  result?: unknown;
+  error?: string;
+  addedAt: number;
+}
 
 export interface ToolCallInfo {
   toolCallId: string;
@@ -153,4 +166,10 @@ export interface StreamEvent {
     totalTokens: number;
   };
   todos?: TodoItem[];
+  queue?: QueuedTool[];
+  pending?: number;
+  inProgress?: number;
+  completed?: number;
+  unfulfilled?: string[];
+  retryCount?: number;
 }

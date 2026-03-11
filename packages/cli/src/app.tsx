@@ -8,6 +8,7 @@ import {
   GameOverScreen,
   InputBox,
   ToolCallView,
+  ToolQueueView,
   PermissionPrompt,
   QuestionPrompt,
   ModelPicker,
@@ -64,7 +65,7 @@ import {
   setTelemetryEnabled,
   trackEvent,
 } from '@personal-cli/core';
-import { MCPClientManager, type MCPServerConfig, type ToolResult } from '@personal-cli/mcp-client';
+import { MCPClientManager, type MCPServerConfig } from '@personal-cli/mcp-client';
 import {
   ZenGatewayConfigSchema,
   ZenGatewayStatusSchema,
@@ -76,8 +77,6 @@ import {
 import { promises as fs, existsSync } from 'fs';
 import { join } from 'path';
 import clipboardy from 'clipboardy';
-import { parseZenGatewayConfig, parseZenGatewayConfigFromEnv } from './utils/zen-config.js';
-import { getToolTextResult } from './utils/tool-result.js';
 
 interface AppProps {
   initialAttachments?: Array<{ path: string; type: 'file' | 'image' }>;
@@ -115,15 +114,6 @@ function parseZenGatewayConfigFromEnv(): ZenGatewayConfig | null {
   return result.success ? result.data : null;
 }
 
-function getTextResult(result: ToolResult): string {
-  const text = result.content.find((item) => item.type === 'text' && typeof item.text === 'string')?.text;
-  if (!text) {
-    throw new Error('Zen Gateway returned an empty response.');
-  }
-
-  return text;
-}
-
 export function App({ initialAttachments = [] }: AppProps) {
   const [focusedToolCallId, setFocusedToolCallId] = useState<string | null>(null);
   const [expandedToolCalls, setExpandedToolCalls] = useState<Set<string>>(new Set());
@@ -136,6 +126,7 @@ export function App({ initialAttachments = [] }: AppProps) {
     tokensUsed,
     cost,
     toolCalls,
+    toolQueue,
     pendingPermission,
     pendingQuestion,
     error,
@@ -1423,6 +1414,7 @@ export const helloWorld = async ({ name = 'World' }) => {
               <Box flexDirection="column" paddingX={1}>
                 {messages.length === 0 && !isStreaming && <WelcomeScreen tick={tick} />}
                 {todos.length > 0 && <TodoPanel todos={todos} />}
+                {toolQueue.length > 0 && <ToolQueueView queue={toolQueue} />}
                 {toolCalls.map((tc) => (
                   <ToolCallView
                     key={tc.toolCallId}
@@ -1534,4 +1526,3 @@ export const helloWorld = async ({ name = 'World' }) => {
     </>
   );
 }
-

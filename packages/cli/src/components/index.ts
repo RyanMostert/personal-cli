@@ -31,4 +31,5 @@ export * from './StreamingMessage';
 export * from './ThoughtView';
 export * from './TodoPanel';
 export * from './ToolCallView';
+export * from './ToolQueueView';
 export * from './WelcomeScreen';

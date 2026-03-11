@@ -47,6 +47,7 @@ import {
 import { parseStream } from './streaming-parser.js';
 import { loadProjectHints, formatProjectHints } from './utils/project-hints.js';
 import { buildTools as createToolsWithContext } from './utils/tools.js';
+import type { QueuedTool, ToolQueueUpdate } from './streaming-protocol.js';
 
 export interface AgentOptions {
   providerManager: ProviderManager;
@@ -79,6 +80,15 @@ export class Agent {
   private fallbackManager: ToolFallbackManager;
   private eventTracker: AgentEventTracker;
   private pendingTodoUpdates: TodoItem[] | null = null;
+  private toolQueue: QueuedTool[] = [];
+  private executedToolCallIds: Set<string> = new Set();
+  private pendingPromises: {
+    promisedTools: string[];
+    promisedActions: string[];
+    timestamp: number;
+  } | null = null;
+  private promiseRetryCount = 0;
+  private readonly MAX_PROMISE_RETRIES = 2;
 
   constructor(options: AgentOptions & { fallbackConfig?: FallbackConfig }) {
     this.providerManager = options.providerManager;
@@ -216,6 +226,165 @@ export class Agent {
 
   exportEvents(): string {
     return this.eventTracker.exportToJSON();
+  }
+
+  enqueueTool(toolCallId: string, toolName: string, args: Record<string, unknown>): string {
+    const id = `${toolName}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const queuedTool: QueuedTool = {
+      id,
+      toolCallId,
+      toolName,
+      args,
+      status: 'pending',
+      addedAt: Date.now(),
+    };
+    this.toolQueue.push(queuedTool);
+    return id;
+  }
+
+  startToolExecution(toolId: string): void {
+    const tool = this.toolQueue.find((t) => t.id === toolId);
+    if (tool) {
+      tool.status = 'executing';
+    }
+  }
+
+  completeToolExecution(toolId: string, result: unknown): void {
+    const tool = this.toolQueue.find((t) => t.id === toolId);
+    if (tool) {
+      tool.status = 'completed';
+      tool.result = result;
+    }
+  }
+
+  failToolExecution(toolId: string, error: string): void {
+    const tool = this.toolQueue.find((t) => t.id === toolId);
+    if (tool) {
+      tool.status = 'failed';
+      tool.error = error;
+    }
+  }
+
+  getToolQueue(): QueuedTool[] {
+    return [...this.toolQueue];
+  }
+
+  getQueueStats(): { pending: number; inProgress: number; completed: number } {
+    let pending = 0;
+    let inProgress = 0;
+    let completed = 0;
+    for (const tool of this.toolQueue) {
+      if (tool.status === 'pending') pending++;
+      else if (tool.status === 'executing') inProgress++;
+      else if (tool.status === 'completed') completed++;
+    }
+    return { pending, inProgress, completed };
+  }
+
+  clearToolQueue(): void {
+    this.toolQueue = [];
+    this.executedToolCallIds.clear();
+  }
+
+  markToolCallExecuted(toolCallId: string): void {
+    this.executedToolCallIds.add(toolCallId);
+  }
+
+  wasToolCallExecuted(toolCallId: string): boolean {
+    return this.executedToolCallIds.has(toolCallId);
+  }
+
+  setPendingPromises(promisedTools: string[], promisedActions: string[]): void {
+    this.pendingPromises = {
+      promisedTools,
+      promisedActions,
+      timestamp: Date.now(),
+    };
+    this.promiseRetryCount = 0;
+  }
+
+  getPendingPromises(): { promisedTools: string[]; promisedActions: string[] } | null {
+    return this.pendingPromises;
+  }
+
+  incrementPromiseRetry(): number {
+    this.promiseRetryCount++;
+    return this.promiseRetryCount;
+  }
+
+  getPromiseRetryCount(): number {
+    return this.promiseRetryCount;
+  }
+
+  clearPendingPromises(): void {
+    this.pendingPromises = null;
+    this.promiseRetryCount = 0;
+  }
+
+  private extractPromisesFromText(text: string): {
+    promisedTools: string[];
+    promisedActions: string[];
+  } {
+    const promisedTools: string[] = [];
+    const promisedActions: string[] = [];
+
+    const toolNames = [
+      'readFile',
+      'writeFile',
+      'editFile',
+      'listDir',
+      'searchFiles',
+      'globFiles',
+      'semanticSearch',
+      'diagnostics',
+      'runCommand',
+      'runTests',
+      'webFetch',
+      'webSearch',
+      'gitStatus',
+      'gitDiff',
+      'gitLog',
+      'gitCommit',
+      'todoWrite',
+      'todoRead',
+      'patch',
+      'question',
+      'moveFile',
+      'copyFile',
+      'deleteFile',
+      'batchEdit',
+      'memoryWrite',
+      'memoryRead',
+      'memoryDelete',
+      'notifyUser',
+    ];
+
+    const actionPatterns = [
+      /I'll\s+(?:run\s+)?(?:the\s+)?(\w+)/gi,
+      /I(?:'ll|\s+will)\s+(?:run\s+)?(?:the\s+)?(\w+)/gi,
+      /I(?:'m going to|m about to)\s+(?:run\s+)?(?:the\s+)?(\w+)/gi,
+      /(?:first|then|next)\s+I(?:'ll|\s+will)\s+(?:run\s+)?(?:the\s+)?(\w+)/gi,
+      /(?:I\s+)?(?:need to|should|must|have to)\s+(\w+)/gi,
+    ];
+
+    for (const toolName of toolNames) {
+      const regex = new RegExp(`\\b${toolName}\\b`, 'gi');
+      if (regex.test(text)) {
+        promisedTools.push(toolName);
+      }
+    }
+
+    for (const pattern of actionPatterns) {
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const action = match[1].toLowerCase();
+        if (!promisedActions.includes(action)) {
+          promisedActions.push(action);
+        }
+      }
+    }
+
+    return { promisedTools, promisedActions };
   }
 
   async synthesizeAnswer(topic: string): Promise<string> {
@@ -490,14 +659,36 @@ export class Agent {
             case 'tool-call-start': {
               const toolCall = (event as any).toolCall;
 
+              // Extract promises from text before tool execution
+              if (!this.getPendingPromises() && rawText.length > 20) {
+                const { promisedTools, promisedActions } = this.extractPromisesFromText(rawText);
+                if (promisedTools.length > 0 || promisedActions.length > 0) {
+                  this.setPendingPromises(promisedTools, promisedActions);
+                }
+              }
+
               allToolCalls[toolCall.toolCallId] = {
                 toolCallId: toolCall.toolCallId,
                 toolName: toolCall.toolName,
                 args: toolCall.args,
               };
 
+              // Enqueue tool and mark as executed
+              this.enqueueTool(toolCall.toolCallId, toolCall.toolName, toolCall.args || {});
+              this.markToolCallExecuted(toolCall.toolCallId);
+
               // Track tool call start
               this.eventTracker.trackToolCall(toolCall.toolName, toolCall.args || {});
+
+              // Yield queue update
+              const stats = this.getQueueStats();
+              yield {
+                type: 'tool-queue-update',
+                queue: this.getToolQueue(),
+                pending: stats.pending,
+                inProgress: stats.inProgress,
+                completed: stats.completed,
+              } as ToolQueueUpdate;
 
               yield {
                 type: 'tool-call-start',
@@ -631,6 +822,25 @@ export class Agent {
                 },
               };
 
+              // Update tool queue with result
+              for (const queuedTool of this.toolQueue) {
+                if (queuedTool.toolCallId === toolCall.toolCallId) {
+                  queuedTool.status = 'completed';
+                  queuedTool.result = toolResult;
+                  break;
+                }
+              }
+
+              // Yield queue update after tool completes
+              const stats = this.getQueueStats();
+              yield {
+                type: 'tool-queue-update',
+                queue: this.getToolQueue(),
+                pending: stats.pending,
+                inProgress: stats.inProgress,
+                completed: stats.completed,
+              } as ToolQueueUpdate;
+
               // Drain pending todo updates triggered by this tool call
               if (this.pendingTodoUpdates !== null) {
                 yield { type: 'todo-update', todos: this.pendingTodoUpdates };
@@ -666,6 +876,102 @@ export class Agent {
         }
       } finally {
         clearTimeout(streamTimeout);
+      }
+
+      // Check for unfulfilled promises and retry if needed
+      const promises = this.getPendingPromises();
+      if (promises && promises.promisedTools.length > 0) {
+        const executedToolNames = Object.values(allToolCalls).map((tc) =>
+          tc.toolName.toLowerCase(),
+        );
+        const unfulfilled: string[] = [];
+
+        for (const promised of promises.promisedTools) {
+          const promisedLower = promised.toLowerCase();
+          if (!executedToolNames.some((name) => name.toLowerCase() === promisedLower)) {
+            unfulfilled.push(promised);
+          }
+        }
+
+        if (unfulfilled.length > 0 && this.getPromiseRetryCount() < this.MAX_PROMISE_RETRIES) {
+          const retryCount = this.incrementPromiseRetry();
+
+          yield {
+            type: 'promise-warning',
+            message: `You mentioned you'd use ${unfulfilled.join(', ')} but didn't execute them. Please do so now.`,
+            unfulfilled,
+            retryCount,
+          } as any;
+
+          // Send retry prompt to model
+          const retryPrompt = `You previously mentioned you'd use the following tools: ${unfulfilled.join(', ')}. Please execute them now to complete your plan.`;
+
+          const retryResult = streamText({
+            model,
+            system: this.systemPrompt,
+            messages: [...this.coreMessages, { role: 'user' as const, content: retryPrompt }],
+            tools: this.tools,
+            maxSteps: this.maxSteps,
+            maxOutputTokens: 4096,
+            abortSignal: this.currentAbortController?.signal,
+          } as any);
+
+          try {
+            for await (const event of parseStream(retryResult.fullStream)) {
+              if (event.type === 'tool-call-start') {
+                const toolCall = (event as any).toolCall;
+                this.enqueueTool(toolCall.toolCallId, toolCall.toolName, toolCall.args || {});
+                this.markToolCallExecuted(toolCall.toolCallId);
+                const stats = this.getQueueStats();
+                yield {
+                  type: 'tool-queue-update',
+                  queue: this.getToolQueue(),
+                  pending: stats.pending,
+                  inProgress: stats.inProgress,
+                  completed: stats.completed,
+                } as any;
+                yield event as any;
+              } else if (event.type === 'tool-call-result') {
+                const toolCall = (event as any).toolCall;
+                for (const queuedTool of this.toolQueue) {
+                  if (queuedTool.toolCallId === toolCall.toolCallId) {
+                    queuedTool.status = 'completed';
+                    queuedTool.result = toolCall.result;
+                    break;
+                  }
+                }
+                const stats = this.getQueueStats();
+                yield {
+                  type: 'tool-queue-update',
+                  queue: this.getToolQueue(),
+                  pending: stats.pending,
+                  inProgress: stats.inProgress,
+                  completed: stats.completed,
+                } as any;
+                yield event as any;
+              } else if (event.type === 'text-delta') {
+                yield event as any;
+              } else if (event.type === 'thought-delta') {
+                yield event as any;
+              } else if (event.type === 'system') {
+                yield event as any;
+              }
+            }
+          } catch (retryErr) {
+            // Ignore retry errors
+          }
+        } else if (unfulfilled.length > 0) {
+          // Max retries exceeded - warn user
+          yield {
+            type: 'promise-warning',
+            message: `Warning: You mentioned you'd use ${unfulfilled.join(', ')} but didn't execute them after ${this.MAX_PROMISE_RETRIES} retries.`,
+            unfulfilled,
+            retryCount: this.MAX_PROMISE_RETRIES,
+          } as any;
+        }
+
+        // Clear promises after handling
+        this.clearPendingPromises();
       }
 
       this.totalTokensUsed += totalPromptTokens + totalCompletionTokens;

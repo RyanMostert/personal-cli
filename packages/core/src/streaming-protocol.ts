@@ -7,6 +7,32 @@ export interface ToolCallInfo {
   result?: unknown;
 }
 
+export interface QueuedTool {
+  id: string;
+  toolCallId: string;
+  toolName: string;
+  args: Record<string, unknown>;
+  status: 'pending' | 'executing' | 'completed' | 'failed';
+  result?: unknown;
+  error?: string;
+  addedAt: number;
+}
+
+export interface ToolQueueUpdate {
+  type: 'tool-queue-update';
+  queue: QueuedTool[];
+  pending: number;
+  inProgress: number;
+  completed: number;
+}
+
+export interface PromiseWarning {
+  type: 'promise-warning';
+  message: string;
+  unfulfilled: string[];
+  retryCount: number;
+}
+
 export interface TextDelta {
   type: 'text-delta';
   delta: string;
@@ -47,6 +73,8 @@ export type StreamEvent =
   | ThoughtDelta
   | ToolCallStart
   | ToolCallResult
+  | ToolQueueUpdate
+  | PromiseWarning
   | SystemEvent
   | FinishEvent
   | ErrorEvent;

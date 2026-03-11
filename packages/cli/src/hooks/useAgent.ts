@@ -20,6 +20,7 @@ import type {
 import { DEFAULT_TOKEN_BUDGET, loadAttachment } from '@personal-cli/shared';
 import type { PendingPermission } from '../components/PermissionPrompt.js';
 import type { PendingQuestion } from '../components/QuestionPrompt.js';
+import type { QueuedTool } from '@personal-cli/shared';
 import { promises as fs } from 'fs';
 import { error } from 'console';
 
@@ -29,6 +30,7 @@ interface AgentState {
   tokensUsed: number;
   cost: number;
   toolCalls: ToolCallInfo[];
+  toolQueue: QueuedTool[];
   pendingPermission: PendingPermission | null;
   pendingQuestion: PendingQuestion | null;
   error: string | null;
@@ -56,6 +58,7 @@ export function useAgent() {
     tokensUsed: 0,
     cost: 0,
     toolCalls: [],
+    toolQueue: [],
     pendingPermission: null,
     pendingQuestion: null,
     error: null,
@@ -130,7 +133,6 @@ export function useAgent() {
     }
     return agentRef.current;
   }, [permissionCallback]);
-
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -236,6 +238,20 @@ export function useAgent() {
                 setState((prev) => ({ ...prev, todos: event.todos! }));
               }
               break;
+            case 'tool-queue-update':
+              if (event.queue) {
+                setState((prev) => ({ ...prev, toolQueue: event.queue! }));
+              }
+              break;
+            case 'promise-warning':
+              if (event.message) {
+                agent.addSystemMessage(event.message);
+                setState((prev) => ({
+                  ...prev,
+                  messages: [...agent.getMessages()],
+                }));
+              }
+              break;
             case 'error':
               throw event.error;
           }
@@ -263,6 +279,7 @@ export function useAgent() {
           tokensUsed: agent.getTokensUsed(),
           cost: agent.getCost(),
           toolCalls: [],
+          toolQueue: [],
         }));
         setStreamingText('');
         setStreamingThought('');
