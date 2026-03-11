@@ -2,6 +2,8 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import path from 'path';
+import fs from 'fs';
 import { TOOL_OUTPUT_MAX_CHARS } from '@personal-cli/shared';
 import type { PermissionCallback } from '../types.js';
 
@@ -31,16 +33,27 @@ export const gitStatus = tool({
 });
 
 export const gitDiff = tool({
-  description: 'Show file diffs.',
+  description: 'Show file diffs. If no file is specified, shows all changes.',
   inputSchema: z.object({
     staged: z.boolean().default(false).describe('Show staged changes only'),
-    file: z.string().optional().describe('Specific file to diff'),
+    file: z.string().optional().describe('Specific file to diff (omit for all changes)'),
     cwd: z.string().optional(),
   }),
   execute: async ({ staged, file, cwd }) => {
     try {
-      const args = ['diff', staged ? '--staged' : '', file ?? ''].filter(Boolean).join(' ');
-      let output = await git(args, cwd);
+      const workingDir = cwd ?? process.cwd();
+      let fileToDiff = file;
+
+      // If file is specified, validate it exists - if not, ignore and run full diff
+      if (file) {
+        const filePath = path.resolve(workingDir, file);
+        if (!fs.existsSync(filePath)) {
+          fileToDiff = undefined; // Fall back to full diff
+        }
+      }
+
+      const args = ['diff', staged ? '--staged' : '', fileToDiff ?? ''].filter(Boolean).join(' ');
+      let output = await git(args, workingDir);
       if (!output) output = 'No differences found.';
       if (output.length > TOOL_OUTPUT_MAX_CHARS) {
         output = output.slice(0, TOOL_OUTPUT_MAX_CHARS) + '\n... (truncated)';
