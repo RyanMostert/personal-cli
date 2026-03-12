@@ -18,6 +18,7 @@ interface Props {
   activeToolName?: string;
   /** Flash notification from notifyUser tool. */
   notification?: { title: string; level: 'info' | 'success' | 'warning' | 'error' } | null;
+  time: string;
 }
 
 const HINTS = [
@@ -42,6 +43,7 @@ export function StatusBar({
   leaderKeyActive = false,
   activeToolName,
   notification,
+  time,
 }: Props) {
   const [hintIndex, setHintIndex] = useState(0);
   const [flashVisible, setFlashVisible] = useState(false);
@@ -173,6 +175,9 @@ export function StatusBar({
           <Text color={tokenColor}>{barStr}</Text>
           <Text color="#484F58"> {Math.round(progress * 100)}%</Text>
           <Text color="#30363D"> </Text>
+          <Box justifyContent='flex-end' paddingX={1}>
+            <Text color="#484F58">{time}</Text>
+            </Box>
           <Text color={cost > 0 ? '#D29922' : '#484F58'}>{costStr}</Text>
         </Box>
       </Box>

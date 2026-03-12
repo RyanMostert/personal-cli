@@ -9,6 +9,7 @@ import os from 'os';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import cmd from 'shiki/dist/langs/cmd.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -61,6 +62,18 @@ export const generalCommands: Command[] = [
     cmd: '/clear',
     description: 'Clear conversation history',
     handler: (_: string, ctx: CommandContext) => ctx.clearMessages(),
+  },
+  {
+    cmd: '/stats',
+    description: 'Show conversation statistics',
+    handler: (_: string, ctx: CommandContext) => {
+      const msgCount = ctx.messages.length;
+      const tokenCount = ctx.tokensUsed;
+      const cost = ctx.cost;
+      ctx.addSystemMessage(
+        `Messages: ${msgCount}\nTokens: ${tokenCount}\nCost: $${cost.toFixed(4)}`,
+      );
+    },
   },
   {
     cmd: '/settings',

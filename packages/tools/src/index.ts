@@ -5,6 +5,7 @@ import { createWriteFile } from './tools/write-file.js';
 import { createEditFile } from './tools/edit-file.js';
 import { listDir } from './tools/list-dir.js';
 import { searchFiles } from './tools/search-files.js';
+import { searchFile, setSearchFilePermission as setSearchFilePerm } from './tools/search-file.js';
 import { globFiles } from './tools/glob-files.js';
 import { semanticSearch } from './tools/semantic-search.js';
 import { diagnostics } from './tools/diagnostics.js';
@@ -60,6 +61,7 @@ export function createTools(
 
   // Hook resolvedPermission into readFile synchronously
   setReadFilePermission(resolvedPermission);
+  setSearchFilePerm(resolvedPermission);
 
   const { onWrite, questionFn, plugins, onTodoUpdate, onNotify } = options ?? {};
   const { todoWrite, todoRead } = createTodoTools(onTodoUpdate);
@@ -70,6 +72,7 @@ export function createTools(
     editFile: createEditFile(resolvedPermission, onWrite),
     listDir,
     searchFiles,
+    searchFile,
     globFiles,
     semanticSearch,
     diagnostics,
@@ -152,7 +155,10 @@ function convertArgsToZod(args?: Record<string, ToolArgSchema>) {
   return z.object(shape);
 }
 
-function makePermissionResolver(rules: PermissionRule[], userCallback?: PermissionCallback): PermissionCallback {
+function makePermissionResolver(
+  rules: PermissionRule[],
+  userCallback?: PermissionCallback,
+): PermissionCallback {
   return async (toolName, args) => {
     const pathArg = (args.path ?? args.command ?? args.filePath ?? '') as string;
 

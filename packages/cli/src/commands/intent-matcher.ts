@@ -6,7 +6,8 @@ interface IntentPattern {
 
 const INTENT_MAP: IntentPattern[] = [
   { pattern: /^(attach|add)\s+file\s+(.+)$/i, cmd: '/add', getArgs: (m) => m[2] },
-  { pattern: /^(show|open)\s+(.+)$/i, cmd: '/open', getArgs: (m) => m[2] },
+  // Only match /open with actual file paths (with extensions or path separators), not git commands
+  { pattern: /^(show|open)\s+(\S+\.\S+|\S+\/|\.\/?\S+)$/i, cmd: '/open', getArgs: (m) => m[2] },
   { pattern: /^(undo|revert)(\s+that)?$/i, cmd: '/undo' },
   { pattern: /^(redo|repeat)(\s+that)?$/i, cmd: '/redo' },
   { pattern: /^(clear|reset)\s+chat$/i, cmd: '/clear' },

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Box, Text, useInput, useApp, Static } from 'ink';
+import { getCurrentTime } from '@personal-cli/shared';
 import {
   StatusBar,
   MessageView,
@@ -189,7 +190,7 @@ export function App({ initialAttachments = [] }: AppProps) {
     [],
   );
   const [mcpServerCount, setMcpServerCount] = useState(0);
-
+  const time = getCurrentTime();
   // Zen Gateway
   const {
     zenConfig,
@@ -1497,6 +1498,7 @@ export const helloWorld = async ({ name = 'World' }) => {
           mcpServerCount={mcpServerCount}
           activeToolCount={toolCalls.filter((tc) => !tc.result && !tc.error).length}
           leaderKeyActive={leaderKeyActive}
+          time={time}
         />
 
         <CommandAutocomplete

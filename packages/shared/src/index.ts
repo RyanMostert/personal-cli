@@ -7,3 +7,5 @@ export type { ModelTag } from './models/registry.js';
 export * from './providers/registry.js';
 export * from './themes/index.js';
 export * from './attachments.js';
+export * from './utils/session.js';
+export * from './utils/time.js';

@@ -3,6 +3,8 @@ import { Box, Text } from 'ink';
 import { PatchView } from './PatchView.js';
 import type { ToolCallInfo } from '@personal-cli/shared';
 import { useTheme } from '../context/ThemeContext.js';
+import { parseToolDiff } from '../utils/diff-parser.js';
+import { DiffView } from './DiffView.js';
 
 interface Props {
   tool: ToolCallInfo;
@@ -292,30 +294,43 @@ export function ToolCallView({
         </Box>
       )}
 
+      {/* Inline diff for small gitDiff results */}
+      {tool.toolName === 'gitDiff' &&
+        (() => {
+          const diffLines = parseToolDiff(tool);
+          if (diffLines && diffLines.length > 0 && diffLines.length <= 10) {
+            return <DiffView lines={diffLines} />;
+          }
+          return null;
+        })()}
       {/* Result output */}
-      {isRunFinished && resultSummary !== null && !isEditFile && !isRunTests && (
-        <Box paddingLeft={2} flexDirection="column">
-          <Box flexDirection="row">
-            <Text color={theme.dim}>⎿ </Text>
-            <Text color={isError ? theme.error : theme.dim} wrap="wrap">
-              {expanded
-                ? typeof tool.result === 'string'
-                  ? tool.result
-                  : JSON.stringify(tool.result, null, 2)
-                : resultSummary.text}
-            </Text>
-            {!expanded && resultSummary.lineCount && resultSummary.lineCount > 1 && (
-              <Text color={theme.dim}> [{resultSummary.lineCount}L]</Text>
-            )}
-            {!expanded && focused && (
-              <Text color={theme.primary} bold>
-                {' '}
-                (ENTER)
+      {isRunFinished &&
+        resultSummary !== null &&
+        !isEditFile &&
+        !isRunTests &&
+        tool.toolName !== 'gitDiff' && (
+          <Box paddingLeft={2} flexDirection="column">
+            <Box flexDirection="row">
+              <Text color={theme.dim}>⎿ </Text>
+              <Text color={isError ? theme.error : theme.dim} wrap="wrap">
+                {expanded
+                  ? typeof tool.result === 'string'
+                    ? tool.result
+                    : JSON.stringify(tool.result, null, 2)
+                  : resultSummary.text}
               </Text>
-            )}
+              {!expanded && resultSummary.lineCount && resultSummary.lineCount > 1 && (
+                <Text color={theme.dim}> [{resultSummary.lineCount}L]</Text>
+              )}
+              {!expanded && focused && (
+                <Text color={theme.primary} bold>
+                  {' '}
+                  (ENTER)
+                </Text>
+              )}
+            </Box>
           </Box>
-        </Box>
-      )}
+        )}
 
       {/* Special rendering for edits */}
       {isEditFile && editArgs && (
